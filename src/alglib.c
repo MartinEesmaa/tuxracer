@@ -23,6 +23,7 @@
 
 #include "tuxracer.h"
 #include "alglib.h"
+#include "gauss.h"
 
 vector_t make_vector( scalar_t x, scalar_t y, scalar_t z )
 {
@@ -47,6 +48,14 @@ point2d_t make_point2d( scalar_t x, scalar_t y )
     point2d_t result;
     result.x = x;
     result.y = y;
+    return result;
+}
+
+index2d_t make_index2d( int i, int j )
+{
+    index2d_t result;
+    result.i = i;
+    result.j = j;
     return result;
 }
 
@@ -223,6 +232,50 @@ plane_t make_plane( scalar_t nx, scalar_t ny, scalar_t nz, scalar_t d )
     return tmp;
 }
 
+bool_t intersect_planes( plane_t s1, plane_t s2, plane_t s3, point_t *p )
+{
+    double A[3][4];
+    double x[3];
+    scalar_t retval;
+
+    A[0][0] =  s1.nml.x;
+    A[0][1] =  s1.nml.y;
+    A[0][2] =  s1.nml.z;
+    A[0][3] = -s1.d;
+
+    A[1][0] =  s2.nml.x;
+    A[1][1] =  s2.nml.y;
+    A[1][2] =  s2.nml.z;
+    A[1][3] = -s2.d;
+
+    A[2][0] =  s3.nml.x;
+    A[2][1] =  s3.nml.y;
+    A[2][2] =  s3.nml.z;
+    A[2][3] = -s3.d;
+
+    retval = gauss( (double*) A, 3, x);
+
+    if ( retval != 0 ) {
+	/* Matrix is singular */
+	return False;
+    } else {
+	/* Solution found */
+	p->x = x[0];
+	p->y = x[1];
+	p->z = x[2];
+	return True;
+    }
+}
+
+scalar_t distance_to_plane( plane_t plane, point_t pt ) 
+{
+    return 
+	plane.nml.x * pt.x +
+	plane.nml.y * pt.y +
+	plane.nml.z * pt.z +
+	plane.d;
+}
+
 void make_identity_matrix(matrixgl_t h)
 {
     int i,j;
@@ -266,8 +319,8 @@ void transpose_matrix( matrixgl_t mat, matrixgl_t trans )
 void make_rotation_matrix( matrixgl_t mat, scalar_t angle, char axis )
 {
     scalar_t sinv, cosv;
-    sinv = sin( angle * M_PI / 180.0 );
-    cosv = cos( angle * M_PI / 180.0 );
+    sinv = sin( ANGLES_TO_RADIANS( angle ) );
+    cosv = cos( ANGLES_TO_RADIANS( angle ) );
 
     make_identity_matrix( mat );
 
@@ -294,7 +347,7 @@ void make_rotation_matrix( matrixgl_t mat, scalar_t angle, char axis )
         break;
 
     default:
-        assert(0);  /* shouldn't get here */
+        code_not_reached();  /* shouldn't get here */
 
     }
 } 
@@ -563,7 +616,7 @@ quaternion_t make_rotation_quaternion( vector_t s, vector_t t )
 
 /*
  * Interpolates from q to r by factor t in [0,1].  
- * This is also knows as slerp(q, r, t) (spherical linear interpolation)
+ * This is also known as slerp(q, r, t) (spherical linear interpolation)
  */
 quaternion_t interpolate_quaternions( quaternion_t q, quaternion_t r, 
 				      scalar_t t )
@@ -629,4 +682,182 @@ vector_t rotate_vector( quaternion_t q, vector_t v )
     res.z = res_q.z;
 
     return res;
+}
+
+void cut_line( point_t p1, point_t p2, point2d_t t1, point2d_t t2, scalar_t ratio,
+	       point_t *result, point2d_t *result_tex )
+{
+    *result = move_point( p1, scale_vector( 1 - ratio, subtract_points( p2, p1 ) ) );
+    result_tex->x = (t1.x * ratio) + ((1 - ratio)*t2.x);
+    result_tex->y = (t1.y * ratio) + ((1 - ratio)*t2.y);
+}
+
+
+int cut_triangle( triangle_t *in_tri, triangle_t *out_tri2, triangle_t *out_tri3, 
+		  line_t cut )
+{
+    triangle_t out_tri1;
+    int result;             /* number of triangles */
+    scalar_t side0, side1, side2;
+    scalar_t ratio01, ratio02, ratio12;
+
+    side0 = dot_product( cut.nml, 
+			 subtract_points( in_tri->p[0], cut.pt ) );
+    side1 = dot_product( cut.nml, 
+			 subtract_points( in_tri->p[1], cut.pt ) );
+    side2 = dot_product( cut.nml, 
+			 subtract_points( in_tri->p[2], cut.pt ) );
+    ratio01 = fabs(side1/(side0-side1));
+    ratio02 = fabs(side2/(side0-side2));
+    ratio12 = fabs(side2/(side1-side2));
+
+
+    out_tri1.p[0] = in_tri->p[0];out_tri1.t[0] = in_tri->t[0];
+    if (side0 > 0) {
+	if (side1 > 0) {
+	    out_tri1.p[1] = in_tri->p[1]; out_tri1.t[1] = in_tri->t[1];
+	    if (side2 >= 0) {
+		out_tri1.p[2] = in_tri->p[2]; out_tri1.t[2] = in_tri->t[2];
+		result = 1;
+	    } else {
+		cut_line(in_tri->p[1], in_tri->p[2], in_tri->t[1], in_tri->t[2], 
+			 ratio12, &out_tri1.p[2], &out_tri1.t[2]);
+                out_tri2->p[0] = out_tri1.p[2];out_tri2->t[0] = out_tri1.t[2];
+		cut_line(in_tri->p[0], in_tri->p[2], in_tri->t[0], in_tri->t[2], 
+			 ratio02, &out_tri2->p[1], &out_tri2->t[1]);
+		out_tri2->p[2] = in_tri->p[0];out_tri2->t[2] = in_tri->t[0];
+		out_tri3->p[0] = out_tri2->p[1];out_tri3->t[0] = out_tri2->t[1];
+		out_tri3->p[1] = out_tri2->p[0];out_tri3->t[1] = out_tri2->t[0];
+		out_tri3->p[2] = in_tri->p[2];out_tri3->t[2] = in_tri->t[2];
+		result = 3;
+	    }
+
+	} else if (side1 == 0) {
+	    out_tri1.p[1] = in_tri->p[1];out_tri1.t[1] = in_tri->t[1];
+	    if (side2 >= 0) {
+		out_tri1.p[2] = in_tri->p[2];out_tri1.t[2] = in_tri->t[2];
+		result = 1;
+	    } else {
+		cut_line(in_tri->p[0], in_tri->p[2], in_tri->t[0], in_tri->t[2], 
+			 ratio02, &out_tri1.p[2], &out_tri1.t[2]);
+		out_tri2->p[0] = out_tri1.p[2];out_tri2->t[0] = out_tri1.t[2];
+		out_tri2->p[1] = in_tri->p[1];out_tri2->t[1] = in_tri->t[1];
+		out_tri2->p[2] = in_tri->p[2];out_tri2->t[2] = in_tri->t[2];
+		result = 2;
+	    }
+
+	} else { /* (side1 < 0) */
+	    cut_line(in_tri->p[0], in_tri->p[1], in_tri->t[0], in_tri->t[1], 
+		     ratio01, &out_tri1.p[1], &out_tri1.t[1]);
+	    if (side2 > 0) {
+		out_tri1.p[2] = in_tri->p[2];out_tri1.t[2] = in_tri->t[2];
+		out_tri2->p[0] = in_tri->p[2];out_tri2->t[0] = in_tri->t[2];
+		out_tri2->p[1] = out_tri1.p[1];out_tri2->t[1] = out_tri1.t[1];
+		cut_line(in_tri->p[1], in_tri->p[2], in_tri->t[1], in_tri->t[2], 
+			 ratio12, &out_tri2->p[2], &out_tri2->t[2]);
+		out_tri3->p[0] = out_tri2->p[1];out_tri3->t[0] = out_tri2->t[1];
+		out_tri3->p[1] = in_tri->p[1];out_tri3->t[1] = in_tri->t[1];
+		out_tri3->p[2] = out_tri2->p[2];out_tri3->t[2] = out_tri2->t[2];
+		result = 3;
+	    } else if (side2 == 0) {
+		out_tri1.p[2] = in_tri->p[2];out_tri1.t[2] = in_tri->t[2];
+		out_tri2->p[0] = out_tri1.p[1];out_tri2->t[0] = out_tri1.t[1];
+		out_tri2->p[1] = in_tri->p[1];out_tri2->t[1] = in_tri->t[1];
+		out_tri2->p[2] = in_tri->p[2];out_tri2->t[2] = in_tri->t[2];
+		result = 2;
+	    } else {  /* (side2 < 0) */
+		cut_line(in_tri->p[0], in_tri->p[2], in_tri->t[0], in_tri->t[2], 
+			 ratio02, &out_tri1.p[2], &out_tri1.t[2]);
+		out_tri2->p[0] = out_tri1.p[2];out_tri2->t[0] = out_tri1.t[2];
+		out_tri2->p[1] = out_tri1.p[1];out_tri2->t[1] = out_tri1.t[1];
+		out_tri2->p[2] = in_tri->p[2];out_tri2->t[2] = in_tri->t[2];
+		out_tri3->p[0] = in_tri->p[1];out_tri3->t[0] = in_tri->t[1];
+		out_tri3->p[1] = in_tri->p[2];out_tri3->t[1] = in_tri->t[2];
+		out_tri3->p[2] = out_tri1.p[1];out_tri3->t[2] = out_tri1.t[1];
+		result = 3;
+	    }
+	}
+
+    } else if (side0 == 0) {
+	out_tri1.p[1] = in_tri->p[1];out_tri1.t[1] = in_tri->t[1];
+	if (((side1 > 0) && (side2 > 0)) ||
+	    ((side1 < 0) && (side2 < 0))) {
+	    out_tri1.p[2] = in_tri->p[2];out_tri1.t[2] = in_tri->t[2];
+	    result = 1;
+	} else {
+	    cut_line(in_tri->p[1], in_tri->p[2], in_tri->t[1], in_tri->t[2], 
+		     ratio12, &out_tri1.p[2], &out_tri1.t[2]);
+	    out_tri2->p[0] = in_tri->p[0];out_tri2->t[0] = in_tri->t[0];
+	    out_tri2->p[1] = out_tri1.p[2];out_tri2->t[1] = out_tri1.t[2];
+	    out_tri2->p[2] = in_tri->p[2];out_tri2->t[2] = in_tri->t[2];
+	    result = 2;
+	}
+
+    } else { /* (side0 < 0) */
+	if (side1 < 0) {
+	    out_tri1.p[1] = in_tri->p[1];out_tri1.t[1] = in_tri->t[1];
+	    if (side2 <= 0) {
+		out_tri1.p[2] = in_tri->p[2];out_tri1.t[2] = in_tri->t[2];
+		result = 1;
+	    } else {
+		cut_line(in_tri->p[1], in_tri->p[2], in_tri->t[1], in_tri->t[2], 
+			 ratio12, &out_tri1.p[2], &out_tri1.t[2]);
+		out_tri2->p[0] = out_tri1.p[2];out_tri2->t[0] = out_tri1.t[2];
+		cut_line(in_tri->p[0], in_tri->p[2], in_tri->t[0], in_tri->t[2], 
+			 ratio02, &out_tri2->p[1], &out_tri2->t[1]);
+		out_tri2->p[2] = in_tri->p[0];out_tri2->t[2] = in_tri->t[0];
+		out_tri3->p[0] = out_tri2->p[1];out_tri3->t[0] = out_tri2->t[1];
+		out_tri3->p[1] = out_tri2->p[0];out_tri3->t[1] = out_tri2->t[0];
+		out_tri3->p[2] = in_tri->p[2];out_tri3->t[2] = in_tri->t[2];
+		result = 3;
+	    }
+
+	} else if (side1 == 0) {
+	    out_tri1.p[1] = in_tri->p[1];out_tri1.t[1] = in_tri->t[1];
+	    if (side2 <= 0) {
+		out_tri1.p[2] = in_tri->p[2];out_tri1.t[2] = in_tri->t[2];
+		result = 1;
+	    } else {
+		cut_line(in_tri->p[0], in_tri->p[2], in_tri->t[0], in_tri->t[2], 
+			 ratio02, &out_tri1.p[2], &out_tri1.t[2]);
+		out_tri2->p[0] = out_tri1.p[2];out_tri2->t[0] = out_tri1.t[2];
+		out_tri2->p[1] = in_tri->p[1];out_tri2->t[1] = in_tri->t[1];
+		out_tri2->p[2] = in_tri->p[2];out_tri2->t[2] = in_tri->t[2];
+		result = 2;
+	    }
+
+	} else { /* (side1 > 0) */
+	    cut_line(in_tri->p[0], in_tri->p[1], in_tri->t[0], in_tri->t[1], 
+		     ratio01, &out_tri1.p[1], &out_tri1.t[1]);
+	    if (side2 < 0) {
+		out_tri1.p[2] = in_tri->p[2];out_tri1.t[2] = in_tri->t[2];
+		out_tri2->p[0] = in_tri->p[2];out_tri2->t[0] = in_tri->t[2];
+		out_tri2->p[1] = out_tri1.p[1];out_tri2->t[1] = out_tri1.t[1];
+		cut_line(in_tri->p[1], in_tri->p[2], in_tri->t[1], in_tri->t[2], 
+			 ratio12, &out_tri2->p[2], &out_tri2->t[2]);
+		out_tri3->p[0] = out_tri2->p[1];out_tri3->t[0] = out_tri2->t[1];
+		out_tri3->p[1] = in_tri->p[1];out_tri3->t[1] = in_tri->t[1];
+		out_tri3->p[2] = out_tri2->p[2];out_tri3->t[2] = out_tri2->t[2];
+		result = 3;
+	    } else if (side2 == 0) {
+		out_tri1.p[2] = in_tri->p[2];out_tri1.t[2] = in_tri->t[2];
+		out_tri2->p[0] = out_tri1.p[1];out_tri2->t[0] = out_tri1.t[1];
+		out_tri2->p[1] = in_tri->p[1];out_tri2->t[1] = in_tri->t[1];
+		out_tri2->p[2] = in_tri->p[2];out_tri2->t[2] = in_tri->t[2];
+		result = 2;
+	    } else {  /* (side2 > 0) */
+		cut_line(in_tri->p[0], in_tri->p[2], in_tri->t[0], in_tri->t[2], 
+			 ratio02, &out_tri1.p[2], &out_tri1.t[2]);
+		out_tri2->p[0] = out_tri1.p[2];out_tri2->t[0] = out_tri1.t[2];
+		out_tri2->p[1] = out_tri1.p[1];out_tri2->t[1] = out_tri1.t[1];
+		out_tri2->p[2] = in_tri->p[2];out_tri2->t[2] = in_tri->t[2];
+		out_tri3->p[0] = in_tri->p[1];out_tri3->t[0] = in_tri->t[1];
+		out_tri3->p[1] = in_tri->p[2];out_tri3->t[1] = in_tri->t[2];
+		out_tri3->p[2] = out_tri1.p[1];out_tri3->t[2] = out_tri1.t[1];
+		result = 3;
+	    }
+	}
+    }
+    *in_tri = out_tri1;
+    return result;
 }

@@ -28,17 +28,31 @@ extern "C"
 #include "tuxracer.h"
 
 int       get_tcl_tuple ( Tcl_Interp *ip, char *inList, scalar_t *p, int n );
+int       get_tcl_int_tuple( Tcl_Interp *ip, char *inList, int *p, int n );
 point2d_t make_point2d_from_array ( scalar_t *p );
 point_t   make_point_from_array ( scalar_t *p );
 vector_t  make_vector_from_array ( scalar_t *v );
 colour_t  make_colour_from_array ( scalar_t *c );
-colour_t  make_colour( scalar_t r, scalar_t g, scalar_t b );
+colour_t  make_colour( scalar_t r, scalar_t g, scalar_t b, scalar_t a );
 
 /* Useful macro for processing Tcl callbacks */
 #define NEXT_ARG argc -=1; argv += 1
+
+/* Checks for existence of argument */
+#define CHECK_ARG( name_str, err_string, bail_label ) \
+if ( *argv == NULL ) { \
+    (err_string) = "No argument supplied for " name_str; \
+    goto bail_label; \
+}
 
 #endif /* _TCL_UTIL_H_ */
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+
+/* Emacs Customizations
+;;; Local Variables: ***
+;;; c-basic-offset:0 ***
+;;; End: ***
+*/

@@ -61,6 +61,44 @@ int get_tcl_tuple ( Tcl_Interp *ip, char *inList, scalar_t *p, int n )
 
 }
 
+/* Parse an n-tuple of ints specified as a tcl-list. */
+int get_tcl_int_tuple( Tcl_Interp *ip, char *inList, int *p, int n ) 
+{
+    char **indices;
+    int tmp;
+    int num_ints;
+    int rtn;
+    char s[100];
+    int i;
+
+    rtn = Tcl_SplitList(ip, inList, &num_ints, &indices);
+
+    if ((TCL_OK != rtn) || (n != num_ints)) {
+	sprintf(s,"%d",n);
+	Tcl_AppendResult(ip, 
+			 "Expected a tuple of ", s, " integers.\n",
+			 (char *) 0
+	    );
+	Tcl_Free((char *)indices);
+	return TCL_ERROR;
+    }
+
+    for (i = 0; i < n; i++) {
+	if (TCL_OK != Tcl_GetInt(ip, indices[i], &tmp)) {
+	    Tcl_Free((char *)indices);
+	    sprintf(s,"%d",n);
+	    Tcl_AppendResult(ip, 
+			     "Expected a tuple of ", s, " integers.\n",
+			     (char *) 0
+		);
+	    return TCL_ERROR;
+	}
+	p[i] = tmp;
+    }
+    Tcl_Free((char *)indices);
+    return TCL_OK;
+}
+
 point2d_t make_point2d_from_array ( scalar_t *p ) 
 {
     return make_point2d(p[0],p[1]);
@@ -78,14 +116,15 @@ vector_t make_vector_from_array ( scalar_t *v )
 
 colour_t make_colour_from_array ( scalar_t *c ) 
 {
-    return make_colour(c[0],c[1],c[2]);
+    return make_colour(c[0],c[1],c[2],1.0);
 }
 
-colour_t make_colour( scalar_t r, scalar_t g, scalar_t b)
+colour_t make_colour( scalar_t r, scalar_t g, scalar_t b, scalar_t a)
 {
     colour_t result;
     result.r = r;
     result.g = g;
     result.b = b;
+    result.a = a;
     return result;
 }

@@ -24,6 +24,7 @@
 #include "phys_sim.h"
 #include "course_quad.h"
 #include "multiplayer.h"
+#include "track_marks.h"
 
 static bool_t mirrored = False;
 
@@ -39,6 +40,8 @@ void mirror_course()
     terrain_t *terrain;
     tree_t *tree_locs;
     int num_trees;
+    item_t *item_locs;
+    int num_items;
     point2d_t start_pt;
     int nx, ny;
     scalar_t course_width, course_length;
@@ -49,6 +52,7 @@ void mirror_course()
     terrain = get_course_terrain_data();
     nmls = get_course_normals();
     tree_locs = get_tree_locs();
+    item_locs = get_item_locs();
 
     for ( y=0; y<ny; y++ ) {
 	for ( x=0; x<nx/2; x++ ) {
@@ -79,6 +83,14 @@ void mirror_course()
 	tree_locs[i].ray.pt.y = 
 	    find_y_coord( tree_locs[i].ray.pt.x,
 			  tree_locs[i].ray.pt.z );
+    }
+
+    num_items = get_num_items();
+    for ( i=0; i<num_items; i++) {
+	item_locs[i].ray.pt.x = course_width - item_locs[i].ray.pt.x; 
+	item_locs[i].ray.pt.y = 
+	    find_y_coord( item_locs[i].ray.pt.x,
+			  item_locs[i].ray.pt.z );
     }
 
     fill_gl_arrays();
@@ -119,6 +131,7 @@ void set_course_mirroring( bool_t state )
     if ( mirrored != state ) {
 	mirror_key_frame();
 	mirror_course();
+	init_track_marks();
     }
     mirrored = state;
     

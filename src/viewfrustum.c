@@ -28,27 +28,26 @@ of the bounding boxes wrt to each plane.
 
 static char p_vertex_code[6];
 
-void setup_view_frustum( player_data_t *plyr, scalar_t near, scalar_t far )
+void setup_view_frustum( player_data_t *plyr, scalar_t near_dist, 
+			 scalar_t far_dist )
 {
     scalar_t aspect = (scalar_t) getparam_x_resolution() /
 	getparam_y_resolution();
 
-    matrixgl_t mat;
-    vector_t view_x, view_y, view_z;
     int i;
     point_t pt;
     point_t origin = { 0., 0., 0. };
-    scalar_t half_fov = getparam_fov() * M_PI/180.0 * 0.5;
+    scalar_t half_fov = ANGLES_TO_RADIANS( getparam_fov() * 0.5 );
     scalar_t half_fov_horiz = atan( tan( half_fov ) * aspect ); 
 
 
     /* create frustum in viewing coordinates */
 
     /* near */
-    frustum_planes[0] = make_plane( 0, 0, 1, near );
+    frustum_planes[0] = make_plane( 0, 0, 1, near_dist );
     
     /* far */
-    frustum_planes[1] = make_plane( 0, 0, -1, -far );
+    frustum_planes[1] = make_plane( 0, 0, -1, -far_dist );
 
     /* left */
     frustum_planes[2] = make_plane( -cos(half_fov_horiz), 0, 
@@ -68,37 +67,14 @@ void setup_view_frustum( player_data_t *plyr, scalar_t near, scalar_t far )
 
 
     /* We now transform frustum to world coordinates */
-    view_z = scale_vector( -1, plyr->view.dir );
-    view_x = cross_product( plyr->view.up, view_z );
-    view_y = cross_product( view_z, view_x );
-    normalize_vector( &view_z );
-    normalize_vector( &view_x );
-    normalize_vector( &view_y );
-
-    make_identity_matrix( mat );
-
-    mat[0][0] = view_x.x;
-    mat[0][1] = view_x.y;
-    mat[0][2] = view_x.z;
-
-    mat[1][0] = view_y.x;
-    mat[1][1] = view_y.y;
-    mat[1][2] = view_y.z;
-
-    mat[2][0] = view_z.x;
-    mat[2][1] = view_z.y;
-    mat[2][2] = view_z.z;
-
-    mat[3][0] = plyr->view.pos.x;
-    mat[3][1] = plyr->view.pos.y;
-    mat[3][2] = plyr->view.pos.z;
-    mat[3][3] = 1;
-
     for (i=0; i<6; i++) {
-	pt = transform_point( mat, move_point( origin, scale_vector( 
-	    -frustum_planes[i].d, frustum_planes[i].nml ) ) );
+	pt = transform_point( 
+	    plyr->view.inv_view_mat, 
+	    move_point( origin, scale_vector( 
+		-frustum_planes[i].d, frustum_planes[i].nml ) ) );
 
-	frustum_planes[i].nml = transform_vector( mat, frustum_planes[i].nml );
+	frustum_planes[i].nml = transform_vector( 
+	    plyr->view.inv_view_mat, frustum_planes[i].nml );
 
 	frustum_planes[i].d = -dot_product( 
 	    frustum_planes[i].nml,
@@ -167,4 +143,24 @@ clip_result_t clip_aabb_to_view_frustum( point_t min, point_t max )
     }
 
     return NoClip;
+}
+
+plane_t get_far_clip_plane()
+{
+    return frustum_planes[1];
+}
+
+plane_t get_left_clip_plane()
+{
+    return frustum_planes[2];
+}
+
+plane_t get_right_clip_plane()
+{
+    return frustum_planes[3];
+}
+
+plane_t get_bottom_clip_plane()
+{
+    return frustum_planes[5];
 }

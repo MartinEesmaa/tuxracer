@@ -25,7 +25,7 @@
  */
 #define NUM_FRAMES 10 
 
-static const colour_t text_colour = { 0.0, 0.0, 0.0 };
+static const colour_t text_colour = { 0.0, 0.0, 0.0, 1.0 };
 
 static int      g_frames = 0;
 static clock_t  g_t_old = 0;
@@ -57,18 +57,4 @@ void new_frame_for_fps_calc()
 scalar_t get_fps()
 {
     return g_fps;
-}
-
-void print_fps()
-{
-    char buff[30];
-
-    if ( ! getparam_display_fps() ) return;
-
-    flat_mode();
-    sprintf( buff, "FPS: %.1f", get_fps() );
-
-    glColor3f( text_colour.r, text_colour.g, text_colour.b );
-    glRasterPos2i( 5, 12 ); 
-    print_string( GLUT_BITMAP_HELVETICA_10, buff );
 }

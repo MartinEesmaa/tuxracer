@@ -42,11 +42,18 @@ extern "C"
 #include <limits.h>
 #include <stdarg.h>
 
+#if defined( WIN32 ) || defined( __CYGWIN__ )
+    /* Note that this will define WIN32 for us, if it isn't defined already
+     */
+#  include <windows.h>
+#endif /* defined( WIN32 ) || defined( __CYGWIN__ ) */
+
 #include <GL/gl.h>
+#include <GL/glu.h>
 #include <GL/glut.h>
 
-#ifdef HAVE_GL_XMESA_H
-#   include <GL/xmesa.h>
+#ifdef HAVE_GL_GLX_H
+#   include <GL/glx.h>
 #endif
 
 #include <tcl.h>
@@ -58,6 +65,7 @@ extern "C"
 #define EPS 1e-13
 
 #include "string_util.h"
+#include "file_util.h"
 #include "game_config.h"
 #include "tux_types.h"
 #include "alglib.h"
@@ -66,26 +74,109 @@ extern "C"
 
 #define PROG_NAME "tuxracer"
 
+/* Macros and include files for non-standard math routines */
+#ifdef HAVE_IEEEFP_H
+#   include <ieeefp.h>
+#endif
+#include <float.h>
+
+#ifdef HAVE_FINITE
+#   define FINITE(x) (finite(x))
+#elif HAVE__FINITE
+#   define FINITE(x) (_finite(x))
+#elif HAVE_ISNAN
+#   define FINITE(x) (!isnan(x))
+#elif HAVE__ISNAN
+#   define FINITE(x) (!_isnan(x))
+#else
+#   error "You don't have finite(), _finite(), isnan(), or _isnan() on your system!"
+#endif
+
+/* Macros for swapping bytes */
+#define SWAP_WORD(x) \
+{ \
+unsigned long tmp; \
+tmp  = ((x) >> 24) & 0x000000ff; \
+tmp |= ((x) >> 8)  & 0x0000ff00; \
+tmp |= ((x) << 8)  & 0x00ff0000; \
+tmp |= ((x) << 24) & 0xff000000; \
+(x) = tmp; \
+}
+
+#define SWAP_SHORT(x) \
+{ \
+unsigned short tmp; \
+tmp  = ((x) << 8)  & 0xff00; \
+tmp |= ((x) >> 8)  & 0x00ff; \
+(x) = tmp; \
+}
+
+
 /* define this to turn off all debugging checks and messages */
 /* #define TUXRACER_NO_DEBUG */
+
+/* Directory separator */
+#ifdef WIN32
+#   define DIR_SEPARATOR "\\"
+#else
+#   define DIR_SEPARATOR "/"
+#endif
 
 #define BUFF_LEN 512
 
 /* Multiplayer is not yet supported */
 #define MAX_PLAYERS 1
 
+/* Number of lives players get to complete a cup */
+#define INIT_NUM_LIVES 4
 
 /* Game state */
 typedef enum {
     ALL_MODES = -2,
     NO_MODE = -1,
-    START = 0,
-    INTRO = 1,
-    RACING = 2,
-    GAME_OVER = 3,
-    PAUSED = 4,
-    NUM_GAME_MODES = 5
+    SPLASH = 0,
+    GAME_TYPE_SELECT,
+    EVENT_SELECT,
+    RACE_SELECT,
+    INTRO,
+    RACING,
+    GAME_OVER,
+    PAUSED,
+    RESET,
+    CREDITS,
+    NUM_GAME_MODES
 } game_mode_t;
+
+/* Difficulty levels */
+typedef enum {
+    DIFFICULTY_LEVEL_EASY,
+    DIFFICULTY_LEVEL_NORMAL,
+    DIFFICULTY_LEVEL_HARD,
+    DIFFICULTY_LEVEL_INSANE,
+    DIFFICULTY_NUM_LEVELS
+} difficulty_level_t;
+
+/* Race conditions */
+typedef enum {
+    RACE_CONDITIONS_SUNNY,
+    RACE_CONDITIONS_CLOUDY,
+    RACE_CONDITIONS_NIGHT,
+    RACE_CONDITIONS_NUM_CONDITIONS
+} race_conditions_t;
+
+/* Race data */
+typedef struct {
+    char     *course;                               /* course directory */
+    char     *name;                                 /* name of race */
+    char     *description;                          /* description of course */
+    int       herring_req[DIFFICULTY_NUM_LEVELS];   /* reqd number of herring */
+    scalar_t  time_req[DIFFICULTY_NUM_LEVELS];      /* required time */
+    int       score_req[DIFFICULTY_NUM_LEVELS];     /* required score */
+    bool_t    mirrored;                             /* is course mirrored? */
+    race_conditions_t conditions;                   /* race conditions */
+    bool_t    windy;                                /* is it windy? */
+    bool_t    snowing;                              /* is it snowing? */
+} race_data_t;
 
 /* Course data */
 typedef struct {
@@ -97,17 +188,21 @@ typedef struct {
 
 /* View mode */
 typedef enum {
-    PENGUIN_EYE,
     BEHIND,
-    ABOVE
+    FOLLOW,
+    ABOVE,
+    NUM_VIEW_MODES
 } view_mode_t;
 
 /* View point */
 typedef struct {
     view_mode_t mode;                   /* View mode */
     point_t pos;                        /* position of camera */
+    point_t plyr_pos;                   /* position of player */
     vector_t dir;                       /* viewing direction */
     vector_t up;                        /* up direction */
+    matrixgl_t inv_view_mat;            /* inverse view matrix */
+    bool_t initialized;                 /* has view been initialized? */
 } view_t;
 
 /* Control mode */
@@ -120,14 +215,28 @@ typedef enum {
 /* Control data */
 typedef struct {
     control_mode_t mode;                /* control mode */
-    scalar_t turn_fact;                 /* amount turning [-1,1] */
+    scalar_t turn_fact;                 /* turning [-1,1] */
+    scalar_t turn_animation;            /* animation step [-1,1] */
     bool_t is_braking;                  /* is player braking? */
     bool_t is_paddling;                 /* is player paddling? */
-    scalar_t paddle_time;               /* time player started paddling */
+    scalar_t paddle_time;
+    bool_t begin_jump;
+    bool_t jumping;
+    bool_t jump_charging;
+    scalar_t jump_amt;
+    scalar_t jump_start_time;
+    bool_t barrel_roll_left;
+    bool_t barrel_roll_right;
+    scalar_t barrel_roll_factor;
+    bool_t front_flip;
+    bool_t back_flip;
+    scalar_t flip_factor;
 } control_t;
 
 /* Player data */
 typedef struct {
+    char *name;                         /* name of player */
+    int lives;                          /* number of lives left */
     point_t pos;                        /* current position */
     vector_t vel;                       /* current velocity */
     quaternion_t orientation;           /* current orientation */
@@ -137,10 +246,13 @@ typedef struct {
     vector_t direction;                 /* vector sticking out of feet */
     vector_t net_force;                 /* net force on player */
     vector_t normal_force;              /* terrain force on player */
+    bool_t airborne;                    /* is plyr in the air? */
     bool_t collision;                   /* has plyr collided with obstacle? */
     control_t control;                  /* player control data */
     view_t view;                        /* player's view point */
     scalar_t health;                    /* player's health */
+    int herring;                        /* number of fish collected */
+    int score;                          /* players' score */
 } player_data_t;
 
 /* All global data is stored in a variable of this type */
@@ -150,10 +262,21 @@ typedef struct {
     scalar_t time;                      /* game time */
     scalar_t time_step;                 /* size of current time step 
 					   (i.e., time between frames) */
-    course_data_t course;               /* course data */
     int num_players;                    /* number of players */
     player_data_t player[MAX_PLAYERS];  /* player data */
     Tcl_Interp *tcl_interp;             /* instance of tcl interpreter */
+
+    difficulty_level_t difficulty;      /* game difficulty */
+    char *current_event;                /* name of current event */
+    char *current_cup;                  /* name of current cup */
+    int current_race;                   /* number of race in current cup */
+    course_data_t course;               /* info about current course */
+    race_data_t race;                   /* info about current race */
+    int cup_races_won;                  /* how many races have been won in 
+					   current cup? */
+    bool_t practicing; 			/* are we in practice mode? */
+    bool_t race_aborted;                /* was the race quit prematurely? */
+    scalar_t secs_since_start;          /* seconds since game was started */
 } game_data_t;
 
 extern game_data_t g_game;

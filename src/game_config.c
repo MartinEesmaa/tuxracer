@@ -17,15 +17,77 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <pwd.h>
+/* This file is complex.  However, the ultimate purpose is to make
+   adding new configuration parameters easy.  Here's what you need to
+   do to add a new parameter:
+
+   1. Choose a name and type for the parameter.  By convention,
+   parameters have lower case names and words_are_separated_like_this.
+   Possible types are bool, int, char, and string.  (Nothing is ruling
+   out floating point types; I just haven't needed them.)  As an
+   example in the subsequent steps, suppose we wish to add a parameter
+   foo_bar of type string.
+
+   2. Add a field for the parameter to the 'params' struct defined
+   below.  In our example, we would add the line
+       struct param foo_bar;
+   to the definition of struct params.
+
+   Note that the order of the entries in this struct determines the
+   order that the parameters will appear in the configuration file.
+
+   3. Initialize and assign a default value to the parameter in the
+   init_game_configuration() function.  The INIT_PARAM_<TYPE> macros
+   will do this for you.  In our example, we would add the line
+       INIT_PARAM_STRING( foo_bar, "baz" )
+   to assign a default value of "baz" to the parameter foo_bar.
+
+   4. Create the getparam/setparam functions for the parameter.  This
+   is done using the FN_PARAM_<TYPE> macros.  In our example, we would
+   add the line 
+       FN_PARAM_STRING( foo_bar )
+   somewhere in the top-level scope of this file (to keep things neat
+   group it with the other definitions).  The will create
+   getparam_foo_bar() and setparam_foo_bar() functions that can be
+   used to query the value of the parameter.
+
+   5. Create the prototypes for the getparam/setparam functions.  This
+   is done in game_config.h using the PROTO_PARAM_<TYPE> macros.  In
+   our example, we would add the line
+       PROTO_PARAM_STRING( foo_bar );
+   to game_config.h.
+
+   6. You're done!  */
+
+#if !defined( WIN32 )
+#   include <pwd.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "tuxracer.h"
+#include <dirent.h>
 
-#define CONFIG_FILE ".tuxracer"
+#if defined( WIN32 )
+#  define OLD_CONFIG_FILE "tuxracer.cfg"
+#else
+#  define OLD_CONFIG_FILE ".tuxracer"
+#endif /* defined( WIN32 ) */
+
+#if defined( WIN32 )
+#  define CONFIG_DIR "config"
+#  define CONFIG_FILE "options.txt"
+#else
+#  define CONFIG_DIR ".tuxracer"
+#  define CONFIG_FILE "options"
+#endif /* defined( WIN32 ) */
 
 #ifndef DATA_DIR
-#  define DATA_DIR "/usr/local/share/tuxracer"
+#  if defined( WIN32 )
+#    define DATA_DIR "."
+#  else
+#    define DATA_DIR "/usr/local/share/tuxracer"
+#  endif /* defined( WIN32 ) */
 #endif
 
 /* Identifies the parameter type */
@@ -51,31 +113,33 @@ struct param {
     param_type type;
     param_val val;
     param_val deflt;
+    char *comment;
 };
 
 /*
  * These macros are used to initialize parameter values
  */
 
-#define INIT_PARAM( nam, val, typename ) \
+#define INIT_PARAM( nam, val, typename, commnt ) \
    Params. ## nam ## .loaded = False; \
    Params. ## nam ## .name = #nam; \
-   Params. ## nam ## .deflt. ## typename ## _val  = val;
+   Params. ## nam ## .deflt. ## typename ## _val  = val; \
+   Params. ## nam ## .comment = commnt;
 
-#define INIT_PARAM_STRING( nam, val ) \
-   INIT_PARAM( nam, val, string ); \
+#define INIT_PARAM_STRING( nam, val, commnt ) \
+   INIT_PARAM( nam, val, string, commnt ); \
    Params. ## nam ## .type = PARAM_STRING;
 
-#define INIT_PARAM_CHAR( nam, val ) \
-   INIT_PARAM( nam, val, char ); \
+#define INIT_PARAM_CHAR( nam, val, commnt ) \
+   INIT_PARAM( nam, val, char, commnt ); \
    Params. ## nam ## .type = PARAM_CHAR;
 
-#define INIT_PARAM_INT( nam, val ) \
-   INIT_PARAM( nam, val, int ); \
+#define INIT_PARAM_INT( nam, val, commnt ) \
+   INIT_PARAM( nam, val, int, commnt ); \
    Params. ## nam ## .type = PARAM_INT;
 
-#define INIT_PARAM_BOOL( nam, val ) \
-   INIT_PARAM( nam, val, bool ); \
+#define INIT_PARAM_BOOL( nam, val, commnt ) \
+   INIT_PARAM( nam, val, bool, commnt ); \
    Params. ## nam ## .type = PARAM_BOOL;
 
 
@@ -282,34 +346,59 @@ struct params {
     struct param fullscreen;
     struct param x_resolution;
     struct param y_resolution;
+    struct param capture_mouse; 
     struct param force_window_position;
-    struct param warp_pointer;
-    struct param control_mode; /* 0 = keyboard, 
-				  1 = mouse,
-				  2 = joystick
-			       */
     struct param quit_key;
     struct param turn_left_key;
     struct param turn_right_key;
+    struct param trick_modifier_key;
     struct param brake_key;
     struct param paddle_key;
-    struct param above_view_key;
+    struct param jump_key;
+    struct param reset_key;
+    struct param follow_view_key;
     struct param behind_view_key;
-    struct param eye_view_key;
+    struct param above_view_key;
+    struct param view_mode; /* coresponds to view_mode_t */
     struct param screenshot_key;
     struct param pause_key;
+
+    struct param joystick_paddle_button;
+    struct param joystick_brake_button;
+    struct param joystick_jump_button;
+    struct param joystick_trick_button;
+    struct param joystick_continue_button;
+
+    struct param no_audio;
+    struct param sound_enabled;
+    struct param music_enabled;
+    struct param sound_volume; /* 0-128 */
+    struct param music_volume; /* 0-128 */
+    struct param audio_freq_mode; /* 0 = 11025, 
+				     1 = 22050, 
+				     2 = 44100 */
+    struct param audio_format_mode; /* 0 = 8 bits, 
+				       1 = 16 bits */
+    struct param audio_stereo; 
+    struct param audio_buffer_size; 
+
     struct param display_fps;
-    struct param tux_slides_on_belly;
     struct param course_detail_level;
     struct param forward_clip_distance;
     struct param backward_clip_distance;
     struct param tree_detail_distance;
+    struct param terrain_blending;
+    struct param perfect_terrain_blending;
+    struct param terrain_envmap;
     struct param draw_tux_shadow;
     struct param tux_sphere_divisions;
     struct param tux_shadow_sphere_divisions;
     struct param draw_particles;
-    struct param draw_particle_shadows;
+    struct param track_marks;
+    struct param ui_snow;
     struct param nice_fog;
+    struct param use_cva;
+    struct param cva_hack;
     struct param use_sphere_display_list;
     struct param do_intro_animation;
     struct param mipmap_type; /* 0 = GL_NEAREST,
@@ -337,42 +426,276 @@ static struct params Params;
 
 void init_game_configuration()
 {
-    INIT_PARAM_STRING( data_dir, DATA_DIR );
-    INIT_PARAM_BOOL( draw_tux_shadow, False );
-    INIT_PARAM_BOOL( draw_particles, True );
-    INIT_PARAM_BOOL( draw_particle_shadows, False );
-    INIT_PARAM_INT( tux_sphere_divisions, 6 );
-    INIT_PARAM_INT( tux_shadow_sphere_divisions, 3 );
-    INIT_PARAM_BOOL( nice_fog, True );
-    INIT_PARAM_BOOL( use_sphere_display_list, True );
-    INIT_PARAM_BOOL( display_fps, False );
-    INIT_PARAM_INT( x_resolution, 640 );
-    INIT_PARAM_INT( y_resolution, 480 );
-    INIT_PARAM_BOOL( do_intro_animation, True );
-    INIT_PARAM_INT( mipmap_type, 3 );
-    INIT_PARAM_BOOL( fullscreen, False );
-    INIT_PARAM_BOOL( force_window_position, True );
-    INIT_PARAM_BOOL( warp_pointer, True );
-    INIT_PARAM_INT( ode_solver, 1 );
-    INIT_PARAM_INT( control_mode, 0 );
-    INIT_PARAM_STRING( quit_key, "q escape" );
-    INIT_PARAM_STRING( turn_left_key, "j" );
-    INIT_PARAM_STRING( turn_right_key, "l" );
-    INIT_PARAM_STRING( brake_key, "space" );
-    INIT_PARAM_STRING( paddle_key, "k" );
-    INIT_PARAM_STRING( above_view_key, "1" );
-    INIT_PARAM_STRING( behind_view_key, "2" );
-    INIT_PARAM_STRING( eye_view_key, "3" );
-    INIT_PARAM_STRING( screenshot_key, "=" );
-    INIT_PARAM_STRING( pause_key, "p" );
-    INIT_PARAM_INT( fov, 60 );
-    INIT_PARAM_STRING( debug, "" );
-    INIT_PARAM_INT( warning_level, 100 );
-    INIT_PARAM_INT( forward_clip_distance, 100 );
-    INIT_PARAM_INT( backward_clip_distance, 10 );
-    INIT_PARAM_INT( tree_detail_distance, 20 );
-    INIT_PARAM_INT( course_detail_level, 125 );
-    INIT_PARAM_BOOL( tux_slides_on_belly, True );
+    INIT_PARAM_STRING( 
+	data_dir, DATA_DIR, 
+	"# The location of the Tux Racer data files" );
+
+    INIT_PARAM_BOOL( 
+	draw_tux_shadow, False, 
+	"# Set this to true to display Tux's shadow.  Note that this is a \n"
+	"# hack and is quite expensive in terms of framerate.\n"
+	"# [EXPERT] This looks better if your card has a stencil buffer; \n"
+	"# if compiling use the --enable-stencil-buffer configure option \n"
+	"# to enable the use of the stencil buffer" );
+
+    INIT_PARAM_BOOL( 
+	draw_particles, True,
+	"# Controls the drawing of snow particles that are kicked up as Tux\n"
+	"# turns and brakes.  Setting this to false should help improve \n"
+	"# performance." );
+
+    INIT_PARAM_INT( 
+	tux_sphere_divisions, 6,
+	"# [EXPERT] Higher values result in a more finely subdivided mesh \n"
+	"# for Tux, and vice versa.  If you're experiencing low framerates,\n"
+	"# try lowering this value." );
+
+    INIT_PARAM_INT( 
+	tux_shadow_sphere_divisions, 3,
+	"# [EXPERT] The level of subdivision of Tux's shadow." );
+
+    INIT_PARAM_BOOL( 
+	nice_fog, True,
+	"# [EXPERT] If true, then the GL_NICEST hint will be used when\n"
+	"# rendering fog.  On some cards, setting this to false may improve\n"
+	"# performance.");
+
+    INIT_PARAM_BOOL( 
+	use_sphere_display_list, True,
+	"# [EXPERT]  Mesa 3.1 sometimes renders Tux strangely when display \n"
+	"# lists are used.  Setting this to false should solve the problem \n"
+	"# at the cost of a few Hz." );
+
+    INIT_PARAM_BOOL( 
+	display_fps, False,
+	"# Set this to true to display the current framerate in Hz." );
+
+    INIT_PARAM_INT( 
+	x_resolution, 640,
+	"# The horizontal size of the Tux Racer window" );
+
+    INIT_PARAM_INT( 
+	y_resolution, 480,
+	"# The vertical size of the Tux Racer window" );
+
+    INIT_PARAM_BOOL( 
+	capture_mouse, False,
+	"# If true, then the mouse will not be able to leave the \n"
+	"# Tux Racer window.\n"
+	"# Set this to true if you are rendering in fullscreen mode." );
+
+    INIT_PARAM_BOOL( 
+	do_intro_animation, True,
+	"# If false, then the introductory animation sequence will be skipped." 
+	);
+
+    INIT_PARAM_INT( 
+	mipmap_type, 3,
+	"# [EXPERT] Allows you to control which type of texture\n"
+	"# interpolation/mipmapping is used when rendering textures.  The\n"
+	"# values correspond to the following OpenGL settings:\n"
+	"#\n"
+        "#  0: GL_NEAREST\n"
+        "#  1: GL_LINEAR\n"
+        "#  2: GL_NEAREST_MIPMAP_NEAREST\n"
+	"#  3: GL_LINEAR_MIPMAP_NEAREST\n"
+        "#  4: GL_NEAREST_MIPMAP_LINEAR\n"
+        "#  5: GL_LINEAR_MIPMAP_LINEAR\n"
+	"#\n"
+	"# On some cards, you may be able to improve performance by\n"
+        "# decreasing this number, at the cost of lower image quality." );
+
+    INIT_PARAM_BOOL( 
+	fullscreen, False,
+	"# Set this to true to force the window to be the same \n"
+	"# size as your screen.\n"
+        "# Linux Voodoo1/Voodoo2 users: This is NOT what you want to use to\n"
+	"# activate fullscreen rendering on your card." );
+
+    INIT_PARAM_BOOL( 
+	force_window_position, False ,
+	"# If true, then the Tux Racer window will automatically be\n"
+	"# placed at (0,0)" );
+
+    INIT_PARAM_INT( 
+	ode_solver, 1 ,
+	"# Selects the ODE (ordinary differential equation) solver.  \n"
+	"# Possible values are:\n"
+	"#\n"
+	"#   0: Modified Euler     (fastest but least accurate)\n"
+        "#   1: Runge-Kutta (2,3)\n"
+	"#   2: Runge-Kutta (4,5)  (slowest but most accurate)" );
+
+    INIT_PARAM_STRING( 
+	quit_key, "q escape" ,
+	"# Key binding for quitting a race" );
+    INIT_PARAM_STRING( 
+	turn_left_key, "j left" ,
+	"# Key binding for turning left" );
+    INIT_PARAM_STRING( 
+	turn_right_key, "l right" ,
+	"# Key binding for turning right" );
+    INIT_PARAM_STRING( 
+	trick_modifier_key, "d" ,
+	"# Key binding for doing tricks" );
+    INIT_PARAM_STRING( 
+	brake_key, "k space down" ,
+	"# Key binding for braking" );
+    INIT_PARAM_STRING( 
+	paddle_key, "i up" ,
+	"# Key binding for paddling (on the ground) and flapping (in the air)" 
+	);
+    INIT_PARAM_STRING( 
+	follow_view_key, "1" ,
+	"# Key binding for the \"Follow\" camera mode" );
+    INIT_PARAM_STRING( 
+	behind_view_key, "2" ,
+	"# Key binding for the \"Behind\" camera mode" );
+    INIT_PARAM_STRING( 
+	above_view_key, "3" ,
+	"# Key binding for the \"Above\" camera mode" );
+    INIT_PARAM_INT( 
+	view_mode, 1 ,
+	"# Default view mode. Possible values are\n" 
+	"#\n"
+	"#   0: Behind\n"
+	"#   1: Follow\n"
+	"#   2: Above" );
+    INIT_PARAM_STRING( 
+	screenshot_key, "=" ,
+	"# Key binding for taking a screenshot" );
+    INIT_PARAM_STRING( 
+	pause_key, "p" ,
+	"# Key binding for pausing the game" );
+    INIT_PARAM_STRING( 
+	reset_key, "backspace" ,
+	"# Key binding for resetting the player position" );
+    INIT_PARAM_STRING( 
+	jump_key, "e" ,
+	"# Key binding for jumping" );
+    
+    INIT_PARAM_INT( 
+	joystick_paddle_button, 0 ,
+	"# Joystick button for paddling (numbering starts at 0).\n" 
+	"# Set to -1 to disable." );
+
+    INIT_PARAM_INT( 
+	joystick_brake_button, 2 ,
+	"# Joystick button for braking (numbering starts at 0).\n" 
+	"# Set to -1 to disable." );
+
+    INIT_PARAM_INT( 
+	joystick_jump_button, 3 ,
+	"# Joystick button for jumping (numbering starts at 0)" );
+
+    INIT_PARAM_INT( 
+	joystick_trick_button, 1 ,
+	"# Joystick button for doing tricks (numbering starts at 0)" );
+
+    INIT_PARAM_INT( 
+	joystick_continue_button, 0 ,
+	"# Joystick button for moving past intro, paused, and \n"
+	"# game over screens (numbering starts at 0)" );
+
+    INIT_PARAM_INT( 
+	fov, 60 ,
+	"# [EXPERT] Sets the camera field-of-view" );
+    INIT_PARAM_STRING( 
+	debug, "" ,
+	"# [EXPERT] Controls the Tux Racer debugging modes" );
+    INIT_PARAM_INT( 
+	warning_level, 100 ,
+	"# [EXPERT] Controls the Tux Racer warning messages" );
+    INIT_PARAM_INT( 
+	forward_clip_distance, 75 ,
+	"# Controls how far ahead of the camera the course\n"
+	"# is rendered.  Larger values mean that more of the course is\n"
+	"# rendered, resulting in slower performance. Decreasing this \n"
+	"# value is an effective way to improve framerates." );
+    INIT_PARAM_INT( 
+	backward_clip_distance, 10 ,
+	"# [EXPERT] Some objects aren't yet clipped to the view frustum, \n"
+	"# so this value is used to control how far up the course these \n"
+	"# objects are drawn." );
+    INIT_PARAM_INT( 
+	tree_detail_distance, 20 ,
+	"# [EXPERT] Controls the distance at which trees are drawn with \n"
+	"# two rectangles instead of one." );
+    INIT_PARAM_BOOL( 
+	terrain_blending, True ,
+	"# Controls the blending of the terrain textures.  Setting this\n"
+	"# to false will help improve performance." );
+    INIT_PARAM_BOOL( 
+	perfect_terrain_blending, False ,
+	"# [EXPERT] If true, then terrain triangles with three different\n"
+	"# terrain types at the vertices will be blended correctly\n"
+	"# (instead of using a faster but imperfect approximation)." );
+    INIT_PARAM_BOOL( 
+	terrain_envmap, True ,
+	"# If true, then the ice will be drawn with an \"environment map\",\n"
+	"# which gives the ice a shiny appearance.  Setting this to false\n"
+	"# will help improve performance." );
+    INIT_PARAM_BOOL( 
+	use_cva, True ,
+	"# [EXPERT] If true, then compiled vertex arrays will be used when\n"
+	"# drawing the terrain.  Whether or not this helps performance\n"
+	"# is driver- and card-dependent." );
+    INIT_PARAM_BOOL( 
+	cva_hack, True ,
+	"# Some card/driver combinations render the terrrain incorrectly\n"
+	"# when using compiled vertex arrays.  This activates a hack \n"
+	"# to work around that problem." );
+    INIT_PARAM_INT( 
+	course_detail_level, 75 ,
+	"# [EXPERT] This controls how accurately the course terrain is \n"
+	"# rendered. A high value results in greater accuracy at the cost of \n"
+	"# performance, and vice versa.  This value can be decreased and \n"
+	"# increased in 10% increments at runtime using the F9 and F10 keys.\n"
+	"# To better see the effect, activate wireframe mode using the F11 \n"
+	"# key (this is a toggle)." );
+    INIT_PARAM_BOOL( 
+	no_audio, False ,
+	"# If True, then audio in the game is completely disabled." );
+    INIT_PARAM_BOOL( 
+	sound_enabled, True ,
+	"# Use this to turn sound effects on and off." );
+    INIT_PARAM_BOOL( 
+	music_enabled, True ,
+	"# Use this to turn music on and off." );
+    INIT_PARAM_INT( 
+	sound_volume, 127 ,
+	"# This controls the sound volume (valid range is 0-127)." );
+    INIT_PARAM_INT( 
+	music_volume, 64 ,
+	"# This controls the music volume (valid range is 0-127)." );
+    INIT_PARAM_INT( 
+	audio_freq_mode, 1 ,
+	"# The controls the frequency of the audio.  Valid values are:\n"
+	"# \n"
+	"#   0: 11025 Hz\n"
+	"#   1: 22050 Hz\n"
+	"#   2: 44100 Hz" );
+    INIT_PARAM_INT( 
+	audio_format_mode, 1 ,
+	"# This controls the number of bits per sample for the audio.\n"
+	"# Valid values are:\n"
+	"#\n"
+	"#   0: 8 bits\n"
+	"#   1: 16 bits" );
+    INIT_PARAM_BOOL( 
+	audio_stereo, True ,
+	"# Audio will be played in stereo of true, and mono if false" );
+    INIT_PARAM_INT( 
+	audio_buffer_size, 2048 ,
+	"# [EXPERT] Controls the size of the audio buffer.  \n"
+	"# Increase the buffer size if you experience choppy audio\n" 
+	"# (at the cost of greater audio latency)" );
+    INIT_PARAM_BOOL( 
+	track_marks, True ,
+	"# If true, then the players will leave track marks in the snow." );
+    INIT_PARAM_BOOL( 
+	ui_snow, True ,
+	"# If true, then the ui screens will have falling snow." );
 }
 
 
@@ -383,7 +706,6 @@ void init_game_configuration()
 FN_PARAM_STRING( data_dir )
 FN_PARAM_BOOL( draw_tux_shadow )
 FN_PARAM_BOOL( draw_particles )
-FN_PARAM_BOOL( draw_particle_shadows )
 FN_PARAM_INT( tux_sphere_divisions )
 FN_PARAM_INT( tux_shadow_sphere_divisions )
 FN_PARAM_BOOL( nice_fog )
@@ -391,22 +713,31 @@ FN_PARAM_BOOL( use_sphere_display_list )
 FN_PARAM_BOOL( display_fps )
 FN_PARAM_INT( x_resolution )
 FN_PARAM_INT( y_resolution )
+FN_PARAM_BOOL( capture_mouse )
 FN_PARAM_BOOL( do_intro_animation )
 FN_PARAM_INT( mipmap_type )
 FN_PARAM_BOOL( fullscreen )
 FN_PARAM_BOOL( force_window_position )
-FN_PARAM_BOOL( warp_pointer )
 FN_PARAM_INT( ode_solver )
 FN_PARAM_STRING( quit_key )
 FN_PARAM_STRING( turn_left_key )
 FN_PARAM_STRING( turn_right_key )
+FN_PARAM_STRING( trick_modifier_key )
 FN_PARAM_STRING( brake_key )
 FN_PARAM_STRING( paddle_key )
 FN_PARAM_STRING( above_view_key )
 FN_PARAM_STRING( behind_view_key )
-FN_PARAM_STRING( eye_view_key )
+FN_PARAM_STRING( follow_view_key )
+FN_PARAM_INT( view_mode )
 FN_PARAM_STRING( screenshot_key )
 FN_PARAM_STRING( pause_key )
+FN_PARAM_STRING( reset_key )
+FN_PARAM_STRING( jump_key )
+FN_PARAM_INT( joystick_jump_button )
+FN_PARAM_INT( joystick_brake_button )
+FN_PARAM_INT( joystick_paddle_button )
+FN_PARAM_INT( joystick_trick_button )
+FN_PARAM_INT( joystick_continue_button )
 FN_PARAM_INT( fov )
 FN_PARAM_STRING( debug )
 FN_PARAM_INT( warning_level )
@@ -414,15 +745,39 @@ FN_PARAM_INT( forward_clip_distance )
 FN_PARAM_INT( backward_clip_distance )
 FN_PARAM_INT( tree_detail_distance )
 FN_PARAM_INT( course_detail_level )
-FN_PARAM_BOOL( tux_slides_on_belly )
+FN_PARAM_BOOL( terrain_blending )
+FN_PARAM_BOOL( perfect_terrain_blending )
+FN_PARAM_BOOL( terrain_envmap )
+FN_PARAM_BOOL( use_cva )
+FN_PARAM_BOOL( cva_hack )
+FN_PARAM_BOOL( track_marks )
+FN_PARAM_BOOL( ui_snow )
+
+FN_PARAM_BOOL( no_audio )
+FN_PARAM_BOOL( sound_enabled )
+FN_PARAM_BOOL( music_enabled )
+FN_PARAM_INT( sound_volume )
+FN_PARAM_INT( music_volume )
+FN_PARAM_INT( audio_freq_mode )
+FN_PARAM_INT( audio_format_mode )
+FN_PARAM_BOOL( audio_stereo )
+FN_PARAM_INT( audio_buffer_size )
+    
 
 
 /*
  * Functions to read and write the configuration file
  */
 
-int get_config_file_name( char *buff, int len )
+int get_old_config_file_name( char *buff, int len )
 {
+#if defined( WIN32 ) 
+    if ( strlen( OLD_CONFIG_FILE ) +1 > len ) {
+	return 1;
+    }
+    strcpy( buff, OLD_CONFIG_FILE );
+    return 0;
+#else
     struct passwd *pwent;
 
     pwent = getpwuid( getuid() );
@@ -431,11 +786,57 @@ int get_config_file_name( char *buff, int len )
 	return 1;
     }
 
-    if ( strlen( pwent->pw_dir ) + strlen( CONFIG_FILE ) + 2 > len ) {
+    if ( strlen( pwent->pw_dir ) + strlen( OLD_CONFIG_FILE ) + 2 > len ) {
 	return 1;
     }
 
-    sprintf( buff, "%s/%s", pwent->pw_dir, CONFIG_FILE );
+    sprintf( buff, "%s/%s", pwent->pw_dir, OLD_CONFIG_FILE );
+    return 0;
+#endif /* defined( WIN32 ) */
+}
+
+int get_config_dir_name( char *buff, int len )
+{
+#if defined( WIN32 ) 
+    if ( strlen( CONFIG_DIR ) +1 > len ) {
+	return 1;
+    }
+    strcpy( buff, CONFIG_DIR );
+    return 0;
+#else
+    struct passwd *pwent;
+
+    pwent = getpwuid( getuid() );
+    if ( pwent == NULL ) {
+	perror( "getpwuid" );
+	return 1;
+    }
+
+    if ( strlen( pwent->pw_dir ) + strlen( CONFIG_DIR) + 2 > len ) {
+	return 1;
+    }
+
+    sprintf( buff, "%s/%s", pwent->pw_dir, CONFIG_DIR );
+    return 0;
+#endif /* defined( WIN32 ) */
+}
+
+int get_config_file_name( char *buff, int len )
+{
+    if (get_config_dir_name( buff, len ) != 0) {
+	return 1;
+    }
+    if ( strlen( buff ) + strlen( CONFIG_FILE ) +2 > len ) {
+	return 1;
+    }
+
+#if defined( WIN32 ) 
+    strcat( buff, "\\" );
+#else
+    strcat( buff, "/" );
+#endif /* defined( WIN32 ) */
+
+    strcat( buff, CONFIG_FILE);
     return 0;
 }
 
@@ -453,23 +854,44 @@ void clear_config_cache()
 void read_config_file()
 {
     char config_file[BUFF_LEN];
-    struct stat config_stat;
+    char config_dir[BUFF_LEN];
 
     clear_config_cache();
 
-    if ( get_config_file_name( config_file, sizeof( config_file ) ) != 0 )
+    if ( get_config_file_name( config_file, sizeof( config_file ) ) != 0 ) {
 	return;
-
-    if ( stat( config_file, &config_stat ) != 0 ) {
-	if ( errno != ENOENT ) 
-	    perror( "stat" );
+    }
+    if ( get_config_dir_name( config_dir, sizeof( config_dir ) ) != 0 ) {
 	return;
     }
 
-    /* File is there, so let's try to evaluate it. */
+
+    if ( opendir( config_dir ) != NULL ) {
+	if ( file_exists( config_file ) ) {
+	    /* File exists -- let's try to evaluate it. */
+	    if ( Tcl_EvalFile( g_game.tcl_interp, config_file ) != TCL_OK ) {
+		handle_error( 1, "error evalating %s: %s", config_file,
+			      Tcl_GetStringResult( g_game.tcl_interp ) );
+	    }
+	}
+	return;
+    }
+
+    /* File does not exist -- look for old version */
+    if ( get_old_config_file_name( config_file, sizeof( config_file ) ) != 0 ) {
+	return;
+    }
+    if ( !file_exists( config_file ) ) {
+	return;
+    }
+    /* Old file exists -- let's try to evaluate it. */
     if ( Tcl_EvalFile( g_game.tcl_interp, config_file ) != TCL_OK ) {
-        handle_error( 1, "error evalating %s: %s", config_file,
+	handle_error( 1, "error evalating deprecated %s: %s", config_file,
 		      Tcl_GetStringResult( g_game.tcl_interp ) );
+    } else {
+	/* Remove old file and save info in new file location */
+	remove(config_file);
+	write_config_file();
     }
 }
 
@@ -477,11 +899,29 @@ void write_config_file()
 {
     FILE *config_stream;
     char config_file[BUFF_LEN];
+    char config_dir[BUFF_LEN];
     struct param *parm;
     int i;
 
     if ( get_config_file_name( config_file, sizeof( config_file ) ) != 0 ) {
 	return;
+    }
+    if ( get_config_dir_name( config_dir, sizeof( config_dir ) ) != 0 ) {
+	return;
+    }
+
+    if ( opendir( config_dir ) == NULL) {
+
+#if defined(WIN32) && !defined(__CYGWIN__)
+	if (mkdir( config_dir ) != 0) {
+	    return;
+	}
+#else
+	if (mkdir( config_dir, 0775) != 0) {
+	    return;
+	}
+#endif
+
     }
 
     config_stream = fopen( config_file, "w" );
@@ -496,14 +936,14 @@ void write_config_file()
     fprintf( config_stream, 
 	     "# Tux Racer " VERSION " configuration file\n"
 	     "#\n"
-	     "# See the README file distributed with the program for\n"
-	     "# descriptions of these parameters.\n"
-	     "# Note: this file is parsed using Tcl, so Tcl syntax applies.\n"
-	     "#\n"
 	);
 
     for (i=0; i<sizeof(Params)/sizeof(struct param); i++) {
 	parm = (struct param*)&Params + i;
+	if ( parm->comment != NULL ) {
+	    fprintf( config_stream, "\n# %s\n#\n%s\n#\n", 
+		     parm->name, parm->comment );
+	}
 	switch ( parm->type ) {
 	case PARAM_STRING:
 	    fetch_param_string( parm );

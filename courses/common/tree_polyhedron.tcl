@@ -5,7 +5,7 @@
 #     where each polygon in the polygon list is a list of indices into
 #     the vertex list.
 #
-tux_tree_poly {              
+set tree_poly {{              
     { 0 0 0 }
     { 0.0 0.15  0.5 }
     { 0.5 0.15  0.0 }
@@ -21,5 +21,5 @@ tux_tree_poly {
     { 2 5 1 }
     { 3 5 2 }
     { 4 5 3 }
-} 
+}}
 

@@ -30,7 +30,8 @@ view_mode_t get_view_mode( player_data_t *plyr );
 void traverse_dag_for_view_point( scene_node_t *node, matrixgl_t trans );
 point_t get_tux_view_pt();
 void set_tux_eye( tux_eye_t which_eye, point_t pt );
-void update_view( player_data_t *plyr );
+void update_view( player_data_t *plyr, scalar_t dt );
+void setup_view_matrix( player_data_t *plyr );
 
 #endif /* _VIEWMODE_H_ */
 

@@ -29,7 +29,6 @@ extern "C"
 
 void     new_frame_for_fps_calc();
 scalar_t get_fps();
-void print_fps();
 
 #endif
 

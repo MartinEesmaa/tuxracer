@@ -27,7 +27,7 @@ extern "C"
 
 void adjust_tux_joints( scalar_t turnFact, bool_t isBraking, 
 			scalar_t paddling_factor, scalar_t speed,
-			vector_t net_force );
+			vector_t net_force, scalar_t jump_factor );
 void  load_tux();
 void  draw_tux();
 char* get_tux_root_node();

@@ -32,6 +32,7 @@ void read_config_file();
 void write_config_file();
 void clear_config_cache();
 void register_game_config_callbacks( Tcl_Interp *ip );
+int get_config_dir_name( char *buff, int len );
 
 #define PROTO_PARAM( name, type ) \
     type getparam_ ## name(); \
@@ -56,8 +57,6 @@ PROTO_PARAM_BOOL( draw_tux_shadow );
 
 PROTO_PARAM_BOOL( draw_particles );
 
-PROTO_PARAM_BOOL( draw_particle_shadows );
-
 PROTO_PARAM_INT( tux_sphere_divisions );
 
 PROTO_PARAM_INT( tux_shadow_sphere_divisions );
@@ -72,6 +71,8 @@ PROTO_PARAM_INT( x_resolution );
 
 PROTO_PARAM_INT( y_resolution );
 
+PROTO_PARAM_BOOL( capture_mouse );
+
 PROTO_PARAM_BOOL( do_intro_animation );
 
 PROTO_PARAM_INT( mipmap_type );
@@ -80,17 +81,15 @@ PROTO_PARAM_BOOL( fullscreen );
 
 PROTO_PARAM_BOOL( force_window_position );
 
-PROTO_PARAM_BOOL( warp_pointer );
-
 PROTO_PARAM_INT( ode_solver );
-
-PROTO_PARAM_INT( control_mode );
 
 PROTO_PARAM_STRING( quit_key );
 
 PROTO_PARAM_STRING( turn_left_key );
 
 PROTO_PARAM_STRING( turn_right_key );
+
+PROTO_PARAM_STRING( trick_modifier_key );
 
 PROTO_PARAM_STRING( brake_key );
 
@@ -102,9 +101,27 @@ PROTO_PARAM_STRING( behind_view_key );
 
 PROTO_PARAM_STRING( eye_view_key );
 
+PROTO_PARAM_STRING( follow_view_key );
+
+PROTO_PARAM_INT( view_mode );
+
 PROTO_PARAM_STRING( screenshot_key );
 
 PROTO_PARAM_STRING( pause_key );
+    
+PROTO_PARAM_STRING( reset_key );
+
+PROTO_PARAM_STRING( jump_key );
+
+PROTO_PARAM_INT( joystick_jump_button );
+
+PROTO_PARAM_INT( joystick_brake_button );
+
+PROTO_PARAM_INT( joystick_paddle_button );
+
+PROTO_PARAM_INT( joystick_trick_button );
+
+PROTO_PARAM_INT( joystick_continue_button );
 
 PROTO_PARAM_INT( fov );
 
@@ -120,7 +137,37 @@ PROTO_PARAM_INT( tree_detail_distance );
 
 PROTO_PARAM_INT( course_detail_level );
 
-PROTO_PARAM_BOOL( tux_slides_on_belly );
+PROTO_PARAM_BOOL( terrain_blending );
+
+PROTO_PARAM_BOOL( perfect_terrain_blending );
+
+PROTO_PARAM_BOOL( terrain_envmap );
+
+PROTO_PARAM_BOOL( use_cva );
+
+PROTO_PARAM_BOOL( cva_hack );
+
+PROTO_PARAM_BOOL( no_audio );
+
+PROTO_PARAM_BOOL( sound_enabled );
+
+PROTO_PARAM_BOOL( music_enabled );
+
+PROTO_PARAM_INT( sound_volume );
+
+PROTO_PARAM_INT( music_volume );
+
+PROTO_PARAM_INT( audio_freq_mode );
+
+PROTO_PARAM_INT( audio_format_mode );
+
+PROTO_PARAM_BOOL( audio_stereo );
+
+PROTO_PARAM_INT( audio_buffer_size );
+
+PROTO_PARAM_BOOL( track_marks );
+
+PROTO_PARAM_BOOL( ui_snow );
 
 #endif 
 

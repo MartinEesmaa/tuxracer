@@ -32,9 +32,13 @@
 #include "fog.h"
 #include "part_sys.h"
 #include "multiplayer.h"
-
+#include "audio_data.h"
+#include "track_marks.h"
 
 #define MAX_TREES 8192
+#define MAX_TREE_TYPES 32
+#define MAX_ITEMS 8192
+#define MAX_ITEM_TYPES 128
 
 #define MIN_ANGLE 5
 #define MAX_ANGLE 80
@@ -45,51 +49,116 @@
 #define TREE_IMG_THRESHOLD 128
 #define NUM_TERRAIN_TYPES 3
 
-static bool_t        courseLoaded = False;
+#define DEP_TREE_RED 255
+#define DEP_TREE_GREEN 0
+#define DEP_TREE_BLUE 0
 
-static int           courseNumber;
+static bool_t        course_loaded = False;
+
+/* This array stores the heightmap.  It is stored as follows: suppose
+   your at the top of a course, looking down.  The elevation data
+   starts at the very top-left of the course, and proceeds from left
+   to right.  So the very top strip of the course is stored first,
+   followed by the next strip in left-to-right order, and so on until
+   the botton strip. */
 static scalar_t     *elevation;
-static scalar_t      elevScale;
-static scalar_t      courseWidth, courseLength;
-static scalar_t      courseAngle;
+static scalar_t      elev_scale;
+static scalar_t      course_width, course_length;
+static scalar_t      play_width, play_length;
+static scalar_t      course_angle;
 static int           nx, ny;
-static tree_t        treeLocs[MAX_TREES];
-static int           numtrees;
-static scalar_t      treeDiam;
-static scalar_t      treeHeight;
-static polyhedron_t  treePolyhedron;
+static tree_t        tree_locs[MAX_TREES];
+static int           num_trees;
 static terrain_t    *terrain;
-static point2d_t     startPt;
+static point2d_t     start_pt;
 static char         *course_author = NULL;
 static char         *course_name = NULL;
 static int           base_height_value;
+static tree_type_t   tree_types[MAX_TREE_TYPES];
+static int           num_tree_types = 0;
+static int           tree_dep_call = -1;
 
-/* Interleaved vertex and normal data */
-static GLfloat      *vertex_normal_array = NULL;
+static item_t        item_locs[MAX_ITEMS];
+static item_type_t   item_types[MAX_ITEM_TYPES];
+static int           num_item_types = 0;
+static int           num_items;
+
+/* Interleaved vertex, normal, and color data */
+static GLubyte      *vnc_array = NULL;
 
 scalar_t     *get_course_elev_data()    { return elevation; }
 terrain_t    *get_course_terrain_data() { return terrain; }
-scalar_t      get_course_angle()        { return courseAngle; } 
-tree_t       *get_tree_locs()           { return treeLocs; }
-int           get_num_trees()           { return numtrees; }
-scalar_t      get_tree_diam()           { return treeDiam; }
-scalar_t      get_tree_height()         { return treeHeight; }
-polyhedron_t  get_tree_polyhedron()     { return treePolyhedron; }
-point2d_t     get_start_pt()            { return startPt; }
-void          set_start_pt( point2d_t p ) { startPt = p; }
+scalar_t      get_course_angle()        { return course_angle; } 
+tree_t       *get_tree_locs()           { return tree_locs; }
+int           get_num_trees()           { return num_trees; }
+polyhedron_t  get_tree_polyhedron(int type) { return tree_types[type].poly; }
+char         *get_tree_name(int type)       { return tree_types[type].name; }
+point2d_t     get_start_pt()            { return start_pt; }
+void          set_start_pt( point2d_t p ) { start_pt = p; }
 char         *get_course_author()       { return course_author; }
 char         *get_course_name()         { return course_name; }
 
-void get_gl_arrays( GLfloat **vertex_normal_arr )
+item_t       *get_item_locs()           { return item_locs; }
+int           get_num_items()           { return num_items; }
+char         *get_item_name(int type)   { return item_types[type].name; }
+int           get_num_item_types()      { return num_item_types; }
+item_type_t  *get_item_types()          { return item_types; }
+
+void get_gl_arrays( GLubyte **vnc_arr )
 {
-    *vertex_normal_arr = vertex_normal_array;
+    *vnc_arr = vnc_array;
 }
 
 void get_course_dimensions( scalar_t *width, scalar_t *length )
 {
-    *width = courseWidth;
-    *length = courseLength;
+    *width = course_width;
+    *length = course_length;
 } 
+
+void get_play_dimensions( scalar_t *width, scalar_t *length )
+{
+    *width = play_width;
+    *length = play_length;
+} 
+
+/*! 
+  Returns the base (minimum) height of the terrain at \c distance
+  \pre     A course has been loaded
+  \arg \c  distance the (non-negative) distance down the course
+
+  \return  Minimum height (y-coord) of terrain
+  \author  jfpatry
+  \date    Created:  2000-08-30
+  \date    Modified: 2000-08-30
+*/
+scalar_t get_terrain_base_height( scalar_t distance )
+{
+    scalar_t slope = tan( ANGLES_TO_RADIANS( course_angle ) );
+    scalar_t base_height;
+    
+    check_assertion( distance > -EPS,
+		     "distance should be positive" );
+
+    /* This will need to be fixed once we add variably-sloped terrain */
+    base_height = -slope * distance - 
+	base_height_value / 255.0 * elev_scale;
+    return base_height;
+}
+
+/*! 
+  Returns the maximum height of the terrain at \c distance
+  \pre     A course has been loaded
+  \arg \c  distance the (non-negative) distance down the course
+
+  \return  Maximum height (y-coord) of terrain
+  \author  jfpatry
+  \date    Created:  2000-08-30
+  \date    Modified: 2000-08-30
+*/
+scalar_t get_terrain_max_height( scalar_t distance )
+{
+    return get_terrain_base_height( distance ) + elev_scale;
+}
 
 void get_course_divisions( int *x, int *y )
 {
@@ -100,21 +169,21 @@ void get_course_divisions( int *x, int *y )
 
 static void reset_course()
 {
+    int i;
+
     /*
      * Defaults
      */
-    courseNumber = -1;
-    numtrees     = 0;
-    courseAngle  = 20.;
-    courseWidth  = 50.;
-    courseLength = 130.;
-    treeDiam     = 2.0;
-    treeHeight   = 4.5;
-    treePolyhedron.num_polygons = 0;
-    treePolyhedron.num_vertices = 0;
+    num_trees     = 0;
+    num_items     = 0;
+    course_angle  = 20.;
+    course_width  = 50.;
+    course_length = 130.;
+    play_width  = 50.;
+    play_length = 130.;
     nx = ny = -1;
-    startPt.x = 0;
-    startPt.y = 0;
+    start_pt.x = 0;
+    start_pt.y = 0;
     base_height_value = 127; /* 50% grey */
 
     set_course_mirroring( False );
@@ -133,17 +202,59 @@ static void reset_course()
     }
     course_name = NULL;
 
-    if ( courseLoaded == False ) return;
+    if ( course_loaded == False ) return;
 
     reset_course_quadtree();
 
     free( elevation ); elevation = NULL;
     free( terrain ); terrain = NULL;
-    free( treePolyhedron.polygons ); treePolyhedron.polygons = NULL;
-    free( treePolyhedron.vertices ); treePolyhedron.vertices = NULL;
-    free( vertex_normal_array ); vertex_normal_array = NULL;
 
-    courseLoaded = False;
+    free( vnc_array ); vnc_array = NULL;
+
+    for ( i = 0; i < num_tree_types; i++) {
+	unbind_texture( tree_types[i].name );
+	free( tree_types[i].name );
+	tree_types[i].name = NULL;
+
+	free( tree_types[i].poly.polygons );
+	tree_types[i].poly.polygons = NULL;
+
+	free( tree_types[i].poly.vertices );
+	tree_types[i].poly.vertices = NULL;
+
+	free( tree_types[i].texture );
+	tree_types[i].texture = NULL;
+
+	tree_types[i].poly.num_vertices  = 0;
+	tree_types[i].poly.num_polygons  = 0;
+	tree_types[i].texture = NULL;
+	tree_types[i].num_trees = 0;
+
+	tree_types[i].pos = NULL;
+	tree_types[i].insert_pos = NULL;
+    }
+    num_tree_types = 0;
+    tree_dep_call = -1;
+
+    for ( i = 0; i < num_item_types; i++) {
+	if (item_types[i].reset_point == False) {
+	    unbind_texture( item_types[i].name );
+	}
+
+	free( item_types[i].name );
+	item_types[i].name = NULL;
+
+	free( item_types[i].texture );
+	item_types[i].texture = NULL;
+
+	item_types[i].pos = NULL;
+	item_types[i].insert_pos = NULL;
+
+	item_types[i].num_items = 0;
+    }
+    num_item_types = 0;
+
+    course_loaded = False;
 
     reset_key_frame();
 } 
@@ -172,48 +283,65 @@ void fill_gl_arrays()
 
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
 
-    /* Align on vertices and normals on 16-byte intervals (Q3A does this) */
-    vertex_normal_array = (GLfloat*) malloc( 8 * sizeof(GLfloat) * nx * ny );
+    /* Align vertices and normals on 16-byte intervals (Q3A does this) */
+    vnc_array = (GLubyte*) malloc( STRIDE_GL_ARRAY * nx * ny );
 
     for (x=0; x<nx; x++) {
 	for (y=0; y<ny; y++) {
-	    idx = 8*(y*nx+x);
-	    vertex_normal_array[idx]   = (GLfloat) x / (nx-1.) * courseWidth;
-	    vertex_normal_array[idx+1] = ELEV(x,y);
-	    vertex_normal_array[idx+2] = -(GLfloat) y / (ny-1.) * courseLength;
+	    idx = STRIDE_GL_ARRAY*(y*nx+x);
+	   
+#define floatval(i) (*(GLfloat*)(vnc_array+idx+(i)*sizeof(GLfloat)))
+
+	    floatval(0) = (GLfloat)x / (nx-1.) * course_width;
+	    floatval(1) = ELEV(x,y);
+	    floatval(2) = -(GLfloat)y / (ny-1.) * course_length;
 
 	    nml = normals[ x + y * nx ];
-	    vertex_normal_array[idx+4] = nml.x;
-	    vertex_normal_array[idx+5] = nml.y;
-	    vertex_normal_array[idx+6] = nml.z;
-	    vertex_normal_array[idx+7] = 1.0f;
+	    floatval(4) = nml.x;
+	    floatval(5) = nml.y;
+	    floatval(6) = nml.z;
+	    floatval(7) = 1.0f;
+	   
+#undef floatval
+#define byteval(i) (*(GLubyte*)(vnc_array+idx+8*sizeof(GLfloat) +\
+    i*sizeof(GLubyte)))
+
+	    byteval(0) = 255;
+	    byteval(1) = 255;
+	    byteval(2) = 255;
+	    byteval(3) = 255;
+
+#undef byteval
+
 	}
     }
 
     glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer( 3, GL_FLOAT, 8*sizeof(GLfloat), vertex_normal_array );
+    glVertexPointer( 3, GL_FLOAT, STRIDE_GL_ARRAY, vnc_array );
 
     glEnableClientState(GL_NORMAL_ARRAY);
-    glNormalPointer( GL_FLOAT, 8*sizeof(GLfloat), &vertex_normal_array[4] );
+    glNormalPointer( GL_FLOAT, STRIDE_GL_ARRAY, 
+		     vnc_array + 4*sizeof(GLfloat) );
+
+    glEnableClientState(GL_COLOR_ARRAY);
+    glColorPointer( 4, GL_UNSIGNED_BYTE, STRIDE_GL_ARRAY, 
+		    vnc_array + 8*sizeof(GLfloat) );
 }
 
-void select_course( int num ) 
+void load_course( char *course )
 {
     char buff[BUFF_LEN];
     char cwd[BUFF_LEN];
 
-    check_assertion( 1 <= num, "Course numbers must be >= 1" );
-
     reset_course();
-
-    courseNumber = num;
 
     if ( getcwd( cwd, BUFF_LEN ) == NULL ) {
 	handle_system_error( 1, "getcwd failed" );
     }
 
-    sprintf( buff, "%s/courses/%d", getparam_data_dir(), num );
+    sprintf( buff, "%s/courses/%s", getparam_data_dir(), course );
     if ( chdir( buff ) != 0 ) {
 	handle_system_error( 1, "Couldn't chdir to %s", buff );
     } 
@@ -234,13 +362,17 @@ void select_course( int num )
 
     fill_gl_arrays();
 
-    init_course_quadtree( elevation, nx, ny, courseWidth/(nx-1.), 
-			  -courseLength/(ny-1),
+    init_course_quadtree( elevation, nx, ny, course_width/(nx-1.), 
+			  -course_length/(ny-1),
 			  g_game.player[local_player()].view.pos, 
 			  getparam_course_detail_level() );
 
+    init_track_marks();
 
-    courseLoaded = True;
+    course_loaded = True;
+
+    /* flush unused audio files */
+    delete_unused_audio_data();
 } 
 
 
@@ -271,10 +403,10 @@ static int course_dim_cb ( ClientData cd, Tcl_Interp *ip,
 {
     double width, length;
 
-    if ( argc != 3 ) {
+    if ( ( argc != 3 ) && ( argc != 5 ) ) {
         Tcl_AppendResult(ip, argv[0], ": invalid number of arguments\n", 
 			 "Usage: ", argv[0], " <course width> <course length>",
-			 (char *)0 );
+			 " [<play width> <play length>]", (char *)0 );
         return TCL_ERROR;
     } 
 
@@ -289,8 +421,26 @@ static int course_dim_cb ( ClientData cd, Tcl_Interp *ip,
         return TCL_ERROR;
     } 
 
-    courseWidth = width;
-    courseLength = length;
+    course_width = width;
+    course_length = length;
+
+    if ( argc == 5 ) {
+	if ( Tcl_GetDouble( ip, argv[3], &width ) != TCL_OK ) {
+	    Tcl_AppendResult(ip, argv[0], ": invalid play width", 
+			     (char *)0 );
+	    return TCL_ERROR;
+	} 
+	if ( Tcl_GetDouble( ip, argv[4], &length ) != TCL_OK ) {
+	    Tcl_AppendResult(ip, argv[0], ": invalid play length", 
+			     (char *)0 );
+	    return TCL_ERROR;
+	} 
+	play_width = width;
+	play_length = length;
+    } else {
+	play_width = course_width;
+	play_length = course_length;
+    }
 
     return TCL_OK;
 } 
@@ -322,7 +472,7 @@ static int angle_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
 	angle = MAX_ANGLE;
     }
 
-    courseAngle = angle;
+    course_angle = angle;
 
     return TCL_OK;
 } 
@@ -330,7 +480,7 @@ static int angle_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
 
 static int elev_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[]) 
 {
-    IMAGE *elevImg;
+    IMAGE *elev_img;
     scalar_t slope;
     int   x,y;
     int   pad;
@@ -342,20 +492,20 @@ static int elev_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    if (courseLoaded) {
+    if (course_loaded) {
 	print_warning( TCL_WARNING, "ignoring %s: course already loaded",
 		       argv[0] );
 	return TCL_OK;
     }
 
-    elevImg = ImageLoad( argv[1] );
-    if ( elevImg == NULL ) {
+    elev_img = ImageLoad( argv[1] );
+    if ( elev_img == NULL ) {
 	print_warning( TCL_WARNING, "%s: couldn't load %s", argv[0], argv[1] );
 	return TCL_ERROR;
     }
 
-    nx = elevImg->sizeX;
-    ny = elevImg->sizeY;
+    nx = elev_img->sizeX;
+    ny = elev_img->sizeY;
 
     elevation = (scalar_t *)malloc( sizeof(scalar_t)*nx*ny );
 
@@ -363,32 +513,28 @@ static int elev_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
 	handle_system_error( 1, "malloc failed" );
     }
 
-    slope = tan( courseAngle * M_PI/180.0 );
+    slope = tan( ANGLES_TO_RADIANS( course_angle ) );
 
     pad = 0;    /* RGBA images rows are aligned on 4-byte boundaries */
     for (y=0; y<ny; y++) {
         for (x=0; x<nx; x++) {
-            ELEV(nx-1-x, ny-1-y) = 
-		( ( elevImg->data[ (x + nx * y) * elevImg->sizeZ + pad ] 
-		    - base_height_value ) / 255.0 ) * elevScale
-		- (scalar_t) (ny-1.-y)/ny * courseLength * slope;
-
-            if ( x == 0 || x == nx-1 ) {
-                ELEV(nx-1-x, ny-1-y) += 0.5 * elevScale;
-            } 
+	    ELEV(nx-1-x, ny-1-y) = 
+		( ( elev_img->data[ (x + nx * y) * elev_img->sizeZ + pad ] 
+		    - base_height_value ) / 255.0 ) * elev_scale
+		- (scalar_t) (ny-1.-y)/ny * course_length * slope;
         } 
-        pad += (nx*elevImg->sizeZ) % 4;
+        pad += (nx*elev_img->sizeZ) % 4;
     } 
 
-    free( elevImg->data );
-    free( elevImg );
+    free( elev_img->data );
+    free( elev_img );
 
     return TCL_OK;
 } 
 
 static int terrain_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[]) 
 {
-    IMAGE *terrainImg;
+    IMAGE *terrain_img;
     int   x,y;
     int   pad;
     int   idx;
@@ -400,16 +546,16 @@ static int terrain_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    terrainImg = ImageLoad( argv[1] );
+    terrain_img = ImageLoad( argv[1] );
 
-    if ( terrainImg == NULL ) {
+    if ( terrain_img == NULL ) {
 	print_warning( TCL_WARNING, "%s: couldn't load %s", argv[0], argv[1] );
         Tcl_AppendResult(ip, argv[0], ": couldn't load ", argv[1],
 			 (char *)0 );
 	return TCL_ERROR;
     }
 
-    if ( nx != terrainImg->sizeX || ny != terrainImg->sizeY ) {
+    if ( nx != terrain_img->sizeX || ny != terrain_img->sizeY ) {
         Tcl_AppendResult(ip, argv[0], ": terrain bitmap must have same " 
 			 "dimensions as elevation bitmap",
 			 (char *)0 );
@@ -428,13 +574,13 @@ static int terrain_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         for (x=0; x<nx; x++) {
             idx = (nx-1-x) + nx*(ny-1-y);
 	    terrain[idx] = intensity_to_terrain(
-		terrainImg->data[(x+nx*y)*terrainImg->sizeZ+pad] );
+		terrain_img->data[(x+nx*y)*terrain_img->sizeZ+pad] );
         } 
-        pad += (nx*terrainImg->sizeZ) % 4;
+        pad += (nx*terrain_img->sizeZ) % 4;
     } 
 
-    free( terrainImg->data );
-    free( terrainImg );
+    free( terrain_img->data );
+    free( terrain_img );
 
     return TCL_OK;
 } 
@@ -449,11 +595,40 @@ static int bgnd_img_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    load_texture( BACKGROUND_TEX, argv[1] );
+    if (!load_and_bind_texture( "background", argv[1] )) {
+      Tcl_AppendResult(ip, argv[0], ": could not load texture", (char *) 0);
+      return TCL_ERROR;
+	}
 
     return TCL_OK;
 } 
 
+/*
+// set the defaults that the deprecated tree calls assume
+*/
+static void tree_defaults (tree_type_t * type) {
+
+    check_assertion( type != NULL, "need a non-NULL tree type");
+    type->name = string_copy("tree");
+    type->diam = 2.0;
+    type->height = 4.5;
+    type->vary = 0.5;
+    type->poly.num_vertices = 0;
+    type->poly.vertices = NULL;
+    type->poly.num_polygons = 0;
+    type->poly.polygons = NULL;
+    type->texture = NULL;
+    type->num_trees = 0;
+    type->red = DEP_TREE_RED;
+    type->green = DEP_TREE_GREEN;
+    type->blue = DEP_TREE_BLUE;
+    type->pos = NULL;
+    type->insert_pos = NULL;
+}
+
+/*
+// deprecated
+*/
 static int tree_tex_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[]) 
 {
 
@@ -464,7 +639,23 @@ static int tree_tex_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    load_texture( TREE_TEX, argv[1] );
+    if (tree_dep_call == -1) {
+	if ( num_tree_types + 1 >= MAX_TREE_TYPES ) {
+	    Tcl_AppendResult(ip, argv[0], ": max number of tree types reached",
+			     (char *)0 );
+	    return TCL_ERROR;
+	}
+	tree_dep_call = num_tree_types++;
+	tree_defaults( &tree_types[tree_dep_call] );
+    }
+
+    if (!load_and_bind_texture( tree_types[tree_dep_call].name, argv[1] )) {
+	Tcl_AppendResult(ip, argv[0], ": could not load texture", (char *) 0);
+	return TCL_ERROR;
+    }
+
+    tree_types[tree_dep_call].texture =
+		    string_copy( tree_types[tree_dep_call].name );
 
     return TCL_OK;
 } 
@@ -479,7 +670,10 @@ static int ice_tex_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    load_texture( ICE_TEX, argv[1] );
+    if (!load_and_bind_texture( "ice", argv[1] )) {
+      Tcl_AppendResult(ip, argv[0], ": could not load texture", (char *) 0);
+      return TCL_ERROR;
+	}
 
     return TCL_OK;
 } 
@@ -494,7 +688,10 @@ static int rock_tex_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    load_texture( ROCK_TEX, argv[1] );
+    if (!load_and_bind_texture( "rock", argv[1] )) {
+      Tcl_AppendResult(ip, argv[0], ": could not load texture", (char *) 0);
+      return TCL_ERROR;
+	}
 
     return TCL_OK;
 } 
@@ -509,8 +706,9 @@ static int snow_tex_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    if ( !load_texture( SNOW_TEX, argv[1] ) ) {
-	return TCL_ERROR;
+    if ( !load_and_bind_texture( "snow", argv[1] ) ) {
+      Tcl_AppendResult(ip, argv[0], ": could not load texture", (char *) 0);
+	  return TCL_ERROR;
     }
 
     return TCL_OK;
@@ -536,20 +734,20 @@ static int start_pt_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    if ( !( xcd > 0 && xcd < courseWidth ) ) {
+    if ( !( xcd > 0 && xcd < course_width ) ) {
 	print_warning( TCL_WARNING, "%s: x coordinate out of bounds, "
 		       "using 0\n", argv[0] );
 	xcd = 0;
     }
 
-    if ( !( ycd > 0 && ycd < courseLength ) ) {
+    if ( !( ycd > 0 && ycd < course_length ) ) {
 	print_warning( TCL_WARNING, "%s: y coordinate out of bounds, "
 		       "using 0\n", argv[0] );
 	ycd = 0;
     }
 
-    startPt.x = xcd;
-    startPt.y = -ycd;
+    start_pt.x = xcd;
+    start_pt.y = -ycd;
 
     return TCL_OK;
 } 
@@ -576,22 +774,69 @@ static int elev_scale_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[]
 	return TCL_ERROR;
     }
 
-    elevScale = scale;
+    elev_scale = scale;
 
     return TCL_OK;
 } 
 
-static bool_t is_tree( unsigned char pixel[] )
+static int is_tree( unsigned char pixel[], tree_type_t ** which_type )
 {
-    return pixel[0] + pixel[1] + pixel[2] > TREE_IMG_THRESHOLD;
+    int           min_distance = pixel[0] + pixel[1] + pixel[2];
+    int i;
+    int distance;
+ 
+    *which_type = NULL;
+    for (i = 0; i < num_tree_types; i++) {
+	/* assume red green blue pixel ordering */
+	distance = abs ( tree_types[i].red - pixel[0] ) +
+		    abs ( tree_types[i].green - pixel[1] ) +
+		    abs ( tree_types[i].blue - pixel[2] );
+	if (distance < min_distance) {
+	    min_distance = distance;
+	    *which_type = &tree_types[i];
+	}
+    }
+    
+    return min_distance;
 }
 
+static int is_item( unsigned char pixel[], item_type_t ** which_type )
+{
+    int      min_distance = pixel[0] + pixel[1] + pixel[2];
+    int i;
+    int distance;
+ 
+    *which_type = NULL;
+    for (i = 0; i < num_item_types; i++) {
+	/* assume red green blue pixel ordering */
+	distance = abs ( item_types[i].red - pixel[0] ) +
+		    abs ( item_types[i].green - pixel[1] ) +
+		    abs ( item_types[i].blue - pixel[2] );
+	if (distance < min_distance) {
+	    min_distance = distance;
+	    *which_type = &item_types[i];
+	}
+    }
+    
+    return min_distance;
+}
+
+/*
+// modified
+// now more accurate to call this object_cb - no matter
+*/
 static int trees_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[]) 
 {
     IMAGE *treeImg;
     int sx, sy, sz;
     int x,y;
     int pad;
+    tree_type_t *which_tree;
+    item_type_t *which_item;
+    point2d_t * pos;
+    int i;
+    list_elem_t elem;
+    int best_tree_dist, best_item_dist;
 
     if ( argc != 2 ) {
         Tcl_AppendResult(ip, argv[0], ": invalid number of arguments\n", 
@@ -609,40 +854,135 @@ static int trees_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
 	return TCL_ERROR;
     }
 
+    if ( num_tree_types == 0 && num_item_types == 0 ) {
+	print_warning( IMPORTANT_WARNING,
+		       "tux_trees callback called with no tree or item "
+		       "types set" );
+    }
+
     sx = treeImg->sizeX;
     sy = treeImg->sizeY;
     sz = treeImg->sizeZ;
 
-    numtrees = 0;
+    for (i = 0; i < num_tree_types; i++) {
+	tree_types[i].pos = create_list();
+	tree_types[i].insert_pos = 0;
+	tree_types[i].num_trees = 0;
+    }
+
+    for (i = 0; i < num_item_types; i++) {
+	item_types[i].pos = create_list();
+	item_types[i].insert_pos = 0;
+	item_types[i].num_items = 0;
+    }
+
+    num_trees = 0;
+    num_items = 0;
     pad = 0;
     for (y=0; y<sy; y++) {
         for (x=0; x<sx; x++) {
-            if ( is_tree ( & treeImg->data[ (x + y*sx)*sz + pad ] ) ) {
-                if (numtrees == MAX_TREES ) {
+            best_tree_dist = is_tree ( &treeImg->data[ (x + y*sx)*sz + pad ],
+					 &which_tree );
+            best_item_dist = is_item ( &treeImg->data[ (x + y*sx)*sz + pad ],
+					 &which_item );
+
+	    if ( best_tree_dist < best_item_dist && which_tree != NULL ) {
+                if (num_trees+1 == MAX_TREES ) {
                     fprintf( stderr, "%s: maximum number of trees reached.\n", 
 			     argv[0] );
                     break;
                 }
+		num_trees += 1;
+		which_tree->num_trees += 1;
+		pos = (point2d_t *) malloc(sizeof(point2d_t));
+		pos->x = (sx-x)/(scalar_t)(sx-1.)*course_width;
+		pos->y = -(sy-y)/(scalar_t)(sy-1.)*course_length;
+		which_tree->insert_pos = insert_list_elem(which_tree->pos,
+			which_tree->insert_pos, (list_elem_data_t) pos);
 
-                treeLocs[numtrees].ray.pt.x = 
-		    (sx-x)/(scalar_t)(sx-1.)*courseWidth;
+            } else if ( which_item != NULL ) {
+                if (num_items+1 == MAX_ITEMS ) {
+                    fprintf( stderr, "%s: maximum number of items reached.\n", 
+			     argv[0] );
+                    break;
+                }
+		num_items += 1;
+		which_item->num_items += 1;
+		pos = (point2d_t *) malloc(sizeof(point2d_t));
+		pos->x = (sx-x)/(scalar_t)(sx-1.)*course_width;
+		pos->y = -(sy-y)/(scalar_t)(sy-1.)*course_length;
+		which_item->insert_pos = insert_list_elem(which_item->pos,
+			which_item->insert_pos, (list_elem_data_t) pos);
+	    }
 
-                treeLocs[numtrees].ray.pt.z = 
-		    -(sy-y)/(scalar_t)(sy-1.)*courseLength;
-
-                treeLocs[numtrees].ray.pt.y = 
-		    find_y_coord( treeLocs[numtrees].ray.pt.x,
-				treeLocs[numtrees].ray.pt.z );
-
-                treeLocs[numtrees].ray.vec = make_vector( 0, 1, 0);
-                treeLocs[numtrees].height = ((scalar_t)rand()/RAND_MAX+0.5)* treeHeight;
-                treeLocs[numtrees].diam = treeLocs[numtrees].height/treeHeight 
-                                          * treeDiam;
-                numtrees++;
-            } 
-        } 
+        }
         pad += ( sx * sz ) % 4; /* to compensate for word-aligned rows */
-    } 
+    }
+
+    /*
+    // double pass so that tree and object types are clumped together - reduce
+    // texture switching
+    */
+    num_trees = 0;
+    for (i = 0; i < num_tree_types; i++) {
+	elem = get_list_head(tree_types[i].pos);
+	while (elem != NULL) {
+	    pos = (point2d_t *) get_list_elem_data(elem);
+
+	    tree_locs[num_trees].ray.pt.x = pos->x;
+	    tree_locs[num_trees].ray.pt.z = pos->y;
+	    tree_locs[num_trees].ray.pt.y = find_y_coord( pos->x, pos->y );
+	    free( pos );
+	    elem = get_next_list_elem(tree_types[i].pos, elem);
+
+	    tree_locs[num_trees].ray.vec = make_vector( 0, 1, 0);
+
+	    tree_locs[num_trees].height = 
+		    (scalar_t)rand()/RAND_MAX*tree_types[i].vary*2;
+	    tree_locs[num_trees].height -= tree_types[i].vary;
+	    tree_locs[num_trees].height = tree_types[i].height + 
+			tree_locs[num_trees].height * tree_types[i].height;
+	    tree_locs[num_trees].diam = (tree_locs[num_trees].height /
+			tree_types[i].height) * tree_types[i].diam;
+	    tree_locs[num_trees].tree_type = i;
+	    num_trees++;
+	}
+	del_list( tree_types[i].pos );
+    }
+
+    num_items = 0;
+    for (i = 0; i < num_item_types; i++) {
+	elem = get_list_head(item_types[i].pos);
+	while (elem != NULL) {
+	    pos = (point2d_t *) get_list_elem_data(elem);
+
+	    item_locs[num_items].ray.pt.x = pos->x;
+	    item_locs[num_items].ray.pt.z = pos->y;
+	    item_locs[num_items].ray.pt.y = find_y_coord( pos->x, pos->y )
+					    + item_types[i].above_ground;
+	    free( pos );
+	    elem = get_next_list_elem(item_types[i].pos, elem);
+
+	    item_locs[num_items].ray.vec = make_vector( 0, 1, 0);
+
+	    item_locs[num_items].height = item_types[i].height ; 
+	    item_locs[num_items].diam = item_types[i].diam;
+	    item_locs[num_items].item_type = i;
+	    if ( item_types[i].nocollision )  {
+		item_locs[num_items].collectable = -1;
+	    } else {
+		item_locs[num_items].collectable = 1;
+	    }
+	    if ( item_types[i].reset_point )  {
+		item_locs[num_items].drawable = False;
+	    } else {
+		item_locs[num_items].drawable = True;
+	    }
+	    num_items++;
+	}
+	del_list( item_types[i].pos );
+    }
+
 
     free( treeImg->data );
     free( treeImg );
@@ -650,6 +990,9 @@ static int trees_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
     return TCL_OK;
 } 
 
+/*
+// deprecated
+*/
 static int tree_size_cb( ClientData cd, Tcl_Interp *ip, 
 			 int argc, char *argv[]) 
 {
@@ -673,8 +1016,18 @@ static int tree_size_cb( ClientData cd, Tcl_Interp *ip,
         return TCL_ERROR;
     } 
 
-    treeDiam   = diam;
-    treeHeight = height;
+    if (tree_dep_call == -1) {
+	if ( num_tree_types + 1 >= MAX_TREE_TYPES ) {
+	    Tcl_AppendResult(ip, argv[0], ": max number of tree types reached",
+			     (char *)0 );
+	    return TCL_ERROR;
+	}
+	tree_dep_call = num_tree_types++;
+	tree_defaults( &tree_types[tree_dep_call] );
+    }
+
+    tree_types[tree_dep_call].diam   = diam;
+    tree_types[tree_dep_call].height = height;
 
     return TCL_OK;
 } 
@@ -692,7 +1045,7 @@ get_polyhedron_vertices(Tcl_Interp *ip, char *arg,
 			int *num_vertices, point_t **vertex_list)
 {
   int i;
-  char **indices;
+  char **indices=0;
   int rtn;
   scalar_t pt[3];
   
@@ -702,7 +1055,8 @@ get_polyhedron_vertices(Tcl_Interp *ip, char *arg,
     Tcl_AppendResult(ip, 
 		     "A vertex list must be provided\n",
 		     (char *) 0);
-    free(indices);
+    
+    Tcl_Free((char *) indices);
     return (TCL_ERROR);
   }
 
@@ -711,6 +1065,8 @@ get_polyhedron_vertices(Tcl_Interp *ip, char *arg,
     get_tcl_tuple(ip, indices[i], pt, 3);
     (*vertex_list)[i] = make_point_from_array(pt);
   }
+
+  Tcl_Free((char *) indices);
 
   return TCL_OK;
 }
@@ -723,7 +1079,7 @@ get_single_polygon(Tcl_Interp *ip, char *arg,
 		   polygon_t *polygon)
 {
   int i;
-  char **indices;
+  char **indices=0;
   int rtn;
   int num_vertices;
   
@@ -731,9 +1087,9 @@ get_single_polygon(Tcl_Interp *ip, char *arg,
   if( rtn != TCL_OK )
   {
     Tcl_AppendResult(ip, 
-		     "a list of vertices must be provide for each polygon\n",
+		     "a list of vertices must be provided for each polygon\n",
 		     (char *) 0);
-    free(indices);
+    Tcl_Free((char *) indices);
     return (TCL_ERROR);
   }
   
@@ -742,6 +1098,8 @@ get_single_polygon(Tcl_Interp *ip, char *arg,
   
   for(i = 0; i < num_vertices; i++)
     Tcl_GetInt(ip, indices[i], &(polygon->vertices[i]));
+
+  Tcl_Free((char *) indices);
 
   return TCL_OK;
 }
@@ -754,7 +1112,7 @@ get_polyhedron_polygon(Tcl_Interp *ip, char *arg,
 		       int *num_polygons, polygon_t **polygon_list)
 {
   int i;
-  char **indices;
+  char **indices=0;
   int rtn;
 
   rtn = Tcl_SplitList(ip, arg, num_polygons, &indices);
@@ -763,7 +1121,7 @@ get_polyhedron_polygon(Tcl_Interp *ip, char *arg,
     Tcl_AppendResult(ip, 
 		     "A polygon list must be provided\n",
 		     (char *) 0);
-    free(indices);
+    Tcl_Free((char *) indices);
     return TCL_ERROR;
   }
 
@@ -771,12 +1129,17 @@ get_polyhedron_polygon(Tcl_Interp *ip, char *arg,
   for(i = 0; i < *num_polygons; i++)
     get_single_polygon(ip, indices[i], &((*polygon_list)[i]));
 
+  Tcl_Free((char *) indices);
+
   return TCL_OK;
 }
 
 /*
  * finally the polyhedron object.
  */
+/*
+// deprecated
+*/
 static int 
 tree_poly_cb(ClientData cd, Tcl_Interp *ip, int argc, char *argv[]) 
 {
@@ -795,12 +1158,22 @@ tree_poly_cb(ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
     return TCL_ERROR;
   }
 
+    if (tree_dep_call == -1) {
+	if ( num_tree_types + 1 >= MAX_TREE_TYPES ) {
+	    Tcl_AppendResult(ip, argv[0], ": max number of tree types reached",
+			     (char *)0 );
+	    return TCL_ERROR;
+	}
+	tree_dep_call = num_tree_types++;
+	tree_defaults( &tree_types[tree_dep_call] );
+    }
+
   if( get_polyhedron_vertices(ip, argv[1], &num_vertices, &vertices) == TCL_OK )
     if( get_polyhedron_polygon(ip, argv[2], &num_polygons, &polygons) == TCL_OK ) {
-        treePolyhedron.num_polygons = num_polygons;
-        treePolyhedron.polygons     = polygons;
-        treePolyhedron.num_vertices = num_vertices;
-        treePolyhedron.vertices     = vertices;
+        tree_types[tree_dep_call].poly.num_polygons = num_polygons;
+        tree_types[tree_dep_call].poly.polygons     = polygons;
+        tree_types[tree_dep_call].poly.num_vertices = num_vertices;
+        tree_types[tree_dep_call].poly.vertices     = vertices;
         return TCL_OK;
     }
 
@@ -911,6 +1284,353 @@ static int base_height_value_cb( ClientData cd, Tcl_Interp *ip,
     return TCL_OK;
 } 
 
+static int tree_props_cb( ClientData cd, Tcl_Interp *ip, 
+				 int argc, char *argv[])
+{
+    int         i;
+    int         num_vertices;
+    point_t     *vertices;
+    int         num_polys;
+    polygon_t   *polys;
+    int         rtn, num_col;
+    char **     indices = 0;
+    int         error = 0;
+    int         convert_temp;
+
+    if ( num_tree_types + 1 >= MAX_TREE_TYPES ) {
+	Tcl_AppendResult(ip, argv[0], ": max number of tree types reached",
+			 (char *)0 );
+	return TCL_ERROR;
+    }
+
+    /* fill in values not specified with defaults */
+    tree_types[num_tree_types].name = NULL;
+    tree_types[num_tree_types].diam = 2.0;
+    tree_types[num_tree_types].height = 4.5;
+    tree_types[num_tree_types].vary = 0.5;
+    tree_types[num_tree_types].poly.num_vertices = 0;
+    tree_types[num_tree_types].poly.vertices = NULL;
+    tree_types[num_tree_types].poly.num_polygons = 0;
+    tree_types[num_tree_types].poly.polygons = NULL;
+    tree_types[num_tree_types].texture = NULL;
+    tree_types[num_tree_types].num_trees = 0;
+    tree_types[num_tree_types].red = 255;
+    tree_types[num_tree_types].green = 255;
+    tree_types[num_tree_types].blue = 255;
+    tree_types[num_tree_types].pos = NULL;
+    tree_types[num_tree_types].insert_pos = NULL;
+
+    for ( i = 1; (i < argc - 1) && !error; i += 2 ) {
+	if ( strcmp( "-name", argv[i] ) == 0 ) {
+	    tree_types[num_tree_types].name = string_copy(argv[i+1]);
+
+	} else if ( strcmp( "-diameter", argv[i] ) == 0 ) {
+	    if ( Tcl_GetDouble( ip, argv[i+1],
+		    &tree_types[num_tree_types].diam) != TCL_OK ) {
+		Tcl_AppendResult(ip, argv[0], ": invalid diameter",
+				 (char *)0 );
+		error = 1;
+	    }
+
+	} else if ( strcmp( "-height", argv[i] ) == 0 ) {
+	    if ( Tcl_GetDouble( ip, argv[i+1],
+		    &tree_types[num_tree_types].height) != TCL_OK ) {
+		Tcl_AppendResult(ip, argv[0], ": invalid height",
+				 (char *)0 );
+		error = 1;
+	    }
+
+	} else if ( strcmp( "-texture", argv[i] ) == 0 ) {
+	    if ( !tree_types[num_tree_types].texture ) {
+		tree_types[num_tree_types].texture = string_copy(argv[i+1]);
+	    } else {
+		Tcl_AppendResult(ip, argv[0], ": specify only one texture",
+				(char *)0 );
+	    }
+
+	} else if ( strcmp( "-colour", argv[i] ) == 0 ) {
+	    rtn = Tcl_SplitList(ip, argv[i+1], &num_col, &indices);
+	    if( rtn != TCL_OK ) {
+		Tcl_AppendResult(ip, "a list of colours must be provided\n",
+			     (char *) 0);
+		Tcl_Free((char *) indices);
+		error = 1;
+	    }
+
+	    if (num_col == 3 || num_col == 4) {
+		Tcl_GetInt(ip, indices[0], &convert_temp);
+		tree_types[num_tree_types].red = (unsigned char) convert_temp;
+		Tcl_GetInt(ip, indices[1], &convert_temp);
+		tree_types[num_tree_types].green = (unsigned char) convert_temp;
+		Tcl_GetInt(ip, indices[2], &convert_temp);
+		tree_types[num_tree_types].blue = (unsigned char) convert_temp;
+	    } else {
+		Tcl_AppendResult(ip, argv[0], ": must specify three colours"
+			" to link with tree type", (char *) 0);
+		error = 1;
+	    }
+	    Tcl_Free((char *) indices);
+
+	} else if ( strcmp( "-polyhedron", argv[i] ) == 0 ) {
+	    rtn = Tcl_SplitList(ip, argv[i+1], &num_col, &indices);
+	    if( rtn != TCL_OK || num_col != 2 ) {
+		Tcl_AppendResult(ip, "two sublists of vertices and polygons"
+				     " must be specified\n",
+			     (char *) 0);
+		Tcl_Free((char *) indices);
+		error = 1;
+	    }
+	    if( get_polyhedron_vertices(ip, indices[0], &num_vertices,
+			&vertices) == TCL_OK ) {
+		if( get_polyhedron_polygon(ip, indices[1], &num_polys, &polys)
+			== TCL_OK ) {
+		    tree_types[num_tree_types].poly.num_polygons = num_polys;
+		    tree_types[num_tree_types].poly.polygons     = polys;
+		    tree_types[num_tree_types].poly.num_vertices = num_vertices;
+		    tree_types[num_tree_types].poly.vertices     = vertices;
+		} else {
+		    free( vertices );
+		    error = 1;
+		}
+	    } else {
+		error = 1;
+	    }
+
+	} else if ( strcmp( "-size_varies", argv[i] ) == 0 ) {
+	    if ( Tcl_GetDouble( ip, argv[i+1],
+		    &tree_types[num_tree_types].vary) != TCL_OK ) {
+		Tcl_AppendResult(ip, argv[0], ": invalid size variance",
+				 (char *)0 );
+		error = 1;
+	    }
+	} else {
+	    print_warning( TCL_WARNING, "tux_props_cb: unrecognized "
+			    "parameter '%s'", argv[i]);
+	    /* not sure if next arg is valid command - try it */
+	    i -= 1;
+	}
+    }
+
+    if ( tree_types[num_tree_types].name == 0 || 
+		tree_types[num_tree_types].poly.vertices == 0 ||
+		tree_types[num_tree_types].texture == 0 ) {
+	Tcl_AppendResult(ip, argv[0], ": some mandatory elements not filled",
+		" tree name, texture name and tree polygon must be supplied.",
+		(char *)0 );
+	free( tree_types[num_tree_types].name );
+	free( tree_types[num_tree_types].texture );
+	free( tree_types[num_tree_types].poly.vertices );
+	free( tree_types[num_tree_types].poly.polygons );
+	return TCL_ERROR;
+
+    } else if ( error ) {
+	free( tree_types[num_tree_types].name );
+	free( tree_types[num_tree_types].texture );
+	free( tree_types[num_tree_types].poly.vertices );
+	free( tree_types[num_tree_types].poly.polygons );
+	return TCL_ERROR;
+
+    } else if (!bind_texture( tree_types[num_tree_types].name,
+		tree_types[num_tree_types].texture )) {
+	Tcl_AppendResult(ip, argv[0], ": could not bind texture ",
+		    tree_types[num_tree_types].texture, (char *) 0);
+	free( tree_types[num_tree_types].name );
+	free( tree_types[num_tree_types].texture );
+	free( tree_types[num_tree_types].poly.vertices );
+	free( tree_types[num_tree_types].poly.polygons );
+	return TCL_ERROR;
+    }
+
+    num_tree_types += 1;
+    return TCL_OK;
+}
+
+static int item_spec_cb( ClientData cd, Tcl_Interp *ip, 
+				 int argc, char *argv[])
+{
+    int          rtn, num_col;
+    char **      indices = NULL;
+    int          convert_temp;
+    char *       err_msg = "";
+    char         buff[BUFF_LEN];
+
+    if ( num_item_types + 1 >= MAX_ITEM_TYPES ) {
+	Tcl_AppendResult(ip, argv[0], ": max number of item types reached",
+			 (char *)0 );
+	return TCL_ERROR;
+    }
+
+    item_types[num_item_types].name = NULL;
+    item_types[num_item_types].texture = NULL;
+    item_types[num_item_types].diam = .8;
+    item_types[num_item_types].height = 0.5;
+    item_types[num_item_types].above_ground = 0.0;
+    item_types[num_item_types].red = 255;
+    item_types[num_item_types].green = 255;
+    item_types[num_item_types].blue = 255;
+    item_types[num_item_types].nocollision = False;
+    item_types[num_item_types].reset_point = False;
+    item_types[num_item_types].pos = NULL;
+    item_types[num_item_types].insert_pos = NULL;
+    item_types[num_item_types].num_items = 0;
+    item_types[num_item_types].use_normal = False;
+
+    NEXT_ARG;
+
+    while ( *argv != NULL ) {
+	if ( strcmp( "-name", *argv ) == 0 ) {
+	    NEXT_ARG;
+	    CHECK_ARG( "-name", err_msg, item_spec_bail );
+
+	    item_types[num_item_types].name = string_copy(*argv);
+
+	} else if ( strcmp( "-height", *argv ) == 0 ) {
+	    NEXT_ARG;
+	    CHECK_ARG( "-height", err_msg, item_spec_bail );
+
+	    if ( Tcl_GetDouble( ip, *argv,
+		    &item_types[num_item_types].height) != TCL_OK ) {
+		Tcl_AppendResult(ip, argv[0], ": invalid height\n",
+					(char *) 0);
+	    }
+
+	} else if ( strcmp( "-diameter", *argv ) == 0 ) {
+	    NEXT_ARG;
+	    CHECK_ARG( "-diameter", err_msg, item_spec_bail );
+
+	    if ( Tcl_GetDouble( ip, *argv,
+		    &item_types[num_item_types].diam) != TCL_OK ) {
+		Tcl_AppendResult(ip, argv[0], ": invalid diameter\n",
+					(char *) 0);
+	    }
+	
+	} else if ( strcmp( "-texture", *argv ) == 0 ) {
+	    NEXT_ARG;
+	    CHECK_ARG( "-texture", err_msg, item_spec_bail );
+
+	    if ( !item_types[num_item_types].texture ) {
+		item_types[num_item_types].texture = string_copy(*argv);
+	    } else {
+		Tcl_AppendResult(ip, argv[0], ": specify only one texture\n",
+				(char *)0 );
+	    }
+
+	} else if ( strcmp( "-above_ground", *argv ) == 0 ) {
+	    NEXT_ARG;
+	    CHECK_ARG( "-above_ground", err_msg, item_spec_bail );
+
+	    if ( Tcl_GetDouble( ip, *argv,
+		    &item_types[num_item_types].above_ground) != TCL_OK ) {
+		Tcl_AppendResult(ip, argv[0], ": invalid height above ground\n",
+					(char *) 0);
+	    }
+
+	} else if ( strcmp( "-colour", *argv ) == 0 ||
+		    strcmp( "-color", *argv ) == 0 ) 
+	{
+	    NEXT_ARG;
+	    CHECK_ARG( "-colour", err_msg, item_spec_bail );
+
+	    rtn = Tcl_SplitList(ip, *argv, &num_col, &indices);
+	    if( rtn != TCL_OK ) {
+		err_msg = "Must provide a list of colours for -colour";
+		goto item_spec_bail; 
+	    }
+
+	    if (num_col == 3 || num_col == 4) {
+		Tcl_GetInt(ip, indices[0], &convert_temp);
+		item_types[num_item_types].red = (unsigned char) convert_temp;
+		Tcl_GetInt(ip, indices[1], &convert_temp);
+		item_types[num_item_types].green = (unsigned char) convert_temp;
+		Tcl_GetInt(ip, indices[2], &convert_temp);
+		item_types[num_item_types].blue = (unsigned char) convert_temp;
+	    } else {
+		err_msg = "Colour specification must have 3 or 4 elements";
+		goto item_spec_bail;
+	    }
+	    Tcl_Free((char *) indices);
+	    indices = NULL;
+
+	} else if ( strcmp( "-nocollision", *argv ) == 0 ||
+		    strcmp( "-nocollect", *argv ) == 0 ) {
+	    item_types[num_item_types].nocollision = True;
+
+	} else if ( strcmp( "-reset_point", *argv ) == 0 ) {
+	    item_types[num_item_types].reset_point = True;
+	    item_types[num_item_types].nocollision = True;
+	} else if ( strcmp( "-normal", *argv ) == 0 ) {
+	    NEXT_ARG;
+	    CHECK_ARG( "-normal", err_msg, item_spec_bail );
+
+	    if ( get_tcl_tuple( 
+		ip, *argv, (scalar_t*)&(item_types[num_item_types].normal), 3 )
+		 != TCL_OK )
+	    {
+		err_msg = "Must specify a list of size three for -normal";
+		goto item_spec_bail;
+	    }
+
+	    normalize_vector( &(item_types[num_item_types].normal) );
+
+	    item_types[num_item_types].use_normal = True;
+
+	} else {
+	    sprintf( buff, "Unrecognized option `%s'", *argv );
+	    goto item_spec_bail;
+	}
+
+	NEXT_ARG;
+    }
+
+    if ( item_types[num_item_types].name == 0 ||
+	 ( item_types[num_item_types].texture == 0 &&
+	   item_types[num_item_types].reset_point == False ) ) 
+    {
+	err_msg = "Some mandatory elements not filled.  "
+	    "Item name and texture name must be supplied.";
+	goto item_spec_bail;
+    }
+
+    if ( item_types[num_item_types].reset_point == False &&
+	 !bind_texture( item_types[num_item_types].name,
+			item_types[num_item_types].texture )) 
+    {
+	err_msg = "could not bind specified texture";
+	goto item_spec_bail;
+    }
+
+    num_item_types += 1;
+    return TCL_OK;
+
+item_spec_bail:
+    if ( indices ) {
+	Tcl_Free( (char*) indices );
+	indices = NULL;
+    }
+
+    if ( item_types[num_item_types].name ) {
+	free( item_types[num_item_types].name );
+	item_types[num_item_types].name = NULL;
+    }
+
+    if ( item_types[num_item_types].texture ) {
+	free( item_types[num_item_types].texture );
+	item_types[num_item_types].texture = NULL;
+    }    
+
+    Tcl_AppendResult(
+	ip,
+	"Error in call to tux_item_spec: ", 
+	err_msg,
+	"\n",
+	"Usage: tux_item_spec -name <name> -height <height> "
+	"-diameter <diameter> -colour {r g b [a]} "
+	"[-texture <texture>] [-above_ground <distance>] "
+	"[-nocollect] [-reset_point] [-normal {x y z}]",
+	(NULL) );
+    return TCL_ERROR;
+}
+
 void register_course_load_tcl_callbacks( Tcl_Interp *ip )
 {
     Tcl_CreateCommand (ip, "tux_course_dim", course_dim_cb,  0,0);
@@ -931,5 +1651,7 @@ void register_course_load_tcl_callbacks( Tcl_Interp *ip )
     Tcl_CreateCommand (ip, "tux_course_author", course_author_cb, 0,0);
     Tcl_CreateCommand (ip, "tux_course_name", course_name_cb, 0,0);
     Tcl_CreateCommand (ip, "tux_base_height_value", base_height_value_cb, 0,0);
+    Tcl_CreateCommand (ip, "tux_tree_props",  tree_props_cb,   0,0);
+    Tcl_CreateCommand (ip, "tux_item_spec",  item_spec_cb,   0,0);
 }
 

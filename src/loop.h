@@ -27,9 +27,14 @@ extern "C"
 
 typedef void (*mode_init_func_ptr_t)(void);
 typedef void (*mode_loop_func_ptr_t)( scalar_t time_step );
+typedef void (*mode_term_func_ptr_t)(void);
 
-void register_loop_funcs( game_mode_t mode, mode_init_func_ptr_t init_func,
-			  mode_loop_func_ptr_t loop_func );
+scalar_t get_clock_time();
+void register_loop_funcs( game_mode_t mode, 
+			  mode_init_func_ptr_t init_func,
+			  mode_loop_func_ptr_t loop_func,
+			  mode_term_func_ptr_t term_func );
+void set_game_mode( game_mode_t mode );
 void main_loop();
 
 #endif /* _LOOP_H_ */

@@ -12,7 +12,7 @@
 #include <math.h>
 #include <float.h>
 #include "quadgeom.hpp"
-
+#include "tuxracer.h"
 
 vector	vector::operator+(const vector& v) const
 // Adds two vectors.  Creates a temporary for the return value.
@@ -152,7 +152,7 @@ bool	vector::checknan() const
 	if (fabs(x[0]) > 10000000 || fabs(x[1]) > 10000000 || fabs(x[2]) > 10000000) {
 		return true;//xxxxxxx
 	}
-	if (isnan(x[0]) || isnan(x[1]) || isnan(x[2])) {
+	if (!FINITE(x[0]) || !FINITE(x[1]) || !FINITE(x[2])) {
 		return true;
 	}
 	else return false;

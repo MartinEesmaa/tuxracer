@@ -65,8 +65,8 @@ static Image *ImageOpen(char *fileName)
     }
   if ((image->file = fopen(fileName, "rb")) == NULL) 
     {
-      perror(fileName);
-      exit(-1);
+      free( image );
+      return NULL;
     }
   /*
    *	Read the image header
@@ -220,6 +220,10 @@ IMAGE *ImageLoad(char *fileName)
   int sx;
 
   image = ImageOpen(fileName);
+
+  if ( image == NULL ) {
+      return NULL;
+  }
 
   final = (IMAGE *)malloc(sizeof(IMAGE));
   if (final == NULL) 

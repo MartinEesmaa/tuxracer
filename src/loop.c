@@ -19,6 +19,11 @@
 
 #include "tuxracer.h"
 #include "loop.h"
+#include "ui_mgr.h"
+
+#if defined( HAVE_SDL )
+#   include "SDL.h"
+#endif /* defined( HAVE_SDL ) */
 
 
 /*
@@ -28,6 +33,7 @@
 typedef struct {
     mode_init_func_ptr_t init_func;
     mode_loop_func_ptr_t loop_func;
+    mode_term_func_ptr_t term_func;
 } mode_funcs_t;
 
 
@@ -38,32 +44,52 @@ typedef struct {
 static scalar_t clock_time;
 static mode_funcs_t mode_funcs[ NUM_GAME_MODES ] = 
 { 
-    { NULL, NULL },   /* START */
-    { NULL, NULL },   /* INTRO */
-    { NULL, NULL },   /* RACING */
-    { NULL, NULL }    /* GAME_OVER */
+    { NULL, NULL, NULL },   /* SPLASH */
+    { NULL, NULL, NULL },   /* START */
+    { NULL, NULL, NULL },   /* INTRO */
+    { NULL, NULL, NULL },   /* RACING */
+    { NULL, NULL, NULL },   /* GAME_OVER */
+    { NULL, NULL, NULL },   /* PAUSED */
+    { NULL, NULL, NULL }    /* RESET */
 };
+
+static game_mode_t new_mode = NO_MODE;
 
 
 /*
  * Function definitions
  */
 
-void register_loop_funcs( game_mode_t mode, mode_init_func_ptr_t init_func,
-			  mode_loop_func_ptr_t loop_func )
+void register_loop_funcs( game_mode_t mode, 
+			  mode_init_func_ptr_t init_func,
+			  mode_loop_func_ptr_t loop_func,
+			  mode_term_func_ptr_t term_func )
 {
     check_assertion( mode >= 0 && mode < NUM_GAME_MODES,
 		     "invalid game mode" );
     mode_funcs[ mode ].init_func = init_func;
     mode_funcs[ mode ].loop_func = loop_func;
+    mode_funcs[ mode ].term_func = term_func;
 }
 
-static scalar_t get_clock_time()
+scalar_t get_clock_time()
 {
+#if defined( HAVE_GETTIMEOFDAY )
+
     struct timeval tv;
     gettimeofday( &tv, NULL );
 
     return (scalar_t) tv.tv_sec + (scalar_t) tv.tv_usec * 1.e-6;
+
+#elif defined( HAVE_SDL ) 
+
+    return SDL_GetTicks() * 1.e-3;
+
+#else
+
+#   error "We have no way to determine the time on this system."
+
+#endif /* defined( HAVE_GETTIMEOFDAY ) */
 } 
 
 void reset_time_step_clock()
@@ -84,25 +110,66 @@ static scalar_t calc_time_step()
     return time_step;
 } 
 
+void set_game_mode( game_mode_t mode ) 
+{
+    new_mode = mode;
+}
+
+/* This is the main loop of the game.  It dispatches into the loop
+   functions of the various game modes.  */
 void main_loop()
 {
-    game_mode_t cur_mode = g_game.mode;
+    if ( getparam_capture_mouse() ) {
+	int w = getparam_x_resolution();
+	int h = getparam_y_resolution();
+	point2d_t pos;
 
-    if ( getparam_warp_pointer() ) {
-	glutWarpPointer( getparam_x_resolution()/2, 
-			 getparam_y_resolution()/2 );
-    }
+	pos = ui_get_mouse_position();
 
-    if ( g_game.prev_mode != cur_mode ) {
-	if ( mode_funcs[ cur_mode ].init_func != NULL ) {
-            reset_time_step_clock();
-	    ( mode_funcs[ cur_mode ].init_func )( );
+	/* Flip y coordinates */
+	pos.y = h - pos.y;
+
+	if ( pos.x < 0 ) {
+	    pos.x = 0;
 	}
-	g_game.prev_mode = cur_mode;
+	if ( pos.x > w-1 ) {
+	    pos.x = w-1;
+	}
+	if ( pos.y < 0 ) {
+	    pos.y = 0;
+	}
+	if ( pos.y > h-1 ) {
+	    pos.y = h-1;
+	}
+
+	glutWarpPointer( pos.x, pos.y );
     }
 
-    if ( mode_funcs[ cur_mode ].loop_func != NULL ) {
-        g_game.time_step = calc_time_step();
-	( mode_funcs[ cur_mode ].loop_func )( g_game.time_step );
+    if ( g_game.mode != new_mode ) {
+
+	if ( g_game.mode >= 0 && 
+	     mode_funcs[ g_game.mode ].term_func != NULL ) 
+	{
+	    ( mode_funcs[ g_game.mode ].term_func )( );
+	}
+
+	g_game.prev_mode = g_game.mode;
+
+	g_game.mode = new_mode;
+	
+	if ( mode_funcs[ g_game.mode ].init_func != NULL ) {
+	    ( mode_funcs[ g_game.mode ].init_func )( );
+
+	    /* Reset time step clock so that there isn't a sudden
+	       jump when we start the new mode */
+            reset_time_step_clock();
+	}
+    }
+
+    g_game.time_step = calc_time_step();
+    g_game.secs_since_start += g_game.time_step;
+
+    if ( mode_funcs[ g_game.mode ].loop_func != NULL ) {
+	( mode_funcs[ g_game.mode ].loop_func )( g_game.time_step );
     }
 }

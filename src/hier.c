@@ -22,7 +22,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <math.h>
-#include <values.h>
+#include <float.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -46,8 +46,8 @@ Tcl_HashTable g_hier_material_table;
 
 /* Default Material */
 material_t g_hier_default_material =
-    	    	    	    { { 0., 0., 1. },  /* diffuse colour  = blue */
-			      { 0., 0., 0. },  /* specular colour = black */
+    	    	    	    { { 0., 0., 1., 1.0 },  /* diffuse colour  = blue */
+			      { 0., 0., 0., 1.0 },  /* specular colour = black */
 			      0.0              /* specular exp. = 0.0 */
 			    };
 
@@ -391,10 +391,12 @@ create_material( char *mat, colour_t diffuse,
     matPtr->diffuse.r = diffuse.r;
     matPtr->diffuse.g = diffuse.g;
     matPtr->diffuse.b = diffuse.b;
+    matPtr->diffuse.a = 1.0;
 
     matPtr->specular_colour.r = specular_colour.r;
     matPtr->specular_colour.g = specular_colour.g;
     matPtr->specular_colour.b = specular_colour.b;
+    matPtr->specular_colour.a = 1.0;
 
     matPtr->specular_exp = specular_exp;
 
@@ -413,10 +415,12 @@ void initialize_scene_graph()
     g_hier_default_material.diffuse.r = 0.0;
     g_hier_default_material.diffuse.g = 0.0;
     g_hier_default_material.diffuse.b = 1.0;
+    g_hier_default_material.diffuse.a = 1.0;
 
     g_hier_default_material.specular_colour.r = 0.0;
     g_hier_default_material.specular_colour.g = 0.0;
     g_hier_default_material.specular_colour.b = 0.0;
+    g_hier_default_material.specular_colour.a = 1.0;
 
     g_hier_default_material.specular_exp = 0.0;
 

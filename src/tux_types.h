@@ -56,10 +56,25 @@ typedef struct {
 } point_t;
 
 typedef struct {
+    int i;   
+    int j;
+} index2d_t;
+
+typedef struct {
     scalar_t x;   
     scalar_t y;
     scalar_t z;
 } vector_t; 
+
+typedef struct {
+    scalar_t x;
+    scalar_t y;
+} vector2d_t;
+
+typedef struct {
+    vector_t nml;
+    scalar_t d;
+} plane_t;
 
 typedef scalar_t matrixgl_t[4][4]; 
 
@@ -67,6 +82,11 @@ typedef struct {
     int num_vertices;
     int *vertices;
 } polygon_t;
+
+typedef struct {
+    point_t p[3];
+    point2d_t t[3];
+} triangle_t;
 
 typedef struct {
     int num_vertices;
@@ -81,6 +101,11 @@ typedef struct {
     vector_t vec;
 } ray_t;
 
+typedef struct {
+    point_t pt;
+    vector_t nml;
+} line_t;
+
 /* Quaternion */
 typedef struct {
     scalar_t x;
@@ -94,6 +119,7 @@ typedef struct {
     scalar_t r;
     scalar_t g;
     scalar_t b;
+    scalar_t a;
 } colour_t;
 
 /* Material */
@@ -192,13 +218,17 @@ typedef struct {
     ray_t ray;
     scalar_t height;
     scalar_t diam;
+    int tree_type;
 } tree_t;
 
 typedef struct {
-    vector_t nml;
-    scalar_t d;
-} plane_t;
-
+    ray_t ray;
+    scalar_t height;
+    scalar_t diam;
+    int item_type;
+    int collectable;
+    bool_t drawable;
+} item_t;
 
 #endif /* TUX_TYPES */
 

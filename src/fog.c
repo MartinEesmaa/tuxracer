@@ -23,14 +23,15 @@
 #include "tcl_util.h"
 
 static fog_t fog_settings;
+static bool_t enabled = True;
 
 void reset_fog()
 {
     fog_settings.is_on = True;
-    fog_settings.mode = GL_EXP;
+    fog_settings.mode = GL_LINEAR;
     fog_settings.density = 0.005;
-    fog_settings.start = 0;
-    fog_settings.end = 1;
+    fog_settings.start = 0.0;
+    fog_settings.end = getparam_forward_clip_distance();
     init_glfloat_array( 4, fog_settings.colour, 1.0, 1.0, 1.0, 1.0 );;
 }
 
@@ -38,10 +39,12 @@ void setup_fog()
 {
     if ( !fog_settings.is_on ) {
 	glDisable( GL_FOG );
+	enabled = False;
 	return;
     }
 
     glEnable( GL_FOG );
+    enabled = True;
 
     glFogi( GL_FOG_MODE, fog_settings.mode );
     glFogf( GL_FOG_DENSITY, fog_settings.density );
@@ -59,6 +62,17 @@ void setup_fog()
 void disable_fog()
 {
     glDisable( GL_FOG );
+    enabled = False;
+}
+
+bool_t is_fog_on()
+{
+    return fog_settings.is_on && enabled;
+}
+
+GLfloat* get_fog_colour()
+{
+    return fog_settings.colour;
 }
 
 
@@ -153,7 +167,7 @@ static int fog_cb (ClientData cd, Tcl_Interp *ip,
 	    }
 	    copy_to_glfloat_array( fog_settings.colour, tmp_arr, 4 );
 	} else {
-	    print_warning( TCL_WARNING, "tux_course_light: unrecognized "
+	    print_warning( TCL_WARNING, "tux_fog: unrecognized "
 			   "parameter `%s'", *argv );
 	}
 

@@ -30,6 +30,17 @@ extern "C"
 /* Acceleration due to gravity m/s^2 */
 #define EARTH_GRAV 9.81
 
+#define M_PER_SEC_TO_KM_PER_H 3.6
+
+#define KM_PER_H_TO_M_PER_SEC ( 1.0 / M_PER_SEC_TO_KM_PER_H )
+
+/* Speed at which paddling ceases to be effective (m/s) */
+#define MAX_PADDLING_SPEED ( 60.0 * KM_PER_H_TO_M_PER_SEC ) 
+
+/* Time over which constant jump force is applied */
+#define JUMP_FORCE_DURATION 0.20
+
+
 void      increment_turn_fact( player_data_t *plyr, scalar_t amt );
 void      set_gravity( bool_t low );
 void      set_friction_coeff( scalar_t fric[3] ); 
@@ -37,7 +48,9 @@ void      set_friction( bool_t useFriction );
 scalar_t  get_min_y_coord();
 vector_t  find_course_normal( scalar_t x, scalar_t z );
 scalar_t  find_y_coord( scalar_t x, scalar_t z );
-terrain_t get_surface_type( scalar_t x, scalar_t z );
+void      get_surface_type( scalar_t x, scalar_t z, scalar_t weights[] );
+plane_t   get_local_course_plane( point_t pt );
+scalar_t  get_compression_depth( terrain_t surf_type ); 
 void      set_tux_pos( player_data_t *plyr, point_t newPos );
 void      update_player_pos( player_data_t *plyr, scalar_t dtime );
 void      init_physical_simulation();

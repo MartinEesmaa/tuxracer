@@ -78,11 +78,21 @@ struct quadsquare {
     static double ScaleX, ScaleZ;
     static int RowSize, NumRows;
     static terrain_t *Terrain;
-    static int TexIndex[NumTerrains];
-    static GLuint *TexNames;
+    static GLuint TexId[NumTerrains];
+    static GLuint EnvmapTexId;
 
-    static GLuint *VertexArrayIndices[NumTerrains];
-    static int VertexArrayCounter[NumTerrains];
+    static GLuint *VertexArrayIndices;
+    static GLuint VertexArrayCounter;
+    static GLuint VertexArrayMinIdx;
+    static GLuint VertexArrayMaxIdx;
+
+    static void MakeTri( int a, int b, int c, int terrain );
+    static void MakeSpecialTri( int a, int b, int c, int terrain );
+    static void MakeNoBlendTri( int a, int b, int c, int terrain );
+
+    static void DrawTris();
+    static void DrawEnvmapTris();
+    static void InitArrayCounters();
 
 
 // public:
@@ -95,7 +105,7 @@ struct quadsquare {
     int	CountNodes();
 	
     void	Update(const quadcornerdata& cd, const float ViewerLocation[3], float Detail);
-    int	Render(const quadcornerdata& cd);
+    void	Render(const quadcornerdata& cd, GLubyte *vnc_array);
 
     float	GetHeight(const quadcornerdata& cd, float x, float z);
 
@@ -116,7 +126,8 @@ private:
     void	SetupCornerData(quadcornerdata* q, const quadcornerdata& pd, int ChildIndex);
 
     void	UpdateAux(const quadcornerdata& cd, const float ViewerLocation[3], float CenterError, clip_result_t vis);
-    void	RenderAux(const quadcornerdata& cd, clip_result_t vis);
+    void	RenderAux(const quadcornerdata& cd, clip_result_t vis,
+			  int terrain);
     void	SetStatic(const quadcornerdata& cd);
     void	InitVert(int i, int x, int z);
 

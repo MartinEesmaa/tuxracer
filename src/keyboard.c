@@ -31,15 +31,6 @@ static key_cb_t special_keytable[SPECIAL_KEYTABLE_SIZE];
 static keymap_t keymap[KEYMAP_SIZE];
 static int num_keymap_entries = 0;
 
-/*
-    { START, DEFAULT_CALLBACK, NULL, NULL, start_menu_cb },
-    { RACING, CONFIGURABLE_KEY, "esc", get_quit_key, quit_racing_cb },
-    { RACING, CONFIGURABLE_KEY, "j", get_turn_left_key, turn_left_cb },
-    { RACING, CONFIGURABLE_KEY, "l", get_turn_right_key, turn_right_cb },
-    { RACING, CONFIGURABLE_KEY, "space", get_brake_key, brake_cb },
-    { GAME_OVER, DEFAULT_CALLBACK, NULL, NULL, game_over_cb }
-*/
-
 int add_keymap_entry( game_mode_t mode, keymap_class_t keymap_class,
 		      char *keys, key_func_t key_func, key_cb_t key_cb )
 {

@@ -28,7 +28,9 @@ extern "C"
 /* Warning levels -- these categories are very vague */
 #define CRITICAL_WARNING        1
 #define IMPORTANT_WARNING       10
+#define MISSING_FILE_WARNING    10
 #define TCL_WARNING             20
+#define DEPRECATION_WARNING     30
 #define CONFIGURATION_WARNING   50
 #define PEDANTIC_WARNING        100
 

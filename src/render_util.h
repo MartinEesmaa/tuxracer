@@ -41,14 +41,16 @@ void print_string_centered( scalar_t y, void *font, char *string );
 void reshape( int w, int h );
 void flat_mode();
 void draw_overlay();
-void print_time();
 void clear_rendering_context();
 void configure_fog();
-void set_material_alpha( colour_t diffuse_colour, colour_t specular_colour,
-			 scalar_t specular_exp, scalar_t alpha );
 void set_material( colour_t diffuse_colour, colour_t specular_colour,
 		   scalar_t specular_exp );
 void print_health(scalar_t health_pct);
+
+void draw_billboard( player_data_t *plyr, 
+		     point_t center_pt, scalar_t width, scalar_t height, 
+		     bool_t use_world_y_axis, 
+		     point2d_t min_tex_coord, point2d_t max_tex_coord );
 
 #endif /* _RENDER_UTIL_H_ */
 

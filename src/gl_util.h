@@ -27,7 +27,22 @@ extern "C"
 
 #include "tuxracer.h"
 
+/* Shouldn't need to include this if gl.h is recent, but alas we can't
+ * count on that...
+ */
+#include <GL/glext.h>
+
+#if !defined(GL_GLEXT_VERSION) || GL_GLEXT_VERSION < 6
+#   error "*** You need a more recent copy of glext.h.  You can get one at http://oss.sgi.com/projects/ogl-sample/ABI/glxext.h ; it goes in /usr/include/GL. ***"
+#endif
+
+extern PFNGLLOCKARRAYSEXTPROC glLockArraysEXT_p;
+extern PFNGLUNLOCKARRAYSEXTPROC glUnlockArraysEXT_p;
+
 typedef enum {
+    GUI,
+    GAUGE_BARS,
+    TEXFONT,
     TEXT,
     COURSE,
     TREES,
@@ -35,7 +50,12 @@ typedef enum {
     PARTICLE_SHADOWS,
     BACKGROUND,
     TUX,
-    TUX_SHADOW
+    TUX_SHADOW,
+    SKY,
+    FOG_PLANE,
+    TRACK_MARKS,
+    OVERLAYS, 
+    SPLASH_SCREEN
 } RenderMode;
 
 void set_gl_options( RenderMode mode );
@@ -45,6 +65,8 @@ void check_gl_error();
 void copy_to_glfloat_array( GLfloat dest[], scalar_t src[], int n );
 
 void init_glfloat_array( int num, GLfloat arr[], ... );
+
+void init_opengl_extensions();
 
 #endif
 

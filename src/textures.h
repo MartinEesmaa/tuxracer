@@ -25,22 +25,33 @@ extern "C"
 #ifndef _TEXTURES_H_
 #define _TEXTURES_H_
 
-#define BACKGROUND_TEX 0
-#define TREE_TEX       1
-#define ICE_TEX        2
-#define ROCK_TEX       3
-#define SNOW_TEX       4
-
-#define NUM_TEXTURES   5
-
 #define TEX_SCALE 6
 
-GLuint* get_tex_names();
+typedef struct {
+    GLuint texture_id;
+    int    repeatable;
+    int    ref_count;
+} texture_node_t;
+
 void init_textures();
-bool_t load_texture( int texnum, char *filename );
+
+bool_t load_and_bind_texture( char *binding, char *filename );
+
+bool_t load_texture( char *texname, char *filename, int repeatable );
+bool_t get_texture( char *texname, texture_node_t **tex );
+bool_t del_texture( char *texname );
+
+bool_t bind_texture( char *binding, char *texname );
+bool_t get_texture_binding( char *binding, GLuint *texid );
+bool_t unbind_texture( char *binding );
+
+void get_current_texture_dimensions( int *width, int *height );
+
+bool_t flush_textures(void);
+
+void register_texture_callbacks(Tcl_Interp *ip);
 
 #endif /* _TEXTURES_H_ */
-
 
 #ifdef __cplusplus
 } /* extern "C" */

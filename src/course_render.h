@@ -32,12 +32,12 @@ void setup_course_tex_gen();
 void setup_course_lighting();
 void render_course();
 void draw_background(scalar_t fov, scalar_t aspect );
+void draw_sky(point_t pos);
 void draw_trees() ;
 void set_course_clipping( bool_t state );
 void set_course_eye_point( point_t pt );
 void set_course_fog( bool_t state);
-void set_course_lighting( bool_t state );
-bool_t get_course_lighting();
+void draw_fog_plane();
 
 #endif
 

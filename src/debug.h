@@ -32,6 +32,15 @@ typedef enum {
     DEBUG_QUADTREE,
     DEBUG_CONTROL,
     DEBUG_HEALTH,
+    DEBUG_SOUND,
+    DEBUG_TEXTURE,
+    DEBUG_VIEW,
+    DEBUG_GL_EXT,
+    DEBUG_FONT,
+    DEBUG_UI,
+    DEBUG_GAME_LOGIC,
+    DEBUG_SAVE,
+    DEBUG_JOYSTICK,
     NUM_DEBUG_MODES
 } debug_mode_t;
 

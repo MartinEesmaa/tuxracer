@@ -39,6 +39,8 @@ typedef struct {
 void reset_fog();
 void setup_fog();
 void disable_fog();
+bool_t is_fog_on();
+GLfloat* get_fog_colour();
 void register_fog_callbacks( Tcl_Interp *ip );
 
 #endif

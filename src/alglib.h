@@ -36,10 +36,14 @@ extern "C"
 #   define ROUND_TO_NEAREST(x) ( (int) ((x)+0.5) )
 #endif
 
+#define ANGLES_TO_RADIANS(x) ( M_PI / 180.0 * (x) )
+#define RADIANS_TO_ANGLES(x) ( 180.0 / M_PI * (x) )
+
 /* points and vectors */
 vector_t  make_vector( scalar_t x, scalar_t y, scalar_t z );
 point_t   make_point( scalar_t x, scalar_t y, scalar_t z );
 point2d_t make_point2d( scalar_t x, scalar_t y );
+index2d_t make_index2d( int i, int j );
 
 scalar_t  dot_product( vector_t v1, vector_t v2 );
 vector_t  scale_vector( scalar_t s, vector_t v );
@@ -61,6 +65,8 @@ point_t   transform_point(matrixgl_t mat, point_t p);
 
 /* planes */
 plane_t make_plane( scalar_t nx, scalar_t ny, scalar_t nz, scalar_t d );
+bool_t intersect_planes( plane_t s1, plane_t s2, plane_t s3, point_t *p );
+scalar_t distance_to_plane( plane_t plane, point_t pt );
 
 /* matrices */
 void make_identity_matrix(matrixgl_t h);
@@ -93,6 +99,10 @@ vector_t rotate_vector( quaternion_t q, vector_t v );
 #define MAG_SQD( vec ) ( (vec).x * (vec).x + \
                          (vec).y * (vec).y + \
                          (vec).z * (vec).z )
+
+/* polygons */
+int cut_triangle( triangle_t *replace, triangle_t *new1, triangle_t *new2, 
+		  line_t cut_line );
 
 #endif /* ALGLIB_H */
 

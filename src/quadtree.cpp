@@ -13,11 +13,10 @@
 #include "tuxracer.h"
 #include "textures.h"
 #include "course_load.h"
+#include "fog.h"
+#include "gl_util.h"
+#include "course_render.h"
 
-#include <GL/gl.h>
-
-#include <stdio.h>
-#include <math.h>
 #include "quadtree.hpp"
 #include "quadgeom.hpp"
 
@@ -36,14 +35,24 @@
 /* Amount to magnify errors by within ERROR_MAGNIFICATION_THRESHOLD */
 #define ERROR_MAGNIFICATION_AMOUNT 3
 
+/* Environment map alpha value, integer from 0-255 */ 
+#define ENV_MAP_ALPHA 50
+
+/* Useful macro for setting colors in the color array */
+#define colorval(j,ch) \
+VNCArray[j*STRIDE_GL_ARRAY+STRIDE_GL_ARRAY-4+(ch)]
+
+
 //
 // quadsquare functions.
 //
 
-int quadsquare::TexIndex[NumTerrains];
-GLuint *quadsquare::TexNames;
-GLuint *quadsquare::VertexArrayIndices[NumTerrains] = { NULL };
-int quadsquare::VertexArrayCounter[NumTerrains];
+GLuint quadsquare::TexId[NumTerrains];
+GLuint quadsquare::EnvmapTexId;
+GLuint *quadsquare::VertexArrayIndices = NULL;
+GLuint quadsquare::VertexArrayCounter;
+GLuint quadsquare::VertexArrayMinIdx;
+GLuint quadsquare::VertexArrayMaxIdx;
 
 quadsquare::quadsquare(quadcornerdata* pcd)
 // Constructor.
@@ -94,12 +103,20 @@ quadsquare::quadsquare(quadcornerdata* pcd)
 	print_debug( DEBUG_QUADTREE, "initializing root node" );
 
 	// Initialize texture data
-	TexIndex[Snow] = SNOW_TEX;
-	TexIndex[Ice] = ICE_TEX;
-	TexIndex[Rock] = ROCK_TEX;
+	if (!get_texture_binding("snow", &(TexId[Snow]))) {
+	    TexId[Snow] = 0;
+	}
+	if (!get_texture_binding("ice", &TexId[Ice])) {
+	    TexId[Ice] = 0;
+	}
+	if (!get_texture_binding("rock", &TexId[Rock])) {
+	    TexId[Rock] = 0;
+	}
+	if ( !get_texture_binding( "terrain_envmap", &EnvmapTexId ) ) {
+	    EnvmapTexId = 0;
+	}
 
 	Terrain = get_course_terrain_data();
-	TexNames = get_tex_names();
     }
 }
 
@@ -756,12 +773,12 @@ void	quadsquare::NotifyChildDisable(const quadcornerdata& cd, int index)
     }
 	
     /* We don't really want to delete nodes when they're disabled, do we?
-    if (Child[index]->Static == false) {
-	delete Child[index];
-	Child[index] = 0;
+       if (Child[index]->Static == false) {
+       delete Child[index];
+       Child[index] = 0;
 
-	BlockDeleteCount++;//xxxxx
-    }
+       BlockDeleteCount++;//xxxxx
+       }
     */
 }
 
@@ -951,12 +968,14 @@ void	quadsquare::UpdateAux(const quadcornerdata& cd, const float ViewerLocation[
 }
 
 GLuint VertexIndices[9];
-GLuint VertList[24];
+int VertexTerrains[9];
 
 void	quadsquare::InitVert(int i, int x, int z)
 // Initializes the indexed vertex of VertexArray[] with the
 // given values.
 {
+    int idx;
+
     if ( x >= RowSize ) {
 	x = RowSize-1;
     }
@@ -964,35 +983,180 @@ void	quadsquare::InitVert(int i, int x, int z)
 	z = NumRows - 1;
     }
 
-    VertexIndices[i] = x + RowSize * z;
+    idx = x + RowSize * z;
+
+    VertexIndices[i] = idx;
+    VertexTerrains[i] = Terrain[idx];
 }
 
+GLubyte *VNCArray;
 
-int	quadsquare::Render(const quadcornerdata& cd)
+void quadsquare::DrawTris()
+{
+    int tmp_min_idx = VertexArrayMinIdx;
+    if ( glLockArraysEXT_p && getparam_use_cva() ) {
+
+	if ( getparam_cva_hack() ) {
+	    /* This is a hack that seems to fix the "psychedelic colours" on 
+	       some drivers (TNT/TNT2, for example)
+	     */
+	    if ( tmp_min_idx == 0 ) {
+		tmp_min_idx = 1;
+	    }
+	} 
+
+	glLockArraysEXT_p( tmp_min_idx, 
+			 VertexArrayMaxIdx - tmp_min_idx + 1 ); 
+    }
+
+    glDrawElements( GL_TRIANGLES, VertexArrayCounter,
+		    GL_UNSIGNED_INT, VertexArrayIndices );
+
+    if ( glUnlockArraysEXT_p && getparam_use_cva() ) {
+	glUnlockArraysEXT_p();
+    }
+}
+
+void quadsquare::DrawEnvmapTris() 
+{
+    if ( VertexArrayCounter > 0 && EnvmapTexId != 0 ) {
+	
+	glTexGeni( GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP );
+	glTexGeni( GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP );
+
+	glBindTexture( GL_TEXTURE_2D, EnvmapTexId );
+
+	DrawTris();
+
+	glTexGeni( GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR );
+	glTexGeni( GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR );
+
+    } 
+}
+
+void quadsquare::InitArrayCounters()
+{
+    VertexArrayCounter = 0;
+    VertexArrayMinIdx = INT_MAX;
+    VertexArrayMaxIdx = 0;
+}
+
+void	quadsquare::Render(const quadcornerdata& cd, GLubyte *vnc_array)
 // Draws the heightfield represented by this tree.
 // Returns the number of triangles rendered.
 {
-    for (int i=0; i<NumTerrains; i++) {
-	VertexArrayCounter[i] = 0;
-    }
+    VNCArray = vnc_array;
+    bool_t fog_on;
+    unsigned int i, j;
+    int nx, ny;
+    get_course_divisions( &nx, &ny );
 
-    RenderAux(cd, SomeClip);
 
-    int TriCount = 0;
-    for (int i=0; i<NumTerrains; i++) {
-	// Draw 'em.
+    /* Save fog state */
+    fog_on = is_fog_on();
 
-        if ( VertexArrayCounter[i] == 0 ) {
+
+    /*
+     * Draw the "normal" blended triangles ( <= 2 terrains textures )
+     */
+    for (j=0; j<NumTerrains; j++) {
+	InitArrayCounters();
+	
+	RenderAux(cd, SomeClip, j);
+
+        if ( VertexArrayCounter == 0 ) {
             continue;
         } 
 
-	glBindTexture( GL_TEXTURE_2D, TexNames[TexIndex[i]] );
-	glDrawElements( GL_TRIANGLES, VertexArrayCounter[i],
-			GL_UNSIGNED_INT, VertexArrayIndices[i] );
-	TriCount += VertexArrayCounter[i] / 3;
+	glBindTexture( GL_TEXTURE_2D, TexId[j] );
+	DrawTris();
+
+	if ( j == Ice && getparam_terrain_envmap() ) {
+	    /* Render Ice with environment map */
+	    glDisableClientState( GL_COLOR_ARRAY );
+	    glColor4f( 1.0, 1.0, 1.0, ENV_MAP_ALPHA / 255.0 );
+
+	    DrawEnvmapTris();
+
+	    glEnableClientState( GL_COLOR_ARRAY );
+	}
+
     }
 
-    return TriCount;
+    /*
+     * Draw the "special" triangles that have different terrain types
+     * at each of the corners 
+     */
+    if ( getparam_terrain_blending() &&
+	 getparam_perfect_terrain_blending() ) {
+
+	/*
+	 * Get the "special" three-terrain triangles
+	 */
+	InitArrayCounters();
+	RenderAux( cd, SomeClip, -1 );
+	
+	if ( VertexArrayCounter != 0 ) {
+	    /* Render black triangles */
+	    glDisable( GL_FOG );
+	    
+	    /* Set triangle vertices to black */
+	    for (i=0; i<VertexArrayCounter; i++) {
+		colorval( VertexArrayIndices[i], 0 ) = 0;
+		colorval( VertexArrayIndices[i], 1 ) = 0;
+		colorval( VertexArrayIndices[i], 2 ) = 0;
+		colorval( VertexArrayIndices[i], 3 ) = 255;
+	    }
+	    
+	    /* Draw the black triangles */
+	    glBindTexture( GL_TEXTURE_2D, TexId[0] );
+	    DrawTris();
+	    
+	    /* Now we draw the triangle once for each texture */
+	    if (fog_on) {
+		glEnable( GL_FOG );
+	    }
+
+	    /* Use additive blend function */
+	    glBlendFunc( GL_SRC_ALPHA, GL_ONE );
+
+	    /* First set triangle colours to white */
+	    for (i=0; i<VertexArrayCounter; i++) {
+		colorval( VertexArrayIndices[i], 0 ) = 255;
+		colorval( VertexArrayIndices[i], 1 ) = 255;
+		colorval( VertexArrayIndices[i], 2 ) = 255;
+	    }
+
+	    for (j=0; j<NumTerrains; j++) {
+		glBindTexture( GL_TEXTURE_2D, TexId[j] );
+
+		/* Set alpha values */
+		for (i=0; i<VertexArrayCounter; i++) {
+		    colorval( VertexArrayIndices[i], 3 ) = 
+			(Terrain[VertexArrayIndices[i]] == (terrain_t)j ) ? 
+			255 : 0;
+		}
+
+		DrawTris();
+	    }
+
+
+	    /* Render Ice with environment map */
+	    if ( getparam_terrain_envmap() ) {
+		glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+	    
+		/* Need to set alpha values for ice */
+		for (i=0; i<VertexArrayCounter; i++) {
+		    colorval( VertexArrayIndices[i], 3 ) = 
+			(Terrain[VertexArrayIndices[i]] == Ice) ? 
+			ENV_MAP_ALPHA : 0;
+		}
+		DrawEnvmapTris();
+	    }
+	}
+    }
+
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 }
 
 clip_result_t quadsquare::ClipSquare( const quadcornerdata& cd )
@@ -1046,11 +1210,82 @@ clip_result_t quadsquare::ClipSquare( const quadcornerdata& cd )
 }
 
 
-void	quadsquare::RenderAux(const quadcornerdata& cd, clip_result_t vis)
+typedef void (*make_tri_func_t)( int a, int b, int c, int terrain );
+
+/* Local macro for setting alpha value based on terrain */
+#define setalphaval(i) colorval(VertexIndices[i], 3) = \
+    ( terrain <= VertexTerrains[i] ) ? 255 : 0 
+
+#define update_min_max( idx ) \
+    if ( idx > VertexArrayMaxIdx ) { \
+        VertexArrayMaxIdx = idx; \
+    } \
+    if ( idx < VertexArrayMinIdx ) { \
+        VertexArrayMinIdx = idx; \
+    }
+
+inline void quadsquare::MakeTri( int a, int b, int c, int terrain )
+{
+    if ( ( VertexTerrains[a] == terrain || 
+	   VertexTerrains[b] == terrain || 
+	   VertexTerrains[c] == terrain ) )
+    { 
+	VertexArrayIndices[VertexArrayCounter++] = VertexIndices[a]; 
+	setalphaval(a); 
+	update_min_max( VertexIndices[a] );
+	VertexArrayIndices[VertexArrayCounter++] = VertexIndices[b]; 
+	setalphaval(b); 
+	update_min_max( VertexIndices[b] );
+	VertexArrayIndices[VertexArrayCounter++] = VertexIndices[c]; 
+	setalphaval(c); 
+	update_min_max( VertexIndices[c] );
+    }
+}
+
+
+inline void quadsquare::MakeSpecialTri( int a, int b, int c, int terrain) 
+{
+    /* terrain should be -1 */
+
+    if ( VertexTerrains[a] != VertexTerrains[b] && 
+	 VertexTerrains[a] != VertexTerrains[c] && 
+	 VertexTerrains[b] != VertexTerrains[c] ) 
+    { 
+	VertexArrayIndices[VertexArrayCounter++] = VertexIndices[a]; 
+	update_min_max( VertexIndices[a] );
+	VertexArrayIndices[VertexArrayCounter++] = VertexIndices[b]; 
+	update_min_max( VertexIndices[b] );
+	VertexArrayIndices[VertexArrayCounter++] = VertexIndices[c]; 
+	update_min_max( VertexIndices[c] );
+    }
+}
+
+inline void quadsquare::MakeNoBlendTri( int a, int b, int c, int terrain )
+{
+    if ( ( VertexTerrains[a] == terrain || 
+	   VertexTerrains[b] == terrain || 
+	   VertexTerrains[c] == terrain ) &&
+	 ( VertexTerrains[a] >= terrain &&
+	   VertexTerrains[b] >= terrain &&
+	   VertexTerrains[c] >= terrain ) )
+    { 
+	VertexArrayIndices[VertexArrayCounter++] = VertexIndices[a]; 
+	setalphaval(a); 
+	update_min_max( VertexIndices[a] );
+	VertexArrayIndices[VertexArrayCounter++] = VertexIndices[b]; 
+	setalphaval(b);
+	update_min_max( VertexIndices[b] );
+	VertexArrayIndices[VertexArrayCounter++] = VertexIndices[c];
+	setalphaval(c);
+	update_min_max( VertexIndices[c] );
+    }
+}
+
+void	quadsquare::RenderAux(const quadcornerdata& cd, clip_result_t vis,
+			      int terrain)
 // Does the work of rendering this square.  Uses the enabled vertices only.
 // Recurses as necessary.
 {
-    int terrain_ne, terrain_nw, terrain_se, terrain_sw;
     int	half = 1 << cd.Level;
     int	whole = 2 << cd.Level;
 	
@@ -1076,7 +1311,7 @@ void	quadsquare::RenderAux(const quadcornerdata& cd, clip_result_t vis)
     for (i = 0; i < 4; i++, mask <<= 1) {
 	if (EnabledFlags & (16 << i)) {
 	    SetupCornerData(&q, cd, i);
-	    Child[i]->RenderAux(q, vis);
+	    Child[i]->RenderAux(q, vis, terrain);
 	} else {
 	    flags |= mask;
 	}
@@ -1084,16 +1319,24 @@ void	quadsquare::RenderAux(const quadcornerdata& cd, clip_result_t vis)
 
     if (flags == 0) return;
 
-    // Init vertex data.
-    // 
-    //   +---+---+
-    //  6|  7   8|
-    //   |       |
-    //   +   +   +
-    //  5|  0   1|
-    //   |       |
-    //   +---+---+
-    //  4   3   2
+    // Init vertex data.  Here's a diagram of what's going on.
+    // Yes, this diagram is fucked, but that's because things are mirrored 
+    // in the z axis for us (z coords are actually -z coords).
+    //
+    // (top of course) 
+    //        N                
+    //    +---+---+ (xorg, zorg)
+    //   2|  3   4|        
+    //    |(1) (2)|
+    // E  +   +   +  W
+    //   1|  0   5|
+    //    |(8) (4)|
+    //    +---+---+
+    //   8   7   6
+    //        S
+    // (bottom of course)
+    //
+    // Values in parens are bitmask values for the corresponding child squares
     //
 
     InitVert(0, cd.xorg + half, cd.zorg + half);
@@ -1106,62 +1349,40 @@ void	quadsquare::RenderAux(const quadcornerdata& cd, clip_result_t vis)
     InitVert(7, cd.xorg + half, cd.zorg + whole);
     InitVert(8, cd.xorg + whole, cd.zorg + whole);
 
-    if ( cd.xorg + half < RowSize && cd.xorg + whole < RowSize &&
-	 cd.zorg < NumRows && cd.zorg + half < NumRows ) {
-	terrain_ne = (int) Terrain[ cd.xorg + whole +
-				  (cd.zorg + half) * RowSize ];
-	terrain_nw = (int) Terrain[ cd.xorg + half +
-				  (cd.zorg + half) * RowSize ];
-	terrain_se = (int) Terrain[ cd.xorg + whole +
-				  cd.zorg * RowSize ];
-	terrain_sw = (int) Terrain[ cd.xorg + half +
-				  cd.zorg * RowSize ];
-    } else {
-	terrain_ne = terrain_nw = terrain_se = terrain_sw = Snow;
+
+    // Make the list of triangles to draw.
+#define make_tri_list(tri_func) \
+    if ((EnabledFlags & 1) == 0 ) { \
+	tri_func(0, 2, 8, terrain); \
+    } else { \
+	if (flags & 8) tri_func(0, 1, 8, terrain); \
+	if (flags & 1) tri_func(0, 2, 1, terrain); \
+    } \
+    if ((EnabledFlags & 2) == 0 ) {  \
+	tri_func(0, 4, 2, terrain);  \
+    } else { \
+	if (flags & 1) tri_func(0, 3, 2, terrain); \
+	if (flags & 2) tri_func(0, 4, 3, terrain); \
+    } \
+    if ((EnabledFlags & 4) == 0 ) { \
+	tri_func(0, 6, 4, terrain); \
+    } else { \
+	if (flags & 2) tri_func(0, 5, 4, terrain); \
+	if (flags & 4) tri_func(0, 6, 5, terrain); \
+    } \
+    if ((EnabledFlags & 8) == 0 ) { \
+	tri_func(0, 8, 6, terrain); \
+    } else { \
+	if (flags & 4) tri_func(0, 7, 6, terrain); \
+	if (flags & 8) tri_func(0, 8, 7, terrain); \
     }
 
-
-	
-// Local macro to make the triangle logic shorter & hopefully clearer.
-#define tri(a,b,c) ( \
-VertexArrayIndices[i][VertexArrayCounter[i]++] = VertexIndices[a], \
-VertexArrayIndices[i][VertexArrayCounter[i]++] = VertexIndices[b], \
-VertexArrayIndices[i][VertexArrayCounter[i]++] = VertexIndices[c] )
-
-    for ( i=0; i < (int)NumTerrains; i++ ) {
-	// Make the list of triangles to draw.
-	if ((EnabledFlags & 1) == 0 ) {
-	    if ( terrain_ne == i ) {
-		tri(0, 2, 8);
-	    }
-	} else {
-	    if (flags & 8 && terrain_ne == i) tri(0, 1, 8);
-	    if (flags & 1 && terrain_se == i) tri(0, 2, 1);
-	}
-	if ((EnabledFlags & 2) == 0 ) { 
-	    if ( terrain_se == i ) {
-		tri(0, 4, 2); 
-	    }
-	} else {
-	    if (flags & 1 && terrain_se == i) tri(0, 3, 2);
-	    if (flags & 2 && terrain_sw == i) tri(0, 4, 3);
-	}
-	if ((EnabledFlags & 4) == 0 ) {
-	    if ( terrain_sw == i ) {
-		tri(0, 6, 4);
-	    }
-	} else {
-	    if (flags & 2 && terrain_sw == i) tri(0, 5, 4);
-	    if (flags & 4 && terrain_nw == i) tri(0, 6, 5);
-	}
-	if ((EnabledFlags & 8) == 0 ) {
-	    if ( terrain_nw == i ) {
-		tri(0, 8, 6);
-	    }
-	} else {
-	    if (flags & 4 && terrain_nw == i) tri(0, 7, 6);
-	    if (flags & 8 && terrain_ne == i) tri(0, 8, 7);
-	}
+    if ( terrain == -1 ) {
+	make_tri_list(MakeSpecialTri);
+    } else if ( getparam_terrain_blending() ) {
+	make_tri_list(MakeTri);
+    } else {
+	make_tri_list(MakeNoBlendTri);
     }
 }
 
@@ -1249,17 +1470,14 @@ void	quadsquare::AddHeightMap(const quadcornerdata& cd, const HeightMapInfo& hm)
     NumRows = hm.ZSize;
 
     if ( cd.Parent == NULL ) {
-	if ( VertexArrayIndices[0] != NULL ) {
-	    for ( int i=0; i<NumTerrains; i++ ) {
-		delete VertexArrayIndices[i];
-	    }
+	if ( VertexArrayIndices != NULL ) {
+	    delete VertexArrayIndices;
 	}
-	for ( int i=0; i<NumTerrains; i++ ) {
-	    /* Maximum number of triangles is 2 * RowSize * NumRows 
-	       This uses up a lot of space but it is a *big* performance gain.
-	     */
-	    VertexArrayIndices[i] = new GLuint[6 * RowSize * NumRows];
-	}
+
+	/* Maximum number of triangles is 2 * RowSize * NumRows 
+	   This uses up a lot of space but it is a *big* performance gain.
+	*/
+	VertexArrayIndices = new GLuint[6 * RowSize * NumRows];
     }
 
     // If block is outside rectangle, then don't bother.

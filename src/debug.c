@@ -28,7 +28,16 @@ static char* debug_desc[ NUM_DEBUG_MODES ] = {
     "ode",
     "quadtree",
     "control",
-    "health"
+    "health",
+    "sound",
+    "texture",
+    "view",
+    "gl_ext",
+    "font",
+    "ui",
+    "game_logic",
+    "save",
+    "joystick"
 };
 
 /* Parse the debug parameter, fill in the debug_setting array */

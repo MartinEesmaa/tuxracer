@@ -126,15 +126,9 @@ extern "C" void update_course_quadtree( point_t view_pos, float detail )
 
 extern "C" void render_course_quadtree()
 {
-    static int num_calls = 0;
-    int num_triangles;
+    GLubyte *vnc_array;
 
-    num_triangles = root->Render( root_corner_data );
+    get_gl_arrays( &vnc_array );
 
-    if ( num_calls % 50 == 0 ) {
-	num_calls = 0;
-	print_debug( DEBUG_QUADTREE, "number of triangles: %d", 
-		     num_triangles );
-    }
-    num_calls += 1;
+    root->Render( root_corner_data, vnc_array );
 }

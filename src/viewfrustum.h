@@ -37,6 +37,11 @@ void setup_view_frustum( player_data_t *plyr, scalar_t near, scalar_t far );
 
 clip_result_t clip_aabb_to_view_frustum( point_t min, point_t max );
 
+plane_t get_far_clip_plane();
+plane_t get_left_clip_plane();
+plane_t get_right_clip_plane();
+plane_t get_bottom_clip_plane();
+ 
 #endif /* _VIEWFRUSTUM_H_ */
 
 #ifdef __cplusplus

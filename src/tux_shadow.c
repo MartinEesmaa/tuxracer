@@ -32,13 +32,11 @@
  */
 #ifdef USE_STENCIL_BUFFER
 
-static colour_t shadow_colour = { 0.0, 0.0, 0.0 };
-static scalar_t shadow_alpha = 0.3;
+static colour_t shadow_colour = { 0.0, 0.0, 0.0, 0.3 };
 
 #else 
 
-static colour_t shadow_colour = { 0.0, 0.0, 0.0 };
-static scalar_t shadow_alpha = 0.1;
+static colour_t shadow_colour = { 0.0, 0.0, 0.0, 0.1 };
 
 #endif /* USE_STENCIL_BUFFER */
 
@@ -54,7 +52,7 @@ void draw_tux_shadow()
     set_gl_options( TUX_SHADOW ); 
 
     glColor4f( shadow_colour.r, shadow_colour.g, shadow_colour.b,
-	       shadow_alpha);
+	       shadow_colour.a );
 
     make_identity_matrix( model_matrix );
 

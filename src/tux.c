@@ -46,16 +46,16 @@ static char*     tuxHead;
 
 void adjust_tux_joints( scalar_t turnFact, bool_t isBraking, 
 			scalar_t paddling_factor, scalar_t speed,
-			vector_t net_force )
+			vector_t net_force, scalar_t flap_factor )
 {
     scalar_t turning_angle[2] = {0., 0.};
     scalar_t paddling_angle = 0.;
     scalar_t ext_paddling_angle = 0.;  /* arm extension during paddling */
     scalar_t kick_paddling_angle = 0.;  /* leg kicking during paddling */
     scalar_t braking_angle = 0.;
-    scalar_t belly_corr_fact = getparam_tux_slides_on_belly() ? -1 : 1;
     scalar_t force_angle = 0.; /* amount that legs move because of force */
     scalar_t turn_leg_angle = 0.; /* amount legs move when turning */
+    scalar_t flap_angle = 0.;
 
     /* move arms */
     reset_scene_node( tuxLeftShoulderJoint );
@@ -73,69 +73,60 @@ void adjust_tux_joints( scalar_t turnFact, bool_t isBraking,
     turning_angle[0] = max(-turnFact,0.0) * MAX_ARM_ANGLE;
     turning_angle[1] = max(turnFact,0.0) * MAX_ARM_ANGLE;
 
+    flap_angle = MAX_ARM_ANGLE * (0.5 + 0.5*sin(M_PI*flap_factor*6-M_PI/2));
+
     /* Adjust arms for turning */
     rotate_scene_node( tuxLeftShoulderJoint, 'z', 
-		       belly_corr_fact *
-		       -min( braking_angle + paddling_angle + turning_angle[0],
-			     MAX_ARM_ANGLE ) );
+		       min( braking_angle + paddling_angle + turning_angle[0],
+			    MAX_ARM_ANGLE ) + flap_angle );
     rotate_scene_node( tuxRightShoulderJoint, 'z',
-		       belly_corr_fact *
-		       -min( braking_angle + paddling_angle + turning_angle[1],
-			     MAX_ARM_ANGLE ) );
+		       min( braking_angle + paddling_angle + turning_angle[1], 
+			    MAX_ARM_ANGLE ) + flap_angle );
 
 
+    /* Adjust arms for paddling */
+    rotate_scene_node( tuxLeftShoulderJoint, 'y', -ext_paddling_angle );
+    rotate_scene_node( tuxRightShoulderJoint, 'y', ext_paddling_angle );
 
-    if ( getparam_tux_slides_on_belly() ) {
-
-	/* Adjust arms for paddling */
-	rotate_scene_node( tuxLeftShoulderJoint, 'y', -ext_paddling_angle );
-	rotate_scene_node( tuxRightShoulderJoint, 'y', ext_paddling_angle );
-
-	force_angle = max( -20.0, min( 20.0, -net_force.z / 300.0 ) );
-	turn_leg_angle = turnFact * 10;
+    force_angle = max( -20.0, min( 20.0, -net_force.z / 300.0 ) );
+    turn_leg_angle = turnFact * 10;
     
 	/* Adjust hip joints */
-	reset_scene_node( tuxLeftHipJoint );
-	rotate_scene_node( tuxLeftHipJoint, 'z', -20 + turn_leg_angle
-			   + force_angle );
-	reset_scene_node( tuxRightHipJoint );
-	rotate_scene_node( tuxRightHipJoint, 'z', -20 - turn_leg_angle
-			   + force_angle );
+    reset_scene_node( tuxLeftHipJoint );
+    rotate_scene_node( tuxLeftHipJoint, 'z', -20 + turn_leg_angle
+		       + force_angle );
+    reset_scene_node( tuxRightHipJoint );
+    rotate_scene_node( tuxRightHipJoint, 'z', -20 - turn_leg_angle
+		       + force_angle );
 	
-	/* Adjust knees */
-	reset_scene_node( tuxLeftKneeJoint );
-	rotate_scene_node( tuxLeftKneeJoint, 'z', -10 + turn_leg_angle
-			   - min( 35, speed ) + kick_paddling_angle
-			   + force_angle );
-	reset_scene_node( tuxRightKneeJoint );
-	rotate_scene_node( tuxRightKneeJoint, 'z', -10 - turn_leg_angle
-			   - min( 35, speed ) - kick_paddling_angle 
-			   + force_angle );
+    /* Adjust knees */
+    reset_scene_node( tuxLeftKneeJoint );
+    rotate_scene_node( tuxLeftKneeJoint, 'z', -10 + turn_leg_angle
+		       - min( 35, speed ) + kick_paddling_angle
+		       + force_angle );
+    reset_scene_node( tuxRightKneeJoint );
+    rotate_scene_node( tuxRightKneeJoint, 'z', -10 - turn_leg_angle
+		       - min( 35, speed ) - kick_paddling_angle 
+		       + force_angle );
 
-	/* Adjust ankles */
-	reset_scene_node( tuxLeftAnkleJoint );
-	rotate_scene_node( tuxLeftAnkleJoint, 'z', -20 + min(50, speed ) );
-	reset_scene_node( tuxRightAnkleJoint );
-	rotate_scene_node( tuxRightAnkleJoint, 'z', -20 + min(50, speed ) );
+    /* Adjust ankles */
+    reset_scene_node( tuxLeftAnkleJoint );
+    rotate_scene_node( tuxLeftAnkleJoint, 'z', -20 + min(50, speed ) );
+    reset_scene_node( tuxRightAnkleJoint );
+    rotate_scene_node( tuxRightAnkleJoint, 'z', -20 + min(50, speed ) );
 
 	/* Turn tail */
-	reset_scene_node( tuxTailJoint );
-	rotate_scene_node( tuxTailJoint, 'z', turnFact * 20 );
+    reset_scene_node( tuxTailJoint );
+    rotate_scene_node( tuxTailJoint, 'z', turnFact * 20 );
 
 	/* Adjust head and neck */
-	reset_scene_node( tuxNeck );
-	rotate_scene_node( tuxNeck, 'z', -50 );
-	reset_scene_node( tuxHead );
-	rotate_scene_node( tuxHead, 'z', -30 );
+    reset_scene_node( tuxNeck );
+    rotate_scene_node( tuxNeck, 'z', -50 );
+    reset_scene_node( tuxHead );
+    rotate_scene_node( tuxHead, 'z', -30 );
 
 	/* Turn head when turning */
-	rotate_scene_node( tuxHead, 'y', -turnFact * 70 );
-    } else {
-	reset_scene_node( tuxNeck );
-	rotate_scene_node( tuxNeck, 'z', 20 );
-	reset_scene_node( tuxHead );
-	rotate_scene_node( tuxHead, 'z', 20 );
-    }
+    rotate_scene_node( tuxHead, 'y', -turnFact * 70 );
 
 }
 
@@ -154,11 +145,7 @@ void draw_tux()
      */
     setup_course_lighting();
 
-    glShadeModel( GL_SMOOTH );
-
     draw_scene_graph( tuxRootNode );
-
-    glShadeModel( GL_FLAT );
 } 
 
 void load_tux()
@@ -184,7 +171,7 @@ void load_tux()
 	handle_system_error( 
 	    1, "Can't find the tuxracer data "
 	    "directory.  Please check the\nvalue of `data_dir' in "
-	    "~/.tuxracer and set it to the location where you\n"
+	    "~/.tuxracer/options and set it to the location where you\n"
 	    "installed the tuxracer-data files.\n\n"
 	    "Couldn't chdir to %s", getparam_data_dir() );
 	/*
@@ -194,7 +181,7 @@ void load_tux()
 
     if ( Tcl_EvalFile( g_game.tcl_interp, "./tux.tcl") == TCL_ERROR ) {
         handle_error( 1, "error evalating %s/tux.tcl: %s\n"
-		      "Please check the value of `data_dir' in ~/.tuxracer "
+		      "Please check the value of `data_dir' in ~/.tuxracer/options "
 		      "and make sure it\npoints to the location of the "
 		      "latest version of the tuxracer-data files.", 
 		      getparam_data_dir(), 

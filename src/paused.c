@@ -18,6 +18,7 @@
  */
 
 #include "tuxracer.h"
+#include "audio.h"
 #include "game_config.h"
 #include "multiplayer.h"
 #include "gl_util.h"
@@ -32,16 +33,75 @@
 #include "loop.h"
 #include "fog.h"
 #include "viewfrustum.h"
+#include "hud.h"
+#include "part_sys.h"
+#include "game_logic_util.h"
+#include "fonts.h"
+#include "ui_mgr.h"
+#include "joystick.h"
 
-static const colour_t text_colour = { 0.0, 0.0, 0.0 };
+#define NEXT_MODE RACING
+
+static void mouse_cb( int button, int state, int x, int y )
+{
+    set_game_mode( NEXT_MODE );
+    glutPostRedisplay();
+}
+
+
+/*---------------------------------------------------------------------------*/
+/*! 
+  Draws the text for the paused screen
+  \author  jfpatry
+  \date    Created:  2000-09-26
+  \date    Modified: 2000-09-26
+*/
+void draw_paused_text( void )
+{
+    int w = getparam_x_resolution();
+    int h = getparam_y_resolution();
+    int x_org, y_org;
+    int box_width, box_height;
+    char *string;
+    int string_w, asc, desc;
+    font_t *font;
+
+    box_width = 200;
+    box_height = 300;
+
+    x_org = w/2.0 - box_width/2.0;
+    y_org = h/2.0 - box_height/2.0;   
+
+    if ( !get_font_binding( "paused", &font ) ) {
+	print_warning( IMPORTANT_WARNING,
+		       "Couldn't get font for binding paused" );
+    } else {
+	string = "Paused";
+
+	get_font_metrics( font, string, &string_w, &asc, &desc );
+	
+	glPushMatrix();
+	{
+	    glTranslatef( x_org + box_width/2.0 - string_w/2.0,
+			  y_org + box_height/2.0, 
+			  0 );
+	    bind_font_texture( font );
+	    draw_string( font, string );
+	}
+	glPopMatrix();
+    }
+}
 
 void paused_init() 
 {
     glutDisplayFunc( main_loop );
-    glutIdleFunc( NULL );
+    glutIdleFunc( main_loop );
     glutReshapeFunc( reshape );
-    glutMotionFunc( NULL );
-    glutPassiveMotionFunc( NULL );
+    glutMouseFunc( mouse_cb );
+    glutMotionFunc( ui_event_motion_func );
+    glutPassiveMotionFunc( ui_event_motion_func );
+
+    play_music( "paused" );
 }
 
 void paused_loop( scalar_t time_step )
@@ -53,39 +113,55 @@ void paused_loop( scalar_t time_step )
 
     check_gl_error();
 
+    /* Check joystick */
+    if ( is_joystick_active() ) {
+	update_joystick();
+
+	if ( is_joystick_continue_button_down() )
+	{
+	    set_game_mode( NEXT_MODE );
+	    glutPostRedisplay();
+	    return;
+	}
+    }
+
     new_frame_for_fps_calc();
+
+    update_audio();
 
     clear_rendering_context();
 
     setup_fog();
 
-    update_player_pos( plyr, EPS );
-    update_view( plyr );
+    update_player_pos( plyr, 0 );
+    update_view( plyr, 0 );
 
     setup_view_frustum( plyr, NEAR_CLIP_DIST, 
 			getparam_forward_clip_distance() );
 
+    draw_sky( plyr->view.pos );
+
+    draw_fog_plane( plyr->view );
+
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
     render_course();
-    draw_background( getparam_fov(), (scalar_t)width/height );
     draw_trees();
+
+    if ( getparam_draw_particles() ) {
+	draw_particles( plyr );
+    }
 
     draw_tux();
     draw_tux_shadow();
 
-    flat_mode();
-    draw_overlay();
+    set_gl_options( GUI );
 
-    print_time();
-    print_fps();
+    ui_setup_display();
 
-    glColor3f( text_colour.r, text_colour.g, text_colour.b );
-    print_string_centered( 300, GLUT_BITMAP_TIMES_ROMAN_24, 
-			   "GAME PAUSED" );
-    
-    print_string_centered( 150, GLUT_BITMAP_TIMES_ROMAN_24, 
-			   "Press any key to continue" );
+    draw_paused_text();
+
+    draw_hud( plyr );
 
     reshape( width, height );
 
@@ -95,7 +171,7 @@ void paused_loop( scalar_t time_step )
 START_KEYBOARD_CB( paused_cb )
 {
     if ( release ) return;
-    g_game.mode = RACING;
+    set_game_mode( NEXT_MODE );
     glutPostRedisplay();
 }
 END_KEYBOARD_CB
@@ -109,7 +185,7 @@ void paused_register()
 
     check_assertion( status == 0, "out of keymap entries" );
 
-    register_loop_funcs( PAUSED, paused_init, paused_loop );
+    register_loop_funcs( PAUSED, paused_init, paused_loop, NULL );
 }
 
 

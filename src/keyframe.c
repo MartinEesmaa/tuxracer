@@ -21,6 +21,7 @@
 #include "tux.h"
 #include "phys_sim.h"
 #include "hier.h"
+#include "loop.h"
 
 #define MAX_NUM_KEY_FRAMES 128
 
@@ -95,7 +96,7 @@ void update_key_frame( player_data_t *plyr, scalar_t dt )
     } 
 
     if ( idx == numFrames || numFrames == 0 ) {
-        g_game.mode = RACING;
+        set_game_mode( RACING );
         return;
     } 
 

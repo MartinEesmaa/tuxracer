@@ -28,13 +28,18 @@
 #include "render_util.h"
 #include "fog.h"
 #include "course_quad.h"
+#include "viewfrustum.h"
+#include "track_marks.h"
 
 /* 
  *  Constants 
  */
 
+/* How long to make the flat part at the bottom of the course, as a
+   fraction of the total length of the course */
 #define FLAT_SEGMENT_FRACTION 0.2
 
+/* Aspect ratio of background texture */
 #define BACKGROUND_TEXTURE_ASPECT 3.0
 
 
@@ -51,9 +56,6 @@ static bool_t clip_course = False;
 /* If clipping is active, it will be based on a camera located here */
 static point_t eye_pt;
 
-/* Should we activate lighting when drawing the course? */
-static bool_t light_course = True;
-
 
 /* Macros for converting indices in height map to world coordinates */
 #define XCD(x) (  (scalar_t)(x) / (nx-1.) * courseWidth )
@@ -68,8 +70,6 @@ static bool_t light_course = True;
 
 void set_course_clipping( bool_t state ) { clip_course = state; }
 void set_course_eye_point( point_t pt ) { eye_pt = pt; }
-void set_course_lighting( bool_t state ) { light_course = state; }
-bool_t get_course_lighting() { return light_course; }
 
 vector_t* get_course_normals() { return nmls; } 
 
@@ -279,63 +279,144 @@ void setup_course_tex_gen()
     glTexGenfv( GL_T, GL_OBJECT_PLANE, zplane );
 }
 
-int select_tex( int x, int y, int nx,  terrain_t *terrain )
-{
-    switch ( terrain[ x + nx*y ] ) {
-    case Ice:
-        return ICE_TEX;
-    case Rock:
-        return ROCK_TEX;
-    case Snow:
-        return SNOW_TEX;
-    default:
-        code_not_reached();
-    } 
-    return 0;    /* to suppress warnings */
-} 
-
-
-
 #define DRAW_POINT \
     glNormal3f( nml.x, nml.y, nml.z ); \
     glVertex3f( pt.x, pt.y, pt.z ); 
 
 void render_course()
 {
+    int nx, ny;
+
+    get_course_divisions(&nx, &ny);
     set_gl_options( COURSE );
 
     setup_course_tex_gen();
 
-    if ( light_course ) {
-        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-        set_material( white, black, 1.0 );
-        glEnable( GL_LIGHTING );
-
-	setup_course_lighting();
-
-        glShadeModel( GL_SMOOTH );
-    } else {
-        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
-        set_material( white, black, 0.0 );
-        glShadeModel( GL_FLAT );
-    } 
+    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+    set_material( white, black, 1.0 );
+    
+    setup_course_lighting();
 
     update_course_quadtree( eye_pt, getparam_course_detail_level() );
 
-    /* Locking arrays is only useful for multipass rendering
-#if defined(HAVE_GLLOCKARRAYSEXT) && HAVE_GLLOCKARRAYSEXT
-    glLockArraysEXT(0, nx*ny); 
-#endif
-    */
-
     render_course_quadtree( );
 
-    /* 
-#if defined(HAVE_GLLOCKARRAYSEXT) && HAVE_GLLOCKARRAYSEXT
-    glUnlockArraysEXT();
-#endif
-    */
+    draw_track_marks();
 }
+
+void draw_sky(point_t pos)
+{
+  GLuint texture_id[6];
+
+  set_gl_options( SKY );
+
+  if (!(get_texture_binding( "sky_front", &texture_id[0] ) && 
+        get_texture_binding( "sky_top", &texture_id[1] ) && 
+        get_texture_binding( "sky_bottom", &texture_id[2] ) && 
+        get_texture_binding( "sky_left", &texture_id[3] ) && 
+        get_texture_binding( "sky_right", &texture_id[4] ) && 
+        get_texture_binding( "sky_back", &texture_id[5] ) ) ) {
+    return;
+  } 
+
+  glColor4f( 1.0, 1.0, 1.0, 1.0 );
+
+  glPushMatrix();
+
+  glTranslatef(pos.x, pos.y, pos.z);
+
+  glBindTexture( GL_TEXTURE_2D, texture_id[0] );
+  glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+
+  glBegin(GL_QUADS);
+  glTexCoord2f( 0.0, 0.0 );
+  glVertex3f( -1, -1, -1);
+  glTexCoord2f( 1.0, 0.0 );
+  glVertex3f(  1, -1, -1);
+  glTexCoord2f( 1.0, 1.0 );
+  glVertex3f(  1,  1, -1);
+  glTexCoord2f( 0.0, 1.0 );
+  glVertex3f( -1,  1, -1);
+  glEnd();
+
+  glBindTexture( GL_TEXTURE_2D, texture_id[1] );
+  glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+
+  glBegin(GL_QUADS);
+  glTexCoord2f( 0.0, 0.0 );
+  glVertex3f( -1,  1, -1);
+  glTexCoord2f( 1.0, 0.0 );
+  glVertex3f(  1,  1, -1);
+  glTexCoord2f( 1.0, 1.0 );
+  glVertex3f(  1,  1,  1);
+  glTexCoord2f( 0.0, 1.0 );
+  glVertex3f( -1,  1,  1);
+  glEnd();
+
+  glBindTexture( GL_TEXTURE_2D, texture_id[2] );
+  glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+
+  glBegin(GL_QUADS);
+  glTexCoord2f( 0.0, 0.0 );
+  glVertex3f( -1, -1,  1);
+  glTexCoord2f( 1.0, 0.0 );
+  glVertex3f(  1, -1,  1);
+  glTexCoord2f( 1.0, 1.0 );
+  glVertex3f(  1, -1, -1);
+  glTexCoord2f( 0.0, 1.0 );
+  glVertex3f( -1, -1, -1);
+  glEnd();
+
+
+  glBindTexture( GL_TEXTURE_2D, texture_id[3] );
+  glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+
+  glBegin(GL_QUADS);
+  glTexCoord2f( 0.0, 0.0 );
+  glVertex3f( -1, -1,  1);
+  glTexCoord2f( 1.0, 0.0 );
+  glVertex3f( -1, -1, -1);
+  glTexCoord2f( 1.0, 1.0 );
+  glVertex3f( -1,  1, -1);
+  glTexCoord2f( 0.0, 1.0 );
+  glVertex3f( -1,  1,  1);
+  glEnd();
+
+
+  glBindTexture( GL_TEXTURE_2D, texture_id[4] );
+  glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+
+  glBegin(GL_QUADS);
+  glTexCoord2f( 0.0, 0.0 );
+  glVertex3f(  1, -1, -1);
+  glTexCoord2f( 1.0, 0.0 );
+  glVertex3f(  1, -1,  1);
+  glTexCoord2f( 1.0, 1.0 );
+  glVertex3f(  1,  1,  1);
+  glTexCoord2f( 0.0, 1.0 );
+  glVertex3f(  1,  1, -1);
+  glEnd();
+
+
+  glBindTexture( GL_TEXTURE_2D, texture_id[5] );
+  glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+
+  glBegin(GL_QUADS);
+  glTexCoord2f( 0.0, 0.0 );
+  glVertex3f(  1, -1,  1);
+  glTexCoord2f( 1.0, 0.0 );
+  glVertex3f( -1, -1,  1);
+  glTexCoord2f( 1.0, 1.0 );
+  glVertex3f( -1,  1,  1);
+  glTexCoord2f( 0.0, 1.0 );
+  glVertex3f(  1,  1,  1);
+  glEnd();
+
+
+  glPopMatrix();
+
+}
+
 
 void draw_background(scalar_t fov, scalar_t aspect ) 
 {
@@ -344,18 +425,23 @@ void draw_background(scalar_t fov, scalar_t aspect )
     scalar_t miny;
     scalar_t x0, x1, z0;
     scalar_t total_length;
-    GLuint   *tex_names;
+	GLuint   texture_id[2];
 
     set_gl_options( BACKGROUND );
 
     get_course_dimensions( &courseWidth, &courseLength );
     miny = get_min_y_coord();
-    tex_names = get_tex_names();
+
+	if (!(get_texture_binding( "background", &texture_id[0] ) &&
+		  get_texture_binding( "snow", &texture_id[1] ) ) )  	{
+      return;
+	}
 
     total_length = ( 1.0 + FLAT_SEGMENT_FRACTION ) * courseLength;
 
     /* make background fill field of view */
-    bgndWidth  = 2 * tan(fov/2.*M_PI/180.) * aspect * total_length;
+    bgndWidth  = 2 * tan( ANGLES_TO_RADIANS( fov/2. ) ) * 
+	aspect * total_length;
 
     if ( bgndWidth < total_length ) {
 	bgndWidth = total_length;
@@ -372,7 +458,7 @@ void draw_background(scalar_t fov, scalar_t aspect )
     x1 = courseWidth / 2. + bgndWidth / 2.;
     z0 = -total_length + bgndWidth;
 
-    glBindTexture( GL_TEXTURE_2D, tex_names[BACKGROUND_TEX] );
+    glBindTexture( GL_TEXTURE_2D, texture_id[0] );
     glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
 
     glBegin(GL_QUAD_STRIP);
@@ -415,22 +501,14 @@ void draw_background(scalar_t fov, scalar_t aspect )
     glEnd();
 
     /* Draw bottom rectangle, light it the same way as the course */
-    if ( light_course ) {
-        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-        set_material( white, black, 1.0 );
-        glEnable( GL_LIGHTING );
-
-	setup_course_lighting();
-
-        glShadeModel( GL_SMOOTH );
-    } else {
-        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
-        set_material( white, black, 0.0 );
-        glShadeModel( GL_FLAT );
-    } 
+    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+    set_material( white, black, 1.0 );
+    glEnable( GL_LIGHTING );
+    
+    setup_course_lighting();
 
     glEnable( GL_TEXTURE_2D );
-    glBindTexture( GL_TEXTURE_2D, tex_names[SNOW_TEX] );
+    glBindTexture( GL_TEXTURE_2D, texture_id[1] );
     glNormal3f( 0, 1., 0 );
 
     glBegin( GL_QUADS );
@@ -458,13 +536,24 @@ void draw_trees()
     scalar_t  treeRadius;
     scalar_t  treeHeight;
     int       i;
-    GLuint    *tex_names;
+    GLuint    texture_id;
     vector_t  normal;
     scalar_t  fwd_clip_limit, bwd_clip_limit, fwd_tree_detail_limit;
 
+    int tree_type = -1;
+    char *tree_name = 0;
+
+    item_t    *itemLocs;
+    int       numItems;
+    scalar_t  itemRadius;
+    scalar_t  itemHeight;
+    int       item_type = -1;
+    char *    item_name = 0;
+    item_type_t *item_types;
+
     treeLocs = get_tree_locs();
     numTrees = get_num_trees();
-    tex_names = get_tex_names();
+    item_types = get_item_types();
 
     fwd_clip_limit = getparam_forward_clip_distance();
     bwd_clip_limit = getparam_backward_clip_distance();
@@ -472,21 +561,11 @@ void draw_trees()
 
     set_gl_options( TREES );
 
-    glBindTexture( GL_TEXTURE_2D, tex_names[TREE_TEX] );
-
-    if ( light_course ) {
-        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-        set_material( white, black, 1.0 );
-        glEnable( GL_LIGHTING );
-
-	setup_course_lighting();
-
-        glShadeModel( GL_SMOOTH );
-    } else {
-        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
-        set_material( white, black, 0.0 );
-        glShadeModel( GL_FLAT );
-    } 
+    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+    set_material( white, black, 1.0 );
+    glEnable( GL_LIGHTING );
+    
+    setup_course_lighting();
 
     for (i = 0; i< numTrees; i++ ) {
 
@@ -497,7 +576,17 @@ void draw_trees()
 	    if ( treeLocs[i].ray.pt.z - eye_pt.z > bwd_clip_limit )
 		continue;
 	}
-	
+
+	/* verify that the correct texture is bound */
+	if (treeLocs[i].tree_type != tree_type) {
+	    tree_type = treeLocs[i].tree_type;
+	    tree_name = get_tree_name(tree_type);
+	    if (!get_texture_binding( tree_name, &texture_id ) ) {
+		texture_id = 0;
+	    }
+	    glBindTexture( GL_TEXTURE_2D, texture_id );
+	}
+
         glPushMatrix();
         glTranslatef( treeLocs[i].ray.pt.x, treeLocs[i].ray.pt.y, 
                       treeLocs[i].ray.pt.z );
@@ -520,23 +609,236 @@ void draw_trees()
         glTexCoord2f( 0., 1. );
         glVertex3f( -treeRadius, treeHeight, 0.0 );
 
-	if ( clip_course ) {
-	    if ( eye_pt.z - treeLocs[i].ray.pt.z > fwd_tree_detail_limit ) 
-		goto End_Quads;
+	if ( !clip_course ||
+	     eye_pt.z - treeLocs[i].ray.pt.z < fwd_tree_detail_limit )
+	{
+	    glTexCoord2f( 0., 0. );
+	    glVertex3f( 0.0, 0.0, -treeRadius );
+	    glTexCoord2f( 1., 0. );
+	    glVertex3f( 0.0, 0.0, treeRadius );
+	    glTexCoord2f( 1., 1. );
+	    glVertex3f( 0.0, treeHeight, treeRadius );
+	    glTexCoord2f( 0., 1. );
+	    glVertex3f( 0.0, treeHeight, -treeRadius );
 	}
 
-        glTexCoord2f( 0., 0. );
-        glVertex3f( 0.0, 0.0, -treeRadius );
-        glTexCoord2f( 1., 0. );
-        glVertex3f( 0.0, 0.0, treeRadius );
-        glTexCoord2f( 1., 1. );
-        glVertex3f( 0.0, treeHeight, treeRadius );
-        glTexCoord2f( 0., 1. );
-        glVertex3f( 0.0, treeHeight, -treeRadius );
-
-    End_Quads:
         glEnd();
         glPopMatrix();
     } 
 
+    itemLocs = get_item_locs();
+    numItems = get_num_items();
+
+    for (i = 0; i< numItems; i++ ) {
+
+	if ( itemLocs[i].collectable == 0 || itemLocs[i].drawable == False) {
+	    /* already collected or not to be drawn*/
+	    continue;
+	}
+
+	if ( clip_course ) {
+	    if ( eye_pt.z - itemLocs[i].ray.pt.z > fwd_clip_limit ) 
+		continue;
+	    
+	    if ( itemLocs[i].ray.pt.z - eye_pt.z > bwd_clip_limit )
+		continue;
+	}
+
+	/* verify that the correct texture is bound */
+	if (itemLocs[i].item_type != item_type) {
+	    item_type = itemLocs[i].item_type;
+	    item_name = get_item_name(item_type);
+	    if (!get_texture_binding( item_name, &texture_id ) ) {
+		texture_id = 0;
+	    }
+	    glBindTexture( GL_TEXTURE_2D, texture_id );
+	}
+
+        glPushMatrix();
+	{
+	    glTranslatef( itemLocs[i].ray.pt.x, itemLocs[i].ray.pt.y, 
+			  itemLocs[i].ray.pt.z );
+
+	    itemRadius = itemLocs[i].diam/2.;
+	    itemHeight = itemLocs[i].height;
+
+	    if ( item_types[item_type].use_normal ) {
+		normal = item_types[item_type].normal;
+	    } else {
+		normal = subtract_points( eye_pt, itemLocs[i].ray.pt );
+		normalize_vector( &normal );
+	    }
+
+	    if (normal.y == 1.0) {
+		continue;
+	    }
+
+	    glNormal3f( normal.x, normal.y, normal.z );
+
+	    normal.y = 0.0;
+	    normalize_vector( &normal );
+
+	    glBegin( GL_QUADS );
+	    {
+		glTexCoord2f( 0., 0. );
+		glVertex3f( -itemRadius*normal.z, 
+			    0.0, 
+			    itemRadius*normal.x );
+		glTexCoord2f( 1., 0. );
+		glVertex3f( itemRadius*normal.z, 
+			    0.0, 
+			    -itemRadius*normal.x );
+		glTexCoord2f( 1., 1. );
+		glVertex3f( itemRadius*normal.z, 
+			    itemHeight, 
+			    -itemRadius*normal.x );
+		glTexCoord2f( 0., 1. );
+		glVertex3f( -itemRadius*normal.z, 
+			    itemHeight, 
+			    itemRadius*normal.x );
+	    }
+	    glEnd();
+	}
+        glPopMatrix();
+    } 
+
 } 
+
+/*! 
+  Draws a fog plane at the far clipping plane to mask out clipping of terrain.
+
+  \return  none
+  \author  jfpatry
+  \date    Created:  2000-08-31
+  \date    Modified: 2000-08-31
+*/
+void draw_fog_plane()
+{
+    plane_t left_edge_plane, right_edge_plane;
+    plane_t left_clip_plane, right_clip_plane;
+    plane_t far_clip_plane;
+    plane_t bottom_clip_plane;
+    plane_t bottom_plane, top_plane;
+
+    scalar_t course_width, course_length;
+    scalar_t course_angle, slope;
+
+    point_t left_pt, right_pt, pt;
+    point_t top_left_pt, top_right_pt;
+    point_t bottom_left_pt, bottom_right_pt;
+    vector_t left_vec, right_vec;
+    scalar_t height;
+
+    GLfloat *fog_colour;
+
+    if ( is_fog_on() == False ) {
+	return;
+    }
+
+    set_gl_options( FOG_PLANE );
+
+    get_course_dimensions( &course_width, &course_length );
+    course_angle = get_course_angle();
+    slope = tan( ANGLES_TO_RADIANS( course_angle ) );
+
+    left_edge_plane = make_plane( 1.0, 0.0, 0.0, 0.0 );
+
+    right_edge_plane = make_plane( -1.0, 0.0, 0.0, course_width );
+
+    far_clip_plane = get_far_clip_plane();
+    left_clip_plane = get_left_clip_plane();
+    right_clip_plane = get_right_clip_plane();
+    bottom_clip_plane = get_bottom_clip_plane();
+
+
+    /* Find the bottom plane */
+    bottom_plane.nml = make_vector( 0.0, 1, -slope );
+    height = get_terrain_base_height( 0 );
+
+    /* Unoptimized version
+    pt = make_point( 0, height, 0 );
+    bottom_plane.d = -( pt.x * bottom_plane.nml.x +
+			pt.y * bottom_plane.nml.y +
+			pt.z * bottom_plane.nml.z );
+    */
+    bottom_plane.d = -height * bottom_plane.nml.y;
+
+    /* Find the top plane */
+    top_plane.nml = bottom_plane.nml;
+    height = get_terrain_max_height( 0 );
+    top_plane.d = -height * top_plane.nml.y;
+
+    /* Now find the bottom left and right points of the fog plane */
+    if ( !intersect_planes( bottom_plane, far_clip_plane, left_clip_plane,
+			    &left_pt ) )
+    {
+	return;
+    }
+
+    if ( !intersect_planes( bottom_plane, far_clip_plane, right_clip_plane,
+			    &right_pt ) )
+    {
+	return;
+    }
+
+    if ( !intersect_planes( top_plane, far_clip_plane, left_clip_plane,
+			    &top_left_pt ) )
+    {
+	return;
+    }
+
+    if ( !intersect_planes( top_plane, far_clip_plane, right_clip_plane,
+			    &top_right_pt ) )
+    {
+	return;
+    }
+
+    if ( !intersect_planes( bottom_clip_plane, far_clip_plane, 
+			    left_clip_plane, &bottom_left_pt ) )
+    {
+	return;
+    }
+
+    if ( !intersect_planes( bottom_clip_plane, far_clip_plane, 
+			    right_clip_plane, &bottom_right_pt ) )
+    {
+	return;
+    }
+
+    left_vec = subtract_points( top_left_pt, left_pt );
+    right_vec = subtract_points( top_right_pt, right_pt );
+
+
+    /* Now draw the fog plane */
+
+    set_gl_options( FOG_PLANE );
+
+    fog_colour = get_fog_colour();
+
+    glColor4fv( fog_colour );
+
+    glBegin( GL_QUAD_STRIP );
+
+    glVertex3f( bottom_left_pt.x, bottom_left_pt.y, bottom_left_pt.z );
+    glVertex3f( bottom_right_pt.x, bottom_right_pt.y, bottom_right_pt.z );
+    glVertex3f( left_pt.x, left_pt.y, left_pt.z );
+    glVertex3f( right_pt.x, right_pt.y, right_pt.z );
+
+    glColor4f( fog_colour[0], fog_colour[1], fog_colour[2], 0.9 );
+    glVertex3f( top_left_pt.x, top_left_pt.y, top_left_pt.z );
+    glVertex3f( top_right_pt.x, top_right_pt.y, top_right_pt.z );
+
+    glColor4f( fog_colour[0], fog_colour[1], fog_colour[2], 0.3 );
+    pt = move_point( top_left_pt, left_vec );
+    glVertex3f( pt.x, pt.y, pt.z );
+    pt = move_point( top_right_pt, right_vec );
+    glVertex3f( pt.x, pt.y, pt.z );
+		
+    glColor4f( fog_colour[0], fog_colour[1], fog_colour[2], 0.0 );
+    pt = move_point( top_left_pt, scale_vector( 3.0, left_vec ) );
+    glVertex3f( pt.x, pt.y, pt.z );
+    pt = move_point( top_right_pt, scale_vector( 3.0, right_vec ) );
+    glVertex3f( pt.x, pt.y, pt.z );
+
+    glEnd();
+}

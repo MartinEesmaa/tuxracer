@@ -20,6 +20,7 @@
 
 #include "tuxracer.h"
 #include "course_load.h"
+#include "view.h"
 
 #define DTHETA 0.2
 #define MAXTHETA  10
@@ -49,22 +50,22 @@ void update_preview( player_data_t *plyr )
     get_course_dimensions( &courseWidth, &courseLength );
     courseAngle = get_course_angle();
 
-    eye_pt = make_point( sin( theta * M_PI / 180.0 ) * courseLength + 
+    eye_pt = make_point( sin( ANGLES_TO_RADIANS( theta ) ) * courseLength + 
 			courseWidth / 2.,
-			-courseLength * tan( courseAngle*M_PI/180.0 ) / 2.,
-			-cos( theta * M_PI / 180.0 ) * courseLength );
+			-courseLength * 
+			 tan( ANGLES_TO_RADIANS( courseAngle ) ) / 2.,
+			-cos( ANGLES_TO_RADIANS( theta ) ) * courseLength );
 
     coursePt = make_point( courseWidth / 2., 
-			   -courseLength * tan( courseAngle*M_PI/180.0 ) / 2.,
+			   -courseLength * 
+			   tan( ANGLES_TO_RADIANS( courseAngle ) ) / 2.,
 			   -courseLength / 2.);
 
     plyr->view.pos = eye_pt;
     plyr->view.dir = subtract_points( coursePt, eye_pt );
     plyr->view.up = make_vector( 0, 1, 0 );
 
-    gluLookAt( eye_pt.x, eye_pt.y, eye_pt.z, 
-	       coursePt.x, coursePt.y, coursePt.z, 
-	       0, 1, 0 );
+    setup_view_matrix( plyr );
 
     theta += sign*DTHETA;
     if (theta > MAXTHETA ) {

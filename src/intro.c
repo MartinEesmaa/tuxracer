@@ -17,6 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#include "tuxracer.h"
+#include "audio.h"
 #include "keyframe.h"
 #include "course_render.h"
 #include "multiplayer.h"
@@ -30,20 +32,73 @@
 #include "fog.h"
 #include "viewfrustum.h"
 #include "keyboard.h"
+#include "hud.h"
+#include "phys_sim.h"
+#include "part_sys.h"
+#include "course_load.h"
+#include "joystick.h"
+
+static void abort_intro( player_data_t *plyr ) {
+    point2d_t start_pt = get_start_pt();
+
+    set_game_mode( RACING );
+
+    plyr->orientation_initialized = False;
+    plyr->view.initialized = False;
+
+    plyr->pos.x = start_pt.x;
+    plyr->pos.z = start_pt.y;
+
+    glutPostRedisplay();
+}
 
 void intro_init() 
 {
+    int i, num_items;
+    item_t *item_locs;
+
     player_data_t *plyr = get_player_data( local_player() );
+    point2d_t start_pt = get_start_pt();
 
     init_key_frame();
 
     glutDisplayFunc( main_loop );
     glutIdleFunc( main_loop );
     glutReshapeFunc( reshape );
+    glutMouseFunc( NULL );
     glutMotionFunc( NULL );
     glutPassiveMotionFunc( NULL );
 
     plyr->orientation_initialized = False;
+
+    plyr->view.initialized = False;
+
+    g_game.time = 0.0;
+    plyr->herring = 0;
+    plyr->score = 0;
+
+    plyr->pos.x = start_pt.x;
+    plyr->pos.z = start_pt.y;
+
+    init_physical_simulation();
+
+    plyr->vel = make_vector( 0, 0, 0 );
+
+    clear_particles();
+
+    set_view_mode( plyr, ABOVE );
+    update_view( plyr, EPS ); 
+
+    /* reset all items as collectable */
+    num_items = get_num_items();
+    item_locs = get_item_locs();
+    for (i = 0; i < num_items; i++ ) {
+	if ( item_locs[i].collectable != -1 ) {
+	    item_locs[i].collectable = 1;
+	}
+    }
+
+    play_music( "intro" );
 }
 
 void intro_loop( scalar_t time_step )
@@ -51,12 +106,29 @@ void intro_loop( scalar_t time_step )
     int width, height;
     player_data_t *plyr = get_player_data( local_player() );
 
+    if ( getparam_do_intro_animation() == False ) {
+	set_game_mode( RACING );
+	return;
+    }
+
     width = getparam_x_resolution();
     height = getparam_y_resolution();
 
     check_gl_error();
 
+    /* Check joystick */
+    if ( is_joystick_active() ) {
+	update_joystick();
+
+	if ( is_joystick_continue_button_down() ) {
+	    abort_intro( plyr );
+	    return;
+	}
+    }
+    
     new_frame_for_fps_calc();
+
+    update_audio();
 
     update_key_frame( plyr, time_step );
 
@@ -64,22 +136,25 @@ void intro_loop( scalar_t time_step )
 
     setup_fog();
 
-    set_view_mode( plyr, ABOVE );
-    update_view( plyr );
+    update_view( plyr, time_step );
 
     setup_view_frustum( plyr, NEAR_CLIP_DIST, 
 			getparam_forward_clip_distance() );
 
+    draw_sky( plyr->view.pos );
+
+    draw_fog_plane( plyr->view );
+
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
     render_course( );
-    draw_background( getparam_fov(), (scalar_t)width/height );
+    /* draw_background( getparam_fov(), (scalar_t)width/height ); */
     draw_trees();
 
     draw_tux();
     draw_tux_shadow();
 
-    print_fps();
+    draw_hud( plyr );
 
     reshape( width, height );
     glutSwapBuffers();
@@ -88,9 +163,8 @@ void intro_loop( scalar_t time_step )
 START_KEYBOARD_CB( intro_cb )
 {
     if ( release ) return;
-    g_game.mode = RACING;
-    plyr->orientation_initialized = False;
-    glutPostRedisplay();
+
+    abort_intro( plyr );
 }
 END_KEYBOARD_CB
 
@@ -98,7 +172,7 @@ void intro_register()
 {
     int status = 0;
 
-    register_loop_funcs( INTRO, intro_init, intro_loop );
+    register_loop_funcs( INTRO, intro_init, intro_loop, NULL );
 
     status |= add_keymap_entry(
 	INTRO, DEFAULT_CALLBACK, NULL, NULL, intro_cb );

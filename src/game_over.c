@@ -18,6 +18,7 @@
  */
 
 #include "tuxracer.h"
+#include "audio.h"
 #include "game_config.h"
 #include "multiplayer.h"
 #include "gl_util.h"
@@ -32,16 +33,203 @@
 #include "loop.h"
 #include "fog.h"
 #include "viewfrustum.h"
+#include "hud.h"
+#include "game_logic_util.h"
+#include "fonts.h"
+#include "ui_mgr.h"
+#include "joystick.h"
+#include "part_sys.h"
 
-static const colour_t text_colour = { 0.0, 0.0, 0.0 };
+#define NEXT_MODE RACE_SELECT
+
+static bool_t aborted = False;
+static bool_t race_won = False;
+
+static void mouse_cb( int button, int state, int x, int y )
+{
+    set_game_mode( NEXT_MODE );
+    glutPostRedisplay();
+}
+
+
+/*---------------------------------------------------------------------------*/
+/*! 
+  Draws the text for the game over screen
+  \author  jfpatry
+  \date    Created:  2000-09-24
+  \date    Modified: 2000-09-24
+*/
+void draw_game_over_text( void )
+{
+    int w = getparam_x_resolution();
+    int h = getparam_y_resolution();
+    int x_org, y_org;
+    int box_width, box_height;
+    char *string;
+    int string_w, asc, desc;
+    char buff[BUFF_LEN];
+    font_t *font;
+    font_t *stat_label_font;
+    player_data_t *plyr = get_player_data( local_player() );
+
+    box_width = 200;
+    box_height = 250;
+
+    x_org = w/2.0 - box_width/2.0;
+    y_org = h/2.0 - box_height/2.0;
+
+    if ( !get_font_binding( "race_over", &font ) ) {
+	print_warning( IMPORTANT_WARNING,
+		       "Couldn't get font for binding race_over" );
+    } else {
+	string = "Race Over";
+	get_font_metrics( font, string, &string_w, &asc, &desc );
+	
+	glPushMatrix();
+	{
+	    glTranslatef( x_org + box_width/2.0 - string_w/2.0,
+			  y_org + box_height - asc, 
+			  0 );
+	    bind_font_texture( font );
+	    draw_string( font, string );
+	}
+	glPopMatrix();
+    }
+
+    /* If race was aborted, don't print stats */
+    if ( !g_game.race_aborted ) {
+	if ( !get_font_binding( "race_stats_label", &stat_label_font ) ||
+	     !get_font_binding( "race_stats", &font ) )
+	{
+	    print_warning( IMPORTANT_WARNING,
+			   "Couldn't get fonts for race stats" );
+	} else {
+	    int asc2;
+	    int desc2;
+	    get_font_metrics( font, "", &string_w, &asc, &desc );
+	    get_font_metrics( stat_label_font, "", &string_w, &asc2, &desc2 );
+	
+	    if ( asc < asc2 ) {
+		asc = asc2;
+	    }
+	    if ( desc < desc2 ) {
+		desc = desc2;
+	    }
+
+	    glPushMatrix();
+	    {
+		int minutes;
+		int seconds;
+		int hundredths;
+
+		glTranslatef( x_org,
+			      y_org + 150,
+			      0 );
+
+		bind_font_texture( stat_label_font );
+		draw_string( stat_label_font, "Time: " );
+
+		get_time_components( g_game.time, &minutes, &seconds, &hundredths );
+
+		sprintf( buff, "%02d:%02d.%02d", minutes, seconds, hundredths );
+
+		bind_font_texture( font );
+		draw_string( font, buff );
+	    }
+	    glPopMatrix();
+
+	    glPushMatrix();
+	    {
+		glTranslatef( x_org,
+			      y_org + 150 - (asc + desc),
+			      0 );
+
+		bind_font_texture( stat_label_font );
+		draw_string( stat_label_font, "Herring: " );
+
+		sprintf( buff, "%3d", plyr->herring );
+
+		bind_font_texture( font );
+		draw_string( font, buff );
+	    }
+	    glPopMatrix();
+
+	    glPushMatrix();
+	    {
+		glTranslatef( x_org,
+			      y_org + 150 - 2*(asc + desc),
+			      0 );
+
+		bind_font_texture( stat_label_font );
+		draw_string( stat_label_font, "Score: " );
+
+		sprintf( buff, "%6d", plyr->score );
+
+		bind_font_texture( font );
+		draw_string( font, buff );
+	    }
+	    glPopMatrix();
+	}
+    }
+
+    if ( g_game.race_aborted ) {
+	string = "Race aborted.";
+    } else if ( ( g_game.practicing || is_current_cup_complete() ) &&
+		did_player_beat_best_results() ) 
+    {
+	string = "You beat your best score!";
+    } else if ( g_game.practicing || is_current_cup_complete() ) {
+	string = "";
+    } else if ( race_won && is_current_race_last_race_in_cup() ) {
+	string = "Congratulations! You won the cup!";
+    } else if ( race_won ) {
+	string = "You advanced to the next race!";
+    } else {
+	string = "You didn't advance.";
+    }
+
+    if ( !get_font_binding( "race_result_msg", &font ) ) {
+	print_warning( IMPORTANT_WARNING, 
+		       "Couldn't get font for binding race_result_msg" );
+    } else {
+	get_font_metrics( font, string, &string_w, &asc, &desc );
+	glPushMatrix();
+	{
+	    glTranslatef( x_org + box_width/2. - string_w/2.,
+			  y_org + desc,
+			  0 );
+	    bind_font_texture( font );
+	    draw_string( font, string );
+	}
+	glPopMatrix();
+    }
+}
 
 void game_over_init() 
 {
     glutDisplayFunc( main_loop );
-    glutIdleFunc( NULL );
+    glutIdleFunc( main_loop );
     glutReshapeFunc( reshape );
-    glutMotionFunc( NULL );
-    glutPassiveMotionFunc( NULL );
+    glutMouseFunc( mouse_cb );
+    glutMotionFunc( ui_event_motion_func );
+    glutPassiveMotionFunc( ui_event_motion_func );
+
+    halt_sound( "flying_sound" );
+    halt_sound( "rock_sound" );
+    halt_sound( "ice_sound" );
+    halt_sound( "snow_sound" );
+
+    play_music( "game_over" );
+
+    aborted = g_game.race_aborted;
+
+    if ( !aborted ) {
+	update_player_score( get_player_data( local_player() ) );
+    }
+
+    if ( !g_game.practicing ) {
+	race_won = was_current_race_won();
+    }
 }
 
 void game_over_loop( scalar_t time_step )
@@ -53,39 +241,55 @@ void game_over_loop( scalar_t time_step )
 
     check_gl_error();
 
+    /* Check joystick */
+    if ( is_joystick_active() ) {
+	update_joystick();
+
+	if ( is_joystick_continue_button_down() )
+	{
+	    set_game_mode( NEXT_MODE );
+	    glutPostRedisplay();
+	    return;
+	}
+    }
+
     new_frame_for_fps_calc();
+
+    update_audio();
 
     clear_rendering_context();
 
     setup_fog();
 
-    update_player_pos( plyr, EPS );
-    update_view( plyr );
+    update_player_pos( plyr, 0 );
+    update_view( plyr, 0 );
 
     setup_view_frustum( plyr, NEAR_CLIP_DIST, 
 			getparam_forward_clip_distance() );
 
+    draw_sky(plyr->view.pos);
+
+    draw_fog_plane( plyr->view );
+
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
     render_course();
-    draw_background( getparam_fov(), (scalar_t)width/height );
     draw_trees();
+
+    if ( getparam_draw_particles() ) {
+	draw_particles( plyr );
+    }
 
     draw_tux();
     draw_tux_shadow();
 
-    flat_mode();
-    draw_overlay();
+    set_gl_options( GUI );
 
-    print_time();
-    print_fps();
+    ui_setup_display();
 
-    glColor3f( text_colour.r, text_colour.g, text_colour.b );
-    print_string_centered( 300, GLUT_BITMAP_TIMES_ROMAN_24, 
-			   "GAME OVER" );
-    
-    print_string_centered( 150, GLUT_BITMAP_TIMES_ROMAN_24, 
-			   "Press any key to continue" );
+    draw_game_over_text();
+
+    draw_hud( plyr );
 
     reshape( width, height );
 
@@ -95,7 +299,7 @@ void game_over_loop( scalar_t time_step )
 START_KEYBOARD_CB( game_over_cb )
 {
     if ( release ) return;
-    g_game.mode = START;
+    set_game_mode( NEXT_MODE );
     glutPostRedisplay();
 }
 END_KEYBOARD_CB
@@ -109,7 +313,7 @@ void game_over_register()
 
     check_assertion( status == 0, "out of keymap entries" );
 
-    register_loop_funcs( GAME_OVER, game_over_init, game_over_loop );
+    register_loop_funcs( GAME_OVER, game_over_init, game_over_loop, NULL );
 }
 
 

@@ -32,6 +32,7 @@ light_t* get_course_lights() {
 void reset_lights()
 {
     int i;
+    GLfloat black[] = { 0., 0., 0., 1. };
     for (i=0; i<NUM_COURSE_LIGHTS; i++) {
 	/* Note: we initialize the lights to default OpenGL values
            EXCEPT that light 0 isn't treated differently than the
@@ -48,6 +49,9 @@ void reset_lights()
 	course_lights[i].linear_attenuation = 0.0;
 	course_lights[i].quadratic_attenuation = 0.0;
     }
+
+    /* Turn off global ambient light */
+    glLightModelfv( GL_LIGHT_MODEL_AMBIENT, black );
 }
 
 void setup_course_lighting()
