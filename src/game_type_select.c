@@ -234,13 +234,19 @@ START_KEYBOARD_CB( game_type_select_cb )
 	    break;
 	case 'e':
 	case 13: /* Enter */
-	    enter_event_click_cb( enter_event_btn, NULL );
+	    if ( enter_event_btn ) {
+		button_simulate_mouse_click( enter_event_btn );
+	    }
 	    break;
 	case 'p':
-	    practice_click_cb( practice_btn, NULL );
+	    if ( practice_btn ) {
+		button_simulate_mouse_click( practice_btn );
+	    }
 	    break;
 	case 'c':
-	    credits_click_cb( credits_btn, NULL );
+	    if ( credits_btn ) {
+		button_simulate_mouse_click( credits_btn );
+	    }
 	    break;
 	}
     }

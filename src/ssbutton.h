@@ -52,6 +52,7 @@ void ssbutton_set_visible( ssbutton_t *ssbutton, bool_t visible );
 bool_t ssbutton_is_visible( ssbutton_t *ssbutton );
 void ssbutton_set_active( ssbutton_t *ssbutton, bool_t active );
 bool_t ssbutton_is_active( ssbutton_t *ssbutton );
+void ssbutton_simulate_mouse_click( ssbutton_t *ssbutton );
 
 /* EOF */
 

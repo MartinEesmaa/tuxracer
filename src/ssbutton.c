@@ -114,6 +114,20 @@ static void ssbutton_button_click_event_cb( button_t *button, void *userdata )
 }
 
 
+/*---------------------------------------------------------------------------*/
+/*! 
+  Simulates a mouse click on the ssbutton
+  \author  jfpatry
+  \date    Created:  2000-10-08
+  \date    Modified: 2000-10-08
+*/
+void ssbutton_simulate_mouse_click( ssbutton_t *ssbutton )
+{
+    check_assertion( ssbutton != NULL, "ssbutton is NULL" );
+
+    button_simulate_mouse_click( ssbutton->button );
+}
+
 
 /*---------------------------------------------------------------------------*/
 /*! 

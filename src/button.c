@@ -111,6 +111,24 @@ static void button_mouse_down_cb( void *widget, ui_mouse_button_t which_button,
 
 /*---------------------------------------------------------------------------*/
 /*! 
+  Performs the actions that occur when a button is clicked.
+  \author  jfpatry
+  \date    Created:  2000-10-08
+  \date    Modified: 2000-10-08
+*/
+void button_perform_click_action( button_t *button )
+{
+    check_assertion( button != NULL, "button is NULL" );
+
+    if ( button->click_cb ) {
+	button->click_cb( button, button->click_cb_userdata );
+    }
+    
+}
+
+
+/*---------------------------------------------------------------------------*/
+/*! 
   Callback invoked when mouse up event is received.
   \author  jfpatry
   \date    Created:  2000-09-17
@@ -144,11 +162,27 @@ static void button_mouse_up_cb( void *widget, ui_mouse_button_t which_button,
     if ( button->clicked ) {
 	button->clicked = False;
 	print_debug( DEBUG_UI, "Button was clicked" );
-	if ( button->click_cb ) {
-	    button->click_cb( button, button->click_cb_userdata );
-	}
+	button_perform_click_action( button );
 	ui_set_dirty();
     }
+}
+
+/*---------------------------------------------------------------------------*/
+/*! 
+  Simulates a mouse click on the button
+  \author  jfpatry
+  \date    Created:  2000-10-08
+  \date    Modified: 2000-10-08
+*/
+void button_simulate_mouse_click( button_t *button )
+{
+    check_assertion( button != NULL, "button is NULL" );
+
+    if ( !button->enabled || !button->active ) {
+	return;
+    }
+
+    button_perform_click_action( button );
 }
 
 /*---------------------------------------------------------------------------*/

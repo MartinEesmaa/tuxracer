@@ -1,14 +1,27 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/tuxracer.h)
-AM_INIT_AUTOMAKE(tuxracer, "0.60.1")
+AM_INIT_AUTOMAKE(tuxracer, "0.60.2")
 AM_CONFIG_HEADER(config.h)
 
 dnl Check system type
 AC_CANONICAL_HOST
 
-dnl Checks for programs.
+dnl Check for compilers.  We set CFLAGS and CXXFLAGS to null if unset, so
+dnl that these macros won't set them to default values that we don't want.
+if test "x${CFLAGS-notset}" = "xnotset" ; then
+    export CFLAGS
+    CFLAGS=""
+fi
 AC_PROG_CC
+
+if test "x${CXXFLAGS-notset}" = "xnotset" ; then
+    export CXXFLAGS
+    CXXFLAGS=""
+fi
 AC_PROG_CXX
+
+dnl Check for ranlib
+AC_PROG_RANLIB
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -26,168 +39,543 @@ AC_CHECK_FUNCS(finite isnan)
 AC_CHECK_FUNCS(_finite _isnan)
 AC_CHECK_HEADERS(ieeefp.h)
 
+dnl --------------------------------------------------------------------------
 dnl General options
-TUXRACER_EXTRA_COMPILEFLAGS="-O2"
-TUXRACER_EXTRA_CFLAGS=""
-TUXRACER_EXTRA_CXXFLAGS=""
+dnl --------------------------------------------------------------------------
+TR_CPPFLAGS=""
+TR_CFLAGS="-O2 -Wall -fomit-frame-pointer -ffast-math -fexpensive-optimizations"
+TR_CXXFLAGS="-O2 -Wall -fomit-frame-pointer -ffast-math -fexpensive-optimizations"
+TR_LIBS=""
 
-AC_ARG_ENABLE(debug,     [  --enable-debug          Produce an executable with debugging symbols], TUXRACER_EXTRA_COMPILEFLAGS=-g)
+case "$host" in
+i*86-*-*) TR_CFLAGS="$TR_CFLAGS -malign-loops=2 -malign-jumps=2 -malign-functions=2";
+          TR_CXXFLAGS="$TR_CXXFLAGS -malign-loops=2 -malign-jumps=2 -malign-functions=2";;
+esac
 
-AC_ARG_ENABLE(pedantic,  [  --enable-pedantic       Enable -pedantic (and -ansi for C) when compiling], TUXRACER_EXTRA_CFLAGS="$TUXRACER_EXTRA_CFLAGS -ansi -pedantic"; TUXRACER_EXTRA_CXXFLAGS="$TUXRACER_EXTRA_CXXFLAGS -pedantic")
+AC_ARG_ENABLE(debug,     [  --enable-debug          Produce an executable with debugging symbols], [TR_CFLAGS="-g -Wall"; TR_CXXFLAGS="-g -Wall"])
 
-AC_ARG_ENABLE(profile,[  --enable-profile        Produce a profiled executable],  TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS -pg")
+AC_ARG_ENABLE(pedantic,  [  --enable-pedantic       Enable -pedantic (and -ansi for C) when compiling], TR_CFLAGS="$TR_CFLAGS -ansi -pedantic"; TR_CXXFLAGS="$TR_CXXFLAGS -pedantic")
+
+AC_ARG_ENABLE(profile,[  --enable-profile        Produce a profiled executable],  [TR_CFLAGS="$TR_CFLAGS -pg"; TR_CXXFLAGS="$TR_CXXFLAGS -pg"])
 
 
-dnl Check for cygwin
+dnl --------------------------------------------------------------------------
+dnl Check if compiling for Win32
+dnl --------------------------------------------------------------------------
+AC_MSG_CHECKING([for Win32 platform])
+AC_EGREP_CPP(yes,
+[ 
+#if defined(WIN32) || defined(__CYGWIN__)
+  yes
+#endif
+], is_win32=yes, is_win32=no )
+AC_MSG_RESULT([$is_win32])
+
+dnl Add libs required for Windows
 dnl I don't use -mwindows since I like having the console around
 dnl If the console annoys you then remove "-luser32 -lgdi32" and replace
 dnl with "-mwindows"
-case "$host" in
-*cygwin*) LIBS="-luser32 -lgdi32 $LIBS"
-esac
+if test "x$is_win32" = "xyes" ; then
+    TR_LIBS="$TR_LIBS -luser32 -lgdi32"
+fi
 
-dnl Tcl options
-TCL_LIB_NAME=tcl
 
-AC_ARG_WITH(tcl-libs,    [  --with-tcl-libs=DIR     Specify Tcl 8.0 library location],TCL_LIB_PATH="-L$withval")
+dnl --------------------------------------------------------------------------
+dnl Check for Tcl libraries
+dnl --------------------------------------------------------------------------
+AC_ARG_WITH(tcl-libs,    [  --with-tcl-libs=DIR     Location of Tcl library])
+AC_ARG_WITH(tcl-lib-name,[  --with-tcl-lib-name=NAME Tcl library name])
 
-AC_ARG_WITH(tcl-inc,     [  --with-tcl-inc=DIR      Specify Tcl 8.0 header file location],TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS -I$withval")
+if test "x$with_tcl_libs" = "x" ; then
+    TCL_LDOPTS=""
+else
+    TCL_LDOPTS="-L$with_tcl_libs"
+fi
 
-AC_ARG_WITH(tcl-lib-name,[  --with-tcl-lib-name=NAME Specify Tcl 8.0 library base name],TCL_LIB_NAME="$withval")
+saved_LIBS="$LIBS"
 
-dnl Check for Tcl >= 8.0
-LIBS="$LIBS -lm $TCL_LIB_PATH"
-AC_CHECK_LIB(dl, dlopen)
-AC_CHECK_LIB(tcl8.0, Tcl_Free)
+function check_for_tcl_lib() {
+    AC_MSG_CHECKING([for $TCL_LIB_NAME library])
+    LIBS="$saved_LIBS $TR_LIBS $TCL_LDOPTS -l$TCL_LIB_NAME"
+    AC_TRY_LINK( ,[ char Tcl_NewStringObj(); Tcl_NewStringObj(); ], 
+		 have_tcl_lib=yes, have_tcl_lib=no )
+    AC_MSG_RESULT([$have_tcl_lib])
+    
+} 
 
-if test "x$ac_cv_lib_tcl8_0_Tcl_Free" = "xno" ; then
-    AC_CHECK_LIB(tcl8.2, Tcl_Free)
-    if test "x$ac_cv_lib_tcl8_2_Tcl_Free" = "xno" ; then
-        AC_CHECK_LIB(tcl8.3, Tcl_Free)
+if test "x$with_tcl_lib_name" = "x" ; then
+    TCL_LIB_NAME="tcl8.3"
+else
+    TCL_LIB_NAME="$with_tcl_lib_name"
+fi
 
-	if test "x$ac_cv_lib_tcl8_3_Tcl_Free" = "xno" ; then
-	    dnl Added for cygwin
-	    AC_CHECK_LIB(tcl80, Tcl_Free)
-	    
-	    if test "x$ac_cv_lib_tcl80_Tcl_Free" = "xno" ; then
-		AC_CHECK_LIB($TCL_LIB_NAME, Tcl_Free,,AC_MSG_ERROR(Tcl library version >= 8.0 not found))
-	    fi
-	fi
+check_for_tcl_lib
+
+if test "x$have_tcl_lib" = "xno" -a "x$with_tcl_lib_name" = "x" ; then
+
+    TCL_LIB_LIST=`grep -v -E "^$TCL_LIB_NAME\$" <<EOF 
+tcl8.3
+tcl83
+tcl8.2
+tcl82
+tcl8.0
+tcl80
+tcl
+EOF
+`
+
+    for TCL_LIB_NAME in $TCL_LIB_LIST ; do
+        check_for_tcl_lib
+        if test "x$have_tcl_lib" = "xyes" ; then
+            break;
+        fi
+    done
+fi
+
+if test "x$have_tcl_lib" = "xno" ; then
+    AC_MSG_ERROR([Cannot find Tcl library])
+fi
+
+LIBS="$saved_LIBS"
+TR_LIBS="$TR_LIBS $TCL_LDOPTS -l$TCL_LIB_NAME"
+
+
+dnl --------------------------------------------------------------------------
+dnl Check for Tcl header
+dnl --------------------------------------------------------------------------
+AC_ARG_WITH(tcl-inc,     [  --with-tcl-inc=DIR      Location of Tcl header files])
+AC_ARG_WITH(tcl-header,  [  --with-tcl-header=NAME  Tcl header filename])
+
+saved_CPPFLAGS="$CPPFLAGS"
+
+function check_for_tcl_h() {
+    AC_MSG_CHECKING([for $TCL_HEADER])
+    AC_TRY_CPP( [ #include <$TCL_HEADER> ], have_tcl_h=yes, have_tcl_h=no )
+    AC_MSG_RESULT([$have_tcl_h])
+}
+
+function find_tcl_h() {
+    CPPFLAGS="$saved_CPPFLAGS $TR_CPPFLAGS $TCL_CPPFLAGS"
+
+    if test "x$with_tcl_header" = "x" ; then
+        TCL_HEADER="tcl.h"
+    else
+        TCL_HEADER="$with_tcl_header"
     fi
+
+    check_for_tcl_h
+
+    if test "x$have_tcl_h" = "xno" -a "x$with_tcl_header" = "x" ; then
+
+        TCL_HEADER_LIST=`grep -v -E "^$TCL_HEADER\$" <<EOF 
+tcl.h
+tcl8.3.h
+tcl83.h
+tcl8.2.h
+tcl82.h
+tcl8.0.h
+tcl80.h
+EOF
+`
+
+        for TCL_HEADER in $TCL_HEADER_LIST ; do
+            check_for_tcl_h
+
+            if test "x$have_tcl_h" = "xyes" ; then
+               break;
+            fi
+        done
+    fi
+}
+
+if test "x$with_tcl_inc" = "x" ; then
+    TCL_CPPFLAGS=""
+else
+    TCL_CPPFLAGS="-I$with_tcl_inc"
 fi
 
-dnl Check for X11, taken partly from xracer sources
+find_tcl_h
 
-AC_PATH_XTRA
+if test "x$have_tcl_h" = "xno" -a "x$with_tcl_inc" = "x"; then
+    TCL_INC_LIST="/usr/include/tcl8.3 /usr/include/tcl8.2 \
+                 /usr/include/tcl8.0 /usr/include/tcl"
 
-if ( test "x$have_x" = "xyes" && test "x$cross_compiling" = "xno" ) ; then
-    LIBS="$X_PRE_LIBS $X_LIBS -lX11 -lXi -lXext -lXmu -lXt $X_EXTRA_LIBS $LIBS"
-    TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS $X_CFLAGS"
+    for TCL_INC in $TCL_INC_LIST ; do
+        TCL_CPPFLAGS="-I$TCL_INC"
+        echo "checking for Tcl headers in $TCL_INC..."
+
+        find_tcl_h
+
+        if test "x$have_tcl_h" = "xyes" ; then
+            break;
+        fi
+    done
 fi
 
+if test "x$have_tcl_h" = "xno" ; then
+    AC_MSG_ERROR([Can't find Tcl header file])
+fi
+
+CPPFLAGS="$saved_CPPFLAGS"
+TR_CPPFLAGS="$TR_CPPFLAGS $TCL_CPPFLAGS -DTCL_HEADER=\<$TCL_HEADER\>"
+
+
+dnl --------------------------------------------------------------------------
 dnl Check for SDL
+dnl --------------------------------------------------------------------------
 SDL_VERSION=1.0.1
-AM_PATH_SDL($SDL_VERSION, TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS -DHAVE_SDL=1" )
-TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS $SDL_CFLAGS"
-LIBS="$LIBS $SDL_LIBS"
+AM_PATH_SDL($SDL_VERSION, have_SDL=yes, have_SDL=no)
 
-dnl Check for Joystick Support in SDL
-AC_CHECK_FUNCS( SDL_JoystickOpen )
+if test "x$have_SDL" = "xyes" ; then
+    TR_CPPFLAGS="$TR_CPPFLAGS -DHAVE_SDL=1"
+    TR_CFLAGS="$TR_CFLAGS $SDL_CFLAGS"
+    TR_CXXFLAGS="$TR_CXXFLAGS $SDL_CFLAGS"
+    TR_LIBS="$TR_LIBS $SDL_LIBS"
 
-dnl Check for SDL_mixer
-AC_CHECK_LIB(SDL_mixer, Mix_OpenAudio, TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS -DHAVE_SDL_MIXER=1"; LIBS="-lSDL_mixer $LIBS")
+    dnl Check for joystick support in SDL
+    saved_LIBS="$LIBS"
+    LIBS="$saved_LIBS $TR_LIBS"
 
-dnl Check for OpenGL.
-dnl Taken partly from xracer sources
+    AC_CHECK_FUNCS( SDL_JoystickOpen, 
+                    have_SDL_joystick=yes, have_SDL_joystick=no )
 
-dnl Put -I/usr/include at front so things in /usr/include/GL are
-dnl looked at first -- but only if not cross-compiling.
-if test "x$cross_compiling" = "xno" ; then 
-    TUXRACER_EXTRA_COMPILEFLAGS="-I/usr/include $TUXRACER_EXTRA_COMPILEFLAGS"
+    if test "x$have_SDL_joystick" = "xno" ; then
+        echo "*** This version of SDL doesn't have joystick support."
+        echo "*** Configuring without joystick support."
+    fi
+
+    dnl Check for SDL_mixer
+    AC_CHECK_LIB( SDL_mixer, Mix_OpenAudio, 
+                  have_SDL_mixer=yes, have_SDL_mixer=no )
+
+    if test "x$have_SDL_mixer" = "xyes" ; then 
+	TR_CPPFLAGS="$TR_CPPFLAGS -DHAVE_SDL_MIXER=1" 
+        TR_LIBS="$TR_LIBS -lSDL_mixer"
+    else
+        echo "*** SDL_mixer not found.  Configuring without audio support."
+    fi
+
+    LIBS="$saved_LIBS"
+else
+    echo "*** SDL not found.  Configuring without audio or joystick support."
 fi
 
-AC_ARG_ENABLE(GL,     [  --disable-GL            Do not use -lGL],ac_cv_lib_GL_glNewList=no; ac_cv_lib_GLU_gluLookAt=no)
 
-AC_ARG_WITH(gl-libs,  [  --with-gl-libs=DIR      Specify OpenGL library location],GL_LIB_PATH="-L$withval")
-AC_ARG_WITH(gl-inc,   [  --with-gl-inc=DIR       Specify OpenGL header file location],TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS -I$withval")
+dnl --------------------------------------------------------------------------
+dnl Check for GL library
+dnl --------------------------------------------------------------------------
+AC_ARG_WITH(gl-libs,      [  --with-gl-libs=DIR      GL/MesaGL library location])
+AC_ARG_WITH(gl-lib-name,  [  --with-gl-lib-name=NAME GL library name])
 
-AC_ARG_WITH(glut-libs,[  --with-glut-libs=DIR    Specify GLUT library location], GLUT_LIB_PATH="-L$withval")
-AC_ARG_WITH(glut-inc, [  --with-glut-inc=DIR     Specify GLUT header file location],TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS -I$withval")
+if test "x$with_gl_libs" = "x" ; then
+    GL_LDOPTS=""
+else
+    GL_LDOPTS="-L$with_gl_libs"
+fi
+
+saved_LIBS="$LIBS"
+
+function check_for_gl_lib() {
+    AC_MSG_CHECKING([for $GL_LIB_NAME library])
+    LIBS="$saved_LIBS $TR_LIBS $GL_LDOPTS -l$GL_LIB_NAME"
+    AC_TRY_LINK( , [ char glNewList(); glNewList(); ], have_GL=yes, have_GL=no)
+    AC_MSG_RESULT([$have_GL])
+
+    if test "x$have_GL" = "xyes" ; then
+	TR_LIBS="$TR_LIBS $GL_LDOPTS -l$GL_LIB_NAME"
+        return
+    fi
+
+    dnl Try with -lpthread
+
+    AC_MSG_CHECKING([for $GL_LIB_NAME library (with pthreads)])
+    LIBS="$saved_LIBS $TR_LIBS $GL_LDOPTS -l$GL_LIB_NAME -lpthread"
+    AC_TRY_LINK( , [ char glNewList(); glNewList(); ], 
+                 have_GL=yes, have_GL=no)
+    AC_MSG_RESULT([$have_GL])
+
+    if test "x$have_GL" = "xyes" ; then
+        TR_LIBS="$TR_LIBS $GL_LDOPTS -l$GL_LIB_NAME -lpthread"
+        return
+    fi
+}
+
+function find_gl_lib() {
+    if test "x$with_gl_lib_name" = "x" ; then
+        GL_LIB_NAME="GL"
+    else
+        GL_LIB_NAME="$with_gl_lib_name"
+    fi
+
+    check_for_gl_lib
+
+    if test "x$have_GL" = "xno" -a "x$with_gl_lib_name" = "x" ; then
+        GL_LIB_LIST=`grep -v -E "^$GL_LIB_NAME\$" <<EOF
+GL
+MesaGL
+opengl32
+EOF
+`
+
+        for GL_LIB_NAME in $GL_LIB_LIST ; do
+            check_for_gl_lib
+
+            if test "x$have_GL" = "xyes" ; then
+                break;
+            fi
+        done
+    fi
+}
+
+find_gl_lib
+
+if test "x$have_GL" = "xno" -a "x$GL_LDOPTS" = "x" ; then
+    echo "*** Hmm, you don't seem to have OpenGL libraries installed in the standard"
+    echo "*** location (/usr/lib).  I'll check in /usr/X11R6/lib, since"
+    echo "*** many distributions (incorrectly) put OpenGL libs there."
+    GL_LDOPTS="-L/usr/X11R6/lib"
+    find_gl_lib
+fi
+
+if test "x$have_GL" = "xno" ; then
+    AC_MSG_ERROR([Cannot find GL library])
+fi
+
+dnl Make sure GL lib is up-to-date
+AC_CHECK_FUNCS( glXGetProcAddressARB, gl_up_to_date=yes, gl_up_to_date=no )
+
+if test "x$gl_up_to_date" = "xno" ; then
+    AC_MSG_ERROR([Your copy of OpenGL is out of date. If using Mesa, make sure you have version >= 3.2.])
+fi
+
+LIBS="$saved_LIBS"
+
+dnl --------------------------------------------------------------------------
+dnl Check for GLU library
+dnl --------------------------------------------------------------------------
+
+AC_ARG_WITH(glu-lib-name, [  --with-glu-lib-name=NAME GLU library name])
+
+function check_for_glu_lib() {
+    AC_MSG_CHECKING([for $GLU_LIB_NAME library])
+    LIBS="$saved_LIBS $TR_LIBS -l$GLU_LIB_NAME"
+    AC_TRY_LINK( , [ char gluLookAt(); gluLookAt(); ], 
+                 have_GLU=yes, have_GLU=no)
+    AC_MSG_RESULT([$have_GLU])
+}
+
+if test "x$with_glu_lib_name" = "x" ; then
+    GLU_LIB_NAME="GLU"
+else
+    GLU_LIB_NAME="$with_glu_lib_name"
+fi
+
+saved_LIBS="$LIBS"
+
+check_for_glu_lib
+
+if test "x$have_GLU" = "xno" -a "x$with_glu_lib_name" = "x"; then
+    GLU_LIB_LIST=`grep -v -E "^$GLU_LIB_NAME\$" <<EOF
+GLU
+MesaGLU
+glu32
+EOF
+`
+
+    for GLU_LIB_NAME in $GLU_LIB_LIST ; do
+        check_for_glu_lib
+
+        if test "x$have_GLU" = "xyes" ; then
+            break
+        fi
+    done
+fi
+
+if test "x$have_GLU" = "xno" ; then
+    AC_MSG_ERROR([Cannot find GLU library])
+fi
+
+LIBS="$saved_LIBS"
+TR_LIBS="$TR_LIBS -l$GLU_LIB_NAME"
 
 
-LIBS="$GL_LIB_PATH $GLUT_LIB_PATH $LIBS"
+dnl --------------------------------------------------------------------------
+dnl Check for OpenGL headers
+dnl --------------------------------------------------------------------------
 
-AC_CHECK_LIB(GL, glNewList)
+AC_ARG_WITH(gl-inc,   [  --with-gl-inc=DIR       OpenGL header file location])
 
-if test "x$ac_cv_lib_GL_glNewList" = "xno" ; then
-    dnl Check for MesaGL.
-    AC_CHECK_LIB(MesaGL, glNewList)
-    if test "x$ac_cv_lib_MesaGL_glNewList" = "xno" ; then
-        dnl Check for opengl32 (cygwin)
-	dnl We don't actually check for the presence of any of the API 
-	dnl funcs since cygwin's gcc fails to link unless the header
-        dnl files are included.  There must be a better way -- if you 
-	dnl know of one, let me know.
-	AC_CHECK_LIB(opengl32,main,,AC_MSG_ERROR(GL library was not found))
+if test "x$with_gl_inc" = "x" ; then
+    GL_CPPFLAGS=""
+else 
+    GL_CPPFLAGS="-I$with_gl_inc"
+fi
+
+dnl check for gl.h
+saved_CPPFLAGS="$CPPFLAGS"
+
+function check_for_gl_h() {
+    CPPFLAGS="$saved_CPPFLAGS $GL_CPPFLAGS $TR_CPPFLAGS"
+
+    AC_MSG_CHECKING([for GL/gl.h])
+    AC_TRY_CPP( [ #include <GL/gl.h> ], have_gl_h=yes, have_gl_h=no )
+    AC_MSG_RESULT([$have_gl_h])
+}
+
+check_for_gl_h
+
+if test "x$have_gl_h" = "xno" -a "x$GL_CPPFLAGS" = "x" ; then
+    echo "*** Hmm, you don't seem to have OpenGL headers installed in the standard"
+    echo "*** location (/usr/include).  I'll check in /usr/X11R6/include, since"
+    echo "*** many distributions (incorrectly) put OpenGL headers there."
+    GL_CPPFLAGS="-I/usr/X11R6/include"
+    check_for_gl_h
+fi
+
+if test "x$have_gl_h" = "xno" ; then
+    AC_MSG_ERROR([Cannot find GL/gl.h])
+fi
+
+if test "x$is_win32" = "xno" ; then 
+
+    dnl Check for glx.h
+    AC_CHECK_HEADERS([GL/glx.h], have_glx_h=yes, have_glx_h=no )
+
+    if test "x$have_glx_h" = "xno" ; then
+	AC_MSG_ERROR([Cannot find GL/glx.h])
+    fi
+
+    dnl Check that glXGetProcAddressARB is defined in glx.h
+    AC_MSG_CHECKING([whether glx.h defines glXGetProcAddressARB]);
+    AC_TRY_COMPILE( [#include <GL/glx.h>], [ char *foo = (char*) glXGetProcAddressARB; ],
+                    glx_h_up_to_date=yes, glx_h_up_to_date=no )
+    AC_MSG_RESULT([$glx_h_up_to_date])
+
+    if test "x$glx_h_up_to_date" = "xno" ; then
+        AC_MSG_ERROR([Your copy of glx.h is out of date.  You can get a more recent copy from the latest Mesa distribution (http://mesa3d.sourceforge.net).])
     fi
 fi
 
-AC_CHECK_LIB(GLU, gluLookAt)
-if test "x$ac_cv_lib_GLU_gluLookAt" = "xno" ; then
-    dnl Check for MesaGLU.
-    AC_CHECK_LIB(MesaGLU, gluLookAt)
-    if test "x$ac_cv_lib_MesaGLU_gluLookAt" = "xno" ; then
-        dnl Check for glu32 (cygwin)
-	dnl We don't actually check for the presence of any of the API 
-	dnl funcs since cygwin's gcc fails to link unless the header
-        dnl files are included.  There must be a better way -- if you 
-	dnl know of one, let me know.
-	AC_CHECK_LIB(glu32,main,,AC_MSG_ERROR(GLU library was not found))
+dnl Check for glext.h 
+AC_CHECK_HEADERS( "GL/glext.h", have_glext_h=yes, have_glext_h=no )
+
+if test "x$have_glext_h" = "xno" ; then
+    AC_MSG_ERROR([
+*****************************************************************
+You are missing the file glext.h.
+You can get a copy at
+http://oss.sgi.com/projects/ogl-sample/ABI/glext.h
+Place it in the directory /usr/include/GL.
+*****************************************************************])
+fi
+
+dnl Check that glext.h version is recent enough
+AC_MSG_CHECKING([whether glext.h is recent enough]);
+AC_EGREP_CPP(yes,
+[
+#include <GL/glext.h>
+#if defined(GL_GLEXT_VERSION) && GL_GLEXT_VERSION >= 6
+ yes
+#endif
+], is_glext_h_recent=yes, is_glext_h_recent=no )
+AC_MSG_RESULT([$is_glext_h_recent])
+
+if test "x$is_glext_h_recent" = "xno" ; then
+    AC_MSG_ERROR([
+*****************************************************************
+Your copy of glext.h is out of date.
+You can get a copy of the latest version at
+http://oss.sgi.com/projects/ogl-sample/ABI/glext.h
+Place it in the directory /usr/include/GL.
+*****************************************************************])
+fi
+
+CPPFLAGS="$saved_CPPFLAGS" 
+TR_CPPFLAGS="$TR_CPPFLAGS $GL_CPPFLAGS"
+
+
+dnl --------------------------------------------------------------------------
+dnl Check for glut library
+dnl --------------------------------------------------------------------------
+AC_ARG_WITH(glut-libs,[  --with-glut-libs=DIR    Location of GLUT library])
+
+if test "x$with_glut_libs" = "x" ; then
+    GLUT_LDOPTS=""
+else
+    GLUT_LDOPTS="-L$with_glut_libs"
+fi
+
+function check_for_glut_lib() {
+    AC_MSG_CHECKING([for $GLUT_LIB_NAME library])
+    LIBS="$saved_LIBS $TR_LIBS $GLUT_LDOPTS -l$GLUT_LIB_NAME"
+    AC_TRY_LINK( ,[ char glutKeyboardUpFunc(); glutKeyboardUpFunc(); ],
+                 have_glut_lib=yes, have_glut_lib=no )
+    AC_MSG_RESULT([$have_glut_lib])
+} 
+
+saved_LIBS="$LIBS"
+
+GLUT_LIB_LIST="glut glut32"
+
+for GLUT_LIB_NAME in $GLUT_LIB_LIST ; do
+    check_for_glut_lib
+
+    if test "x$have_glut_lib" = "xyes" ; then
+        break;
     fi
+done
+
+if test "x$have_glut_lib" = "xno" ; then
+    AC_MSG_ERROR([GLUT library not found or too old version. 3.7 (beta) or later required.])
 fi
 
-dnl check for glx.h, glext.h
-dnl Set CFLAGS before this check so that it will be found if in
-dnl non-standard location -- thanks to Kevin Moule <krmoule@cgl.uwaterloo.ca>
-dnl for suggestion 
-ac_save_CFLAGS="$CFLAGS"
-CFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS $CFLAGS"
-AC_CHECK_HEADERS( "GL/glx.h" )
-AC_CHECK_HEADERS( "GL/glext.h" )
-CFLAGS="$ac_save_CFLAGS" 
+LIBS="$saved_LIBS"
+TR_LIBS="$TR_LIBS $GLUT_LDOPTS -l$GLUT_LIB_NAME"
 
-dnl Must have glext.h to compile
-if test "x$ac_cv_header_GL_glext_h" = "xno" ; then
-   echo
-   echo "*****************************************************************"
-   echo "ERROR: You are missing the file glext.h."
-   echo "You can get a copy at"
-   echo "http://oss.sgi.com/projects/ogl-sample/ABI/glext.h"
-   echo "Place it in the directory /usr/include/GL."
-   echo "*****************************************************************"
-   echo
-   exit 1
+
+dnl --------------------------------------------------------------------------
+dnl Check for glut.h
+dnl --------------------------------------------------------------------------
+
+AC_ARG_WITH(glut-inc, [  --with-glut-inc=DIR     Specify GLUT header file location])
+
+if test "x$with_glut_inc" = "x" ; then
+    GLUT_CPPFLAGS=""
+else
+    GLUT_CPPFLAGS="-I$with_glut_inc"
 fi
 
-dnl Check for glut
-AC_CHECK_LIB(glut, glutKeyboardUpFunc)
-if test "x$ac_cv_lib_glut_glutKeyboardUpFunc" = "xno" ; then
-    dnl check for glut32 (cygwin)
-    dnl We don't actually check for the presence of any of the API 
-    dnl funcs since cygwin's gcc fails to link unless the header
-    dnl files are included.  There must be a better way -- if you 
-    dnl know of one, let me know.
-    AC_CHECK_LIB(glut32,main,,AC_MSG_ERROR(GLUT library not found or too old version. 3.7 (beta) or later required.))
+saved_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$saved_CPPFLAGS $TR_CPPFLAGS $GLUT_CPPFLAGS"
+AC_CHECK_HEADER([GL/glut.h], have_glut_h=yes, have_glut_h=no )
+
+if test "x$have_glut_h" = "xno" ; then
+    AC_MSG_ERROR([Cannot find GL/glut.h])
 fi
+
+CPPFLAGS="$saved_CPPFLAGS"
+TR_CPPFLAGS="$TR_CPPFLAGS $GLUT_CPPFLAGS"
+
+
+dnl --------------------------------------------------------------------------
+dnl Other options
+dnl --------------------------------------------------------------------------
 
 dnl Turn use of stencil buffer on/off
-AC_ARG_ENABLE(stencil-buffer,[  --enable-stencil-buffer Use if your hardware has a stencil buffer],TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS -DUSE_STENCIL_BUFFER")
+AC_ARG_ENABLE(stencil-buffer,[  --enable-stencil-buffer Use if your hardware has a stencil buffer],TR_CPPFLAGS="$TR_CPPFLAGS -DUSE_STENCIL_BUFFER")
 
 dnl Specify data directory
-AC_ARG_WITH(data-dir,[  --with-data-dir=PATH    Default tuxracer data directory],TUXRACER_EXTRA_COMPILEFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS -DDATA_DIR=\\\"$withval\\\"")
+AC_ARG_WITH(data-dir,[  --with-data-dir=PATH    Default tuxracer data directory],TR_CPPFLAGS="$TR_CPPFLAGS -DDATA_DIR=\\\"$withval\\\"")
 
-AC_SUBST(TUXRACER_EXTRA_COMPILEFLAGS)
-AC_SUBST(TUXRACER_EXTRA_CFLAGS)
-AC_SUBST(TUXRACER_EXTRA_CXXFLAGS)
+
+AC_SUBST(TR_CPPFLAGS)
+AC_SUBST(TR_CFLAGS)
+AC_SUBST(TR_CXXFLAGS)
+AC_SUBST(TR_LIBS)
+
+CPPFLAGS="$CPPFLAGS $TR_CPPFLAGS"
+CFLAGS="$CFLAGS $TR_CFLAGS"
+CXXFLAGS="$CXXFLAGS $TR_CXXFLAGS"
+LIBS="$LIBS $TR_LIBS"
 
 AC_OUTPUT(Makefile src/Makefile)

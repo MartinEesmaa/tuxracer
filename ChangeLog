@@ -1,3 +1,74 @@
+2000-10-15  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+	* Making version 0.60.2
+
+	* tuxracer/configure.in:
+	Now check for Tcl 8.3 first, then 8.2, then 8.0.
+
+	* tuxracer/configure.in: More configure fixes.
+	- Fixed some problems with Tcl and GL checks
+	- Now check in /usr/include/tcl{8.0,8.2,8.3,} for tcl headers.
+
+2000-10-13  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* tuxracer/configure.in:
+	- If GL libs and headers not found in standard location, then search under
+	  /usr/X11R6/{lib,include}
+	- Tweaked "checking" messages.
+
+	* tuxracer/doconfig: Initial checkin
+
+	* tuxracer/doconfig: New file.
+
+	* tuxracer/src/func_template.txt:
+	Tweaks to function comment template.
+
+	* tuxracer/src/hash.c, tuxracer/src/tuxracer.h:
+	Changed #include <tcl.h> to #include TCL_HEADER, since the name of
+	the Tcl header is different on different systems.
+
+	* tuxracer/src/event_select.c, tuxracer/src/game_type_select.c, tuxracer/src/race_select.c:
+	Use <widget>_simulate_button_click functions in keyboard callbacks.
+
+	* tuxracer/src/button.c, tuxracer/src/button.h, tuxracer/src/listbox.c, tuxracer/src/ssbutton.c, tuxracer/src/ssbutton.h:
+	Added <widget>_simulate_button_click() functions, for use by keyboard
+	callbacks that wish to act as shortcuts for button presses.
+
+	* tuxracer/src/Makefile.am:
+	CFLAGS, CXXFLAGS now set in configure.in.
+
+	* tuxracer/configure.in: Added check for ranlib
+
+2000-10-11  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* tuxracer/configure.in:
+	Near total-rewrite of configure script.  Checks for more Tcl header files,
+	and ensures that the OpenGL headers and libraries are up to date.
+	Still needs more testing on different configurations.
+
+2000-10-08  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* tuxracer/configure.in:
+	Fixed problem with check for glx.h and glext.h.
+
+2000-10-05  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* tuxracer/src/game_config.c:
+	Reduced size of audio buffer
+
+2000-10-03  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* tuxracer/ChangeLog: *** empty log message ***
+
+	* tuxracer/README: Updated for version 0.60.
+
+	* tuxracer/Makefile.am:
+	Added web files for inclusion in dist tarball.
+
+	* tuxracer/src/gl_util.h:
+	Added hack to work around compile problems with old gl.h files.
+
+	* tuxracer/configure.in: Added check for glext.h
+
 2000-10-03  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
 
 	* Making version 0.60.1.

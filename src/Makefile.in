@@ -63,16 +63,15 @@ CC = @CC@
 CXX = @CXX@
 MAKEINFO = @MAKEINFO@
 PACKAGE = @PACKAGE@
+RANLIB = @RANLIB@
 SDL_CFLAGS = @SDL_CFLAGS@
 SDL_CONFIG = @SDL_CONFIG@
 SDL_LIBS = @SDL_LIBS@
-TUXRACER_EXTRA_CFLAGS = @TUXRACER_EXTRA_CFLAGS@
-TUXRACER_EXTRA_COMPILEFLAGS = @TUXRACER_EXTRA_COMPILEFLAGS@
-TUXRACER_EXTRA_CXXFLAGS = @TUXRACER_EXTRA_CXXFLAGS@
+TR_CFLAGS = @TR_CFLAGS@
+TR_CPPFLAGS = @TR_CPPFLAGS@
+TR_CXXFLAGS = @TR_CXXFLAGS@
+TR_LIBS = @TR_LIBS@
 VERSION = @VERSION@
-
-CFLAGS = -Wall @TUXRACER_EXTRA_COMPILEFLAGS@ @TUXRACER_EXTRA_CFLAGS@
-CXXFLAGS = -Wall @TUXRACER_EXTRA_COMPILEFLAGS@ @TUXRACER_EXTRA_CXXFLAGS@
 
 bin_PROGRAMS = tuxracer
 
@@ -88,10 +87,6 @@ DEFS = @DEFS@ -I. -I$(srcdir) -I..
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-X_CFLAGS = @X_CFLAGS@
-X_LIBS = @X_LIBS@
-X_EXTRA_LIBS = @X_EXTRA_LIBS@
-X_PRE_LIBS = @X_PRE_LIBS@
 tuxracer_OBJECTS =  alglib.o audio.o audio_data.o button.o course_load.o \
 course_mgr.o course_quad.o course_render.o credits.o debug.o \
 error_util.o event_select.o file_util.o fog.o fonts.o fps.o \
@@ -107,9 +102,11 @@ ui_snow.o ui_theme.o view.o viewfrustum.o
 tuxracer_LDADD = $(LDADD)
 tuxracer_DEPENDENCIES = 
 tuxracer_LDFLAGS = 
+CXXFLAGS = @CXXFLAGS@
 CXXCOMPILE = $(CXX) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@
+CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
@@ -221,7 +218,7 @@ distdir: $(DISTFILES)
 	@for file in $(DISTFILES); do \
 	  d=$(srcdir); \
 	  if test -d $$d/$$file; then \
-	    cp -pr $$/$$file $(distdir)/$$file; \
+	    cp -pr $$d/$$file $(distdir)/$$file; \
 	  else \
 	    test -f $(distdir)/$$file \
 	    || ln $$d/$$file $(distdir)/$$file 2> /dev/null \

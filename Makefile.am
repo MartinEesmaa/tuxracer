@@ -11,7 +11,9 @@ EXTRA_DIST =						\
 	html/manual.html				\
 	html/images/snow_line.gif			\
 	html/images/menu_side.jpg			\
+	html/images/fgw_top_pick.gif			\
 	html/images/menu_top_left.jpg			\
+	html/images/5rate_cows.gif			\
 	html/images/palette.rgb				\
 	html/images/ingame.jpg				\
 	html/images/menu_top.jpg			\
@@ -34,8 +36,8 @@ EXTRA_DIST =						\
 	html/images/manual/r_key.jpg			\
 	html/images/manual/4.gif			\
 	html/images/manual/1.gif			\
+	html/images/5rate.gif				\
 	html/download.html				\
-	html/tbtm.html					\
 	html/faq.html					\
 	html/support.html				\
 	html/screenshots.html				\

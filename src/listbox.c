@@ -186,7 +186,8 @@ bool_t listbox_goto_next_item( listbox_t *listbox )
 	return False;
     }
 
-    listbox_arrow_click_cb( listbox->down_button, (void*) listbox );
+    button_simulate_mouse_click( listbox->down_button );
+
     return True;
 }
 
@@ -208,7 +209,8 @@ bool_t listbox_goto_prev_item( listbox_t *listbox )
 	return False;
     }
 
-    listbox_arrow_click_cb( listbox->up_button, (void*) listbox );
+    button_simulate_mouse_click( listbox->up_button );
+
     return True;
 }
 

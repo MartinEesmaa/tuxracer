@@ -504,12 +504,16 @@ START_KEYBOARD_CB( event_select_key_cb )
     } else {
 	switch (key) {
 	case 13: /* Enter */
-	    continue_click_cb( continue_btn, NULL );
-	    ui_set_dirty();
+	    if ( continue_btn ) {
+		button_simulate_mouse_click( continue_btn );
+		ui_set_dirty();
+	    }
 	    break;
 	case 27: /* Esc */
-	    back_click_cb( back_btn, NULL );
-	    ui_set_dirty();
+	    if ( back_btn ) {
+		button_simulate_mouse_click( back_btn );
+		ui_set_dirty();
+	    }
 	    break;
 	}
     }

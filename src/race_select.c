@@ -1144,13 +1144,19 @@ static void race_select_loop( scalar_t time_step )
 */
 static void race_select_term()
 {
-    button_delete( back_btn );
+    if ( back_btn ) {
+	button_delete( back_btn );
+    }
     back_btn = NULL;
 
-    button_delete( start_btn );
+    if ( start_btn ) {
+	button_delete( start_btn );
+    }
     start_btn = NULL;
 
-    listbox_delete( race_listbox );
+    if ( race_listbox ) {
+	listbox_delete( race_listbox );
+    }
     race_listbox = NULL;
 
     if ( conditions_ssbtn ) {
@@ -1187,12 +1193,8 @@ static void race_select_term()
 */
 void next_race_condition( void )
 {
-    int cond;
-
-    if ( conditions_ssbtn != NULL && ssbutton_is_enabled( conditions_ssbtn ) ) {
-	cond = ssbutton_get_state( conditions_ssbtn );
-	ssbutton_set_state( conditions_ssbtn,
-			    ( cond + 1 ) % RACE_CONDITIONS_NUM_CONDITIONS );
+    if ( conditions_ssbtn ) {
+	ssbutton_simulate_mouse_click( conditions_ssbtn );
     }
 }
 
@@ -1206,11 +1208,8 @@ void next_race_condition( void )
 */
 void toggle_mirror( void )
 {
-    bool_t mirrored;
-
-    if ( mirror_ssbtn != NULL && ssbutton_is_enabled( mirror_ssbtn ) ) {
-	mirrored = ssbutton_get_state( mirror_ssbtn );
-	ssbutton_set_state( mirror_ssbtn, !mirrored );
+    if ( mirror_ssbtn ) {
+	ssbutton_simulate_mouse_click( mirror_ssbtn );
     }
 }
 
@@ -1224,11 +1223,8 @@ void toggle_mirror( void )
 */
 void toggle_wind( void )
 {
-    bool_t windy;
-
-    if ( wind_ssbtn != NULL && ssbutton_is_enabled( wind_ssbtn ) ) {
-	windy = ssbutton_get_state( wind_ssbtn );
-	ssbutton_set_state( wind_ssbtn, !windy );
+    if ( wind_ssbtn ) {
+	ssbutton_simulate_mouse_click( conditions_ssbtn );
     }
 }
 
@@ -1243,11 +1239,15 @@ START_KEYBOARD_CB( race_select_key_cb )
 	switch (key) {
 	case GLUT_KEY_UP:
 	case GLUT_KEY_LEFT:
-	    listbox_goto_prev_item( race_listbox );
+	    if ( race_listbox ) {
+		listbox_goto_prev_item( race_listbox );
+	    }
 	    break;
 	case GLUT_KEY_RIGHT:
 	case GLUT_KEY_DOWN:
-	    listbox_goto_next_item( race_listbox );
+	    if ( race_listbox ) {
+		listbox_goto_next_item( race_listbox );
+	    }
 	    break;
 	}
     } else {
@@ -1255,12 +1255,16 @@ START_KEYBOARD_CB( race_select_key_cb )
 
 	switch (key) {
 	case 13: /* Enter */
-	    start_click_cb( start_btn, NULL );
-	    ui_set_dirty();
+	    if ( start_btn ) {
+		button_simulate_mouse_click( start_btn );
+		ui_set_dirty();
+	    }
 	    break;
 	case 27: /* Esc */
-	    back_click_cb( back_btn, NULL );
-	    ui_set_dirty();
+	    if ( back_btn ) {
+		button_simulate_mouse_click( back_btn );
+		ui_set_dirty();
+	    }
 	    break;
 	case 'c': 
 	    next_race_condition();

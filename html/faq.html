@@ -49,8 +49,13 @@ TABLE {font-family: Arial, Helvetica, sans-serif; color: #FFFFFF}
   <LI><A HREF="#joystick">Can I use a joystick with Tux Racer?</A>
   <LI><A HREF="#joy_buttons">Can I remap the joystick buttons?</A>
   <LI><A HREF="#joy_analog">Does Tux Racer work with analog joysticks?</A>
+  <LI><A HREF="#stuck_controls">The controls seem stuck -- Tux always turns to the
+right.  How do I fix this?</A>
   <LI><A HREF="#ui_snow">Can I turn off the falling snow in the menus?</A>
   <LI><A HREF="#newcourses">Can I create new courses?</A>
+  <LI><A HREF="#linux_opengl_problems">When compiling under Linux, I get some OpenGL errors.  What's going on?</A>
+  <LI><A HREF="#linux_rock_crash">When I run Tux Racer under Linux, the program crashes
+when I slide over rock.  Is there a fix for this?</A>
 </OL>
 <IMG BORDER=0 SRC="./images/snow_line.gif" ALT="" WIDTH="551" HEIGHT="31"><BR><table cellpadding="0" cellspacing="4" border="0" width="100%">
   <tr>
@@ -164,9 +169,22 @@ href="http://www.lokigames.com">Loki Games</a> has created some pages to help
   <tr>
     <td valign="top"><p class="heading3">A:</p></td>
     <td valign="top"><p class="bodytext">
-    Under Linux, the options file can be found in the ~/.tuxracer directory. 
-    Under Windows, the options file can be found in the config subdirectory of 
-    the Tux Racer installation directory.
+
+    Under Linux, the options file can be found in the ~/.tuxracer
+    directory.  Under Windows, the options file can be found in the
+    config subdirectory of the Tux Racer installation directory.  Note
+    that on both operating systems, you must run Tux Racer at least
+    once before the options file is created.
+
+</p>
+<p class="bodytext">
+
+    <B>Update:</B> At least one user running Windows ME has reported
+    that the config directory is not being created when Tux Racer is
+    first run.  If you have run Tux Racer but there is still no config
+    directory, then try creating it manually and then run Tux Racer
+    again.  The options file should be created when Tux Racer exits.
+
 </p>
 </td>
   </tr>
@@ -306,6 +324,37 @@ href="http://www.lokigames.com">Loki Games</a> has created some pages to help
 <table cellpadding="0" cellspacing="4" border="0" width="100%">
   <tr>
     <td valign="top"><p class="heading3">Q:</p></td>
+    <td valign="top"><A NAME="stuck_controls"></A><p class="heading3">The controls seem stuck -- Tux always turns to the
+right.  How do I fix this?</p></td>
+  </tr>
+  <tr>
+    <td valign="top"><p class="heading3">A:</p></td>
+    <td valign="top"><p class="bodytext">
+
+If you have a game controller connected to your computer, make sure it
+is properly calibrated.
+
+</p>
+<p class="bodytext">
+
+If you don't have a game controller connected to your computer, make
+sure that your operating system doesn't <b>think</b> you have one
+connected.
+
+</p>
+</td>
+  </tr>
+<!--
+  <tr>
+    <td valign="top"></td>
+    <td valign="top"><br><p align="right" class="small"><A HREF="#toc">[back to Contents]</A></p></td>
+  </tr>
+-->
+<BR>
+</table>
+<table cellpadding="0" cellspacing="4" border="0" width="100%">
+  <tr>
+    <td valign="top"><p class="heading3">Q:</p></td>
     <td valign="top"><A NAME="ui_snow"></A><p class="heading3">Can I turn off the falling snow in the menus?</p></td>
   </tr>
   <tr>
@@ -378,6 +427,151 @@ elev.rgb, terrain.rgb, and trees.rgb files.  Here are some pointers:
 </UL>
 
 </p>
+</td>
+  </tr>
+<!--
+  <tr>
+    <td valign="top"></td>
+    <td valign="top"><br><p align="right" class="small"><A HREF="#toc">[back to Contents]</A></p></td>
+  </tr>
+-->
+<BR>
+</table>
+<table cellpadding="0" cellspacing="4" border="0" width="100%">
+  <tr>
+    <td valign="top"><p class="heading3">Q:</p></td>
+    <td valign="top"><A NAME="linux_opengl_problems"></A><p class="heading3">When compiling under Linux, I get some OpenGL errors.  What's going on?</p></td>
+  </tr>
+  <tr>
+    <td valign="top"><p class="heading3">A:</p></td>
+    <td valign="top"><p class="bodytext">
+
+This could be due to several factors.  
+
+<OL>
+  <LI><p class="bodytext">
+      Make sure you're using a version of the tuxracer package &gt;
+      0.60.  That version had problems with some older gl.h header
+      files; later versions implement a workaround to this problem.
+      </p>
+
+  <LI><p class="bodytext">
+
+	Your OpenGL is too old. If you're using Mesa, make sure you
+	upgrade to version 3.2 or later (version 3.3 is the most
+	up-to-date, and seems very stable despite being a development
+	version).  Also make sure you install the libraries and header files
+	in the locations described in the next item.
+      
+      </p>
+      <p class="bodytext">
+      
+	If you get a warning about <tt>glXGetProcAddressARB</tt> being
+	undeclared, then you need a more up-to-date version of the
+        glx.h header file.  This may indiciate that your entire OpenGL
+	is out of date, but it's possible that all you need is a more 
+        recent version of glx.h.  You can get a copy from the latest 
+        release of <A HREF="http://mesa3d.sourceforge.net" >Mesa</A> -- it's in the include/GL directory.
+
+      </p>
+
+  <LI><p class="bodytext">
+
+      You have old copies of the OpenGL libraries on your system, and
+      those are being used instead of your up-to-date copies.  There
+      is an official standard for where to put the OpenGL libraries and
+      header files, agreed upon by all OpenGL providers for
+      Linux (<A HREF="http://oss.sgi.com/projects/ogl-sample/ABI/" >OpenGL Application Binary Interface for Linux</A>):
+
+      <UL>
+	<LI>OpenGL libraries should go in <tt>/usr/lib</tt>.  This
+	    includes libGL, libGLU, and libglut.
+	<LI>OpenGL headers should go in <tt>/usr/include/GL</tt>.  This
+	    includes gl.h, glu.h, glx.h, glut.h, glext.h, and possibly
+	    other files used by your OpenGL implementation.
+      </UL>
+      </p>
+      <p class="bodytext">
+
+      Tux Racer will look for OpenGL headers and libraries in those
+      locations by default.  Getting Tux Racer to compile and run with
+      OpenGL files installed elsewhere is possible, but requires more
+      work (you'll need to use the --with-gl* configure options). 
+
+      </p>
+      <p class="bodytext">
+
+      (Note that there is a bug in the configure script for versions
+      &lt;= 0.60.1 which puts <tt>-I/usr/include</tt> <i>before</i> the path
+      specified with --with-gl-inc, so if you have old OpenGL headers in
+      /usr/include/GL but wish to use other headers to compile Tux
+      Racer, you will have to fix the configure.in script yourself or
+      modify the Makefile manually.)
+
+      </p>
+
+  <LI><p class="bodytext">
+
+      You have an old copy of the glext.h header file.  You can get
+      the latest version from
+      <A HREF="http://oss.sgi.com/projects/ogl-sample/ABI/glext.h" >http://oss.sgi.com/projects/ogl-sample/ABI/glext.h</A>.  It should go
+      in <tt>/usr/include/GL</tt>.
+
+      </p>
+      <p class="bodytext">
+
+      Note that there was a documentation bug in version 0.60 that instructed
+      users to download glxext.h instead of glext.h.  This has been
+      corrected in version 0.60.1.
+
+      </p>
+
+</OL>
+
+</p>
+</td>
+  </tr>
+<!--
+  <tr>
+    <td valign="top"></td>
+    <td valign="top"><br><p align="right" class="small"><A HREF="#toc">[back to Contents]</A></p></td>
+  </tr>
+-->
+<BR>
+</table>
+<table cellpadding="0" cellspacing="4" border="0" width="100%">
+  <tr>
+    <td valign="top"><p class="heading3">Q:</p></td>
+    <td valign="top"><A NAME="linux_rock_crash"></A><p class="heading3">When I run Tux Racer under Linux, the program crashes
+when I slide over rock.  Is there a fix for this?</p></td>
+  </tr>
+  <tr>
+    <td valign="top"><p class="heading3">A:</p></td>
+    <td valign="top"><p class="bodytext">
+
+We believe that this is due to a bug in egcs-2.91.66, an
+"experimental" version of the gcc compiler (you can check which
+version you have by typing "gcc --version" at the shell prompt).
+There are two possible solutions:
+
+<UL>
+  <LI><p class="bodytext">Upgrade gcc to version 2.95.x.  (Note that the 2.96 and 2.97
+      releases are development versions and are not recommended.)</p>
+      <p class="bodytext">OR</p>
+  <LI>Rebuild tuxracer with debugging turned on.  This seems to make
+      the problem go away.
+      <div align="center">
+<table border="0" cellpadding="2" cellspacing="8" width="80%">
+  <tr><td bgcolor="#c0cddd"><font face="Courier, fixed-width" color="#303030" size="2"><B>shell$</B> make distclean<BR>
+<B>shell$</B> ./configure --enable-debug<BR>
+<B>shell$</B> make<BR>
+<B>shell$</B> make install<BR></font></td></tr>
+</table>
+</div>
+
+</UL>
+</p>
+
 </td>
   </tr>
 <!--

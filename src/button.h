@@ -56,6 +56,8 @@ void button_set_active( button_t *button, bool_t active );
 bool_t button_is_active( button_t *button );
 void button_draw( button_t *button );
 void button_set_highlight( button_t *button, bool_t highlight );
+void button_simulate_mouse_click( button_t *button );
+void button_perform_click_action( button_t *button );
 
 /* EOF */
 
