@@ -22,7 +22,7 @@
 #define _INTRO_H_
 
 void intro_init(); 
-void intro_loop();
+void intro_loop( scalar_t time_step );
 void intro_register();
 
 #endif

@@ -23,6 +23,10 @@
 #include "phys_sim.h"
 #include "gl_util.h"
 
+/* This constant is here as part of a debugging check to prevent an infinite 
+   number of particles from being created */
+#define MAX_PARTICLES 500000
+
 #define START_RADIUS 0.1
 #define PART_SIZE    0.07
 #define PART_SPEED   1.3
@@ -40,6 +44,7 @@ typedef struct _Particle {
 
 static colour_t partColour = { 0.69, 0.72, 0.906 };
 static Particle* head = NULL;
+static int num_particles = 0;
 
 scalar_t frand() 
 {
@@ -51,9 +56,26 @@ void create_new_particles( point_t loc, vector_t vel, int num )
     Particle *newp;
     int i;
 
+    /* Debug check to track down infinite particle bug */
+    if ( num_particles + num > MAX_PARTICLES ) {
+        fprintf( stderr, 
+        "tuxracer: Maximum number of particles exceeded.\n"
+        "*** Please help the Tux Racer developers by reporting this bug \n"
+        "*** to <tuxracer-devel@lists.sourceforge.net>\n" );
+        assert( 0 );
+    } 
+
     for (i=0; i<num; i++) {
 
         newp = (Particle*)malloc( sizeof( Particle) );
+
+        if ( newp == NULL ) {
+            fprintf( stderr, "tuxracer: Out of memory.\n" );
+            exit( -1 );
+        } 
+
+        num_particles += 1;
+
         newp->next = head;
         head = newp;
 
@@ -108,6 +130,7 @@ void update_particles( scalar_t time_step )
             q = *p;
             *p = q->next;
             free(q);
+            num_particles -= 1;
             continue;
         } 
 
@@ -150,4 +173,5 @@ void clear_particles()
         free(q);
     } 
     head = NULL;
+    num_particles = 0;
 } 

@@ -42,6 +42,12 @@
 /* Define if you have the glut library (-lglut).  */
 #undef HAVE_LIBGLUT
 
+/* Define if you have the tcl8.0 library (-ltcl8.0).  */
+#undef HAVE_LIBTCL8_0
+
+/* Define if you have the tcl8.2 library (-ltcl8.2).  */
+#undef HAVE_LIBTCL8_2
+
 /* Name of package */
 #undef PACKAGE
 

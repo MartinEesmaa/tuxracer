@@ -39,10 +39,9 @@ void intro_init()
     glutPassiveMotionFunc( NULL );
 }
 
-void intro_loop()
+void intro_loop( scalar_t time_step )
 {
     int width, height;
-    scalar_t time_step;
     player_data_t *plyr = get_player_data( local_player() );
 
     width = get_x_resolution();
@@ -51,7 +50,6 @@ void intro_loop()
     check_gl_error();
 
     new_frame_for_fps_calc();
-    time_step = calc_time_step();
 
     update_key_frame( plyr, time_step );
 

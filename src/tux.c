@@ -78,45 +78,28 @@ void draw_tux()
     /* Turn on lights
      */
     glEnable( GL_LIGHT0 );
-    glEnable( GL_LIGHT1 );
-    glEnable( GL_LIGHT2 );
+    glDisable( GL_LIGHT1 );
+    glDisable( GL_LIGHT2 );
 
     /* Set up light sources
      */
-    light_position[0] = 20.;
-    light_position[1] = 23.;
-    light_position[2] = 40.;
+    light_position[0] = 1.;
+    light_position[1] = 1.;
+    light_position[2] = 2.;
     light_position[3] = 0;
-    light_intensity[0] = 0.7;
-    light_intensity[1] = 0.7;
-    light_intensity[2] = 0.7;
+    light_intensity[0] = 0.8;
+    light_intensity[1] = 0.8;
+    light_intensity[2] = 0.8;
     light_intensity[3] = 1.0;
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_intensity);
     glLightfv(GL_LIGHT0, GL_SPECULAR, light_intensity);
 
-    light_position[0] = 25;
-    light_position[1] = 50;
-    light_position[2] = -50;
-    light_position[3] = 0;
     light_intensity[0] = 0.3;
     light_intensity[1] = 0.3;
     light_intensity[2] = 0.3;
     light_intensity[3] = 1.0;
-    glLightfv(GL_LIGHT1, GL_POSITION, light_position);
-    glLightfv(GL_LIGHT1, GL_AMBIENT, light_intensity);
-
-    light_position[0] = 25;
-    light_position[1] = 50;
-    light_position[2] = -50;
-    light_position[3] = 0;
-    light_intensity[0] = 0.7;
-    light_intensity[1] = 0.7;
-    light_intensity[2] = 0.7;
-    light_intensity[3] = 1.0;
-    glLightfv(GL_LIGHT3, GL_POSITION, light_position);
-    glLightfv(GL_LIGHT3, GL_DIFFUSE, light_intensity);
-    glLightfv(GL_LIGHT3, GL_SPECULAR, light_intensity);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_intensity);
 
     glShadeModel( GL_SMOOTH );
 

@@ -21,7 +21,7 @@
 #define _RACING_H_
 
 void racing_init();
-void racing_loop();
+void racing_loop( scalar_t time_step );
 void racing_register();
 
 #endif

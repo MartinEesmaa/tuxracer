@@ -22,7 +22,7 @@
 #define _START_SCREEN_H_
 
 void start_screen_init();
-void start_screen_loop();
+void start_screen_loop( scalar_t time_step );
 void start_screen_register();
 
 #endif

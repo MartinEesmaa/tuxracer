@@ -271,7 +271,7 @@ preview.o: preview.c tuxracer.h ../config.h string_util.h game_config.h \
 racing.o: racing.c tuxracer.h ../config.h string_util.h game_config.h \
 	tux_types.h alglib.h keyboard.h keyframe.h course_render.h \
 	multiplayer.h gl_util.h fps.h loop.h render_util.h view.h tux.h \
-	tux_shadow.h phys_sim.h course_load.h part_sys.h
+	tux_shadow.h phys_sim.h course_load.h part_sys.h screenshot.h
 render_util.o: render_util.c tuxracer.h ../config.h string_util.h \
 	game_config.h tux_types.h alglib.h gl_util.h
 screenshot.o: screenshot.c tuxracer.h ../config.h string_util.h \

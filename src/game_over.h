@@ -22,7 +22,7 @@
 #define _GAME_OVER_H_
 
 void game_over_init();
-void game_over_loop();
+void game_over_loop( scalar_t time_step );
 void game_over_register();
 
 #endif

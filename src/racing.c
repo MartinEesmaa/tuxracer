@@ -31,6 +31,10 @@
 #include "tux_shadow.h"
 #include "phys_sim.h"
 #include "part_sys.h"
+#include "screenshot.h"
+
+/* Time constant for automatic steering centering (s) */
+#define TURN_DECAY_TIME_CONSTANT 0.5
 
 static bool_t right_turn;
 static bool_t left_turn;
@@ -55,10 +59,9 @@ void racing_init()
     left_turn = right_turn = False;
 }
 
-void racing_loop()
+void racing_loop( scalar_t time_step )
 {
     int width, height;
-    scalar_t time_step;
     player_data_t *plyr = get_player_data( local_player() );
 
     width = get_x_resolution();
@@ -67,8 +70,6 @@ void racing_loop()
     check_gl_error();
 
     new_frame_for_fps_calc();
-    time_step = calc_time_step();
-    g_game.time_step = time_step;
 
     clear_rendering_context();
 
@@ -76,7 +77,12 @@ void racing_loop()
 	increment_turn_fact( plyr, 
 			     ( left_turn ? -1 : 1 ) * 0.2 * time_step / 0.05 );
     } else {
-	plyr->control.turn_fact *= 0.9 * time_step / 0.05;
+        /* Automatically centre steering */
+        if ( time_step < TURN_DECAY_TIME_CONSTANT ) {
+	    plyr->control.turn_fact *= 1.0 - time_step/TURN_DECAY_TIME_CONSTANT;
+        } else {
+	    plyr->control.turn_fact = 0.0;
+        }
     }
 
     update_player_pos( plyr, time_step );

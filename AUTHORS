@@ -5,3 +5,8 @@ Alan Levy <alanlevy@pcug.org.au>
 	* Snowy mountain backdrops used with permission
           (http://www.pcug.org.au/~alanlevy/)
 
+Ingo Ruhnke <grumbel@gmx.de>
+	* Helped to track down nasty particle generation bug
+
+Michael Dale Long <mlong@long.custom.net>
+	* Lighting patch to make dark areas of terrain brighter

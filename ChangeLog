@@ -1,3 +1,33 @@
+2000-03-01  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* Making version 0.10.1
+
+	* configure.in: Added checks for libtcl8.0 and libtcl8.2, in
+	addition to the library name specified by --with-tcl-lib-name
+	option (which defaults to "tcl")
+
+2000-02-29  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* loop.c (main_loop): time steps are initialized when a new
+	mode is entered; the size of the time step is now passed to the
+	loop functions
+
+	* course_render.c (render_course): Prompted by a patch from Michael
+	Dale Long, fixed up lighting code to make dark areas of terrain
+	less dark (now more reasonable for a snowfield).
+	
+	* tux.c (draw_tux): Cleaned up lighting code
+
+	* racing.c (racing_loop): Fixed bug that was causing an unlimited
+	number of particles to be generated (problem with centering of
+	steering)
+	
+2000-02-28  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* part_sys.c (create_new_particles): Now keep track of number of
+	particles; abort if maximum number of particles exceeded (as this
+	signals a bug)
+
 2000-02-27  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
 
 	* Making version 0.10.

@@ -21,11 +21,10 @@
 #define _LOOP_H_
 
 typedef void (*mode_init_func_ptr_t)(void);
-typedef void (*mode_loop_func_ptr_t)(void);
+typedef void (*mode_loop_func_ptr_t)( scalar_t time_step );
 
 void register_loop_funcs( game_mode_t mode, mode_init_func_ptr_t init_func,
 			  mode_loop_func_ptr_t loop_func );
 void main_loop();
-scalar_t calc_time_step();
 
 #endif /* _LOOP_H_ */

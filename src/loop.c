@@ -66,7 +66,12 @@ static scalar_t get_clock_time()
     return (scalar_t) tv.tv_sec + (scalar_t) tv.tv_usec * 1.e-6;
 } 
 
-scalar_t calc_time_step()
+void reset_time_step_clock()
+{
+    clock_time = get_clock_time( );
+} 
+
+static scalar_t calc_time_step()
 {
     scalar_t cur_time, time_step;
 
@@ -86,12 +91,14 @@ void main_loop()
 
     if ( prev_mode != cur_mode ) {
 	if ( mode_funcs[ cur_mode ].init_func != NULL ) {
+            reset_time_step_clock();
 	    ( mode_funcs[ cur_mode ].init_func )( );
 	}
 	prev_mode = cur_mode;
     }
 
     if ( mode_funcs[ cur_mode ].loop_func != NULL ) {
-	( mode_funcs[ cur_mode ].loop_func )( );
+        g_game.time_step = calc_time_step();
+	( mode_funcs[ cur_mode ].loop_func )( g_game.time_step );
     }
 }

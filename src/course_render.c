@@ -258,7 +258,7 @@ void render_course()
         glTranslatef( 0, 20, -courseLength/2. );
         light_position[0] = 1;
         light_position[1] = 1; 
-        light_position[2] = 0;
+        light_position[2] = 1;
         light_position[3] = 0;
         light_intensity[0] = 3.0;
         light_intensity[1] = 3.0;
@@ -272,16 +272,11 @@ void render_course()
         light_intensity[3] = 0.0;
         glLightfv(GL_LIGHT0, GL_SPECULAR, light_intensity);
 
-        light_position[0] = 25;
-        light_position[1] = 50;
-        light_position[2] = -50;
-        light_position[3] = 0;
-        light_intensity[0] = 0.5;
-        light_intensity[1] = 0.5;
-        light_intensity[2] = 0.5;
+        light_intensity[0] = 1.1;
+        light_intensity[1] = 1.1;
+        light_intensity[2] = 1.1;
         light_intensity[3] = 1.0;
-        glLightfv(GL_LIGHT1, GL_POSITION, light_position);
-        glLightfv(GL_LIGHT1, GL_AMBIENT, light_intensity);
+        glLightfv(GL_LIGHT0, GL_AMBIENT, light_intensity);
 
         glPopMatrix();
 

@@ -44,14 +44,13 @@ void start_screen_init()
     glutPassiveMotionFunc( NULL );
 }
 
-void start_screen_loop()
+void start_screen_loop( scalar_t time_step )
 {
     char buff[BUFF_LEN];
 
     check_gl_error();
 
     new_frame_for_fps_calc();
-    calc_time_step();
 
     clear_rendering_context();
 

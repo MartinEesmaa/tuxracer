@@ -42,7 +42,7 @@ void game_over_init()
     glutPassiveMotionFunc( NULL );
 }
 
-void game_over_loop()
+void game_over_loop( scalar_t time_step )
 {
     player_data_t *plyr = get_player_data( local_player() );
     int width, height;
