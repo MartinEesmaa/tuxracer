@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/tuxracer.h)
-AM_INIT_AUTOMAKE(tuxracer, "0.60")
+AM_INIT_AUTOMAKE(tuxracer, "0.60.1")
 AM_CONFIG_HEADER(config.h)
 
 dnl Check system type
@@ -146,14 +146,28 @@ if test "x$ac_cv_lib_GLU_gluLookAt" = "xno" ; then
     fi
 fi
 
-dnl check for glx.h
+dnl check for glx.h, glext.h
 dnl Set CFLAGS before this check so that it will be found if in
 dnl non-standard location -- thanks to Kevin Moule <krmoule@cgl.uwaterloo.ca>
 dnl for suggestion 
 ac_save_CFLAGS="$CFLAGS"
 CFLAGS="$TUXRACER_EXTRA_COMPILEFLAGS $CFLAGS"
 AC_CHECK_HEADERS( "GL/glx.h" )
+AC_CHECK_HEADERS( "GL/glext.h" )
 CFLAGS="$ac_save_CFLAGS" 
+
+dnl Must have glext.h to compile
+if test "x$ac_cv_header_GL_glext_h" = "xno" ; then
+   echo
+   echo "*****************************************************************"
+   echo "ERROR: You are missing the file glext.h."
+   echo "You can get a copy at"
+   echo "http://oss.sgi.com/projects/ogl-sample/ABI/glext.h"
+   echo "Place it in the directory /usr/include/GL."
+   echo "*****************************************************************"
+   echo
+   exit 1
+fi
 
 dnl Check for glut
 AC_CHECK_LIB(glut, glutKeyboardUpFunc)
