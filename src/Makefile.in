@@ -1,0 +1,371 @@
+# Makefile.in generated automatically by automake 1.4a from Makefile.am
+
+# Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
+# This Makefile.in is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+
+SHELL = @SHELL@
+
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+VPATH = @srcdir@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+
+bindir = @bindir@
+sbindir = @sbindir@
+libexecdir = @libexecdir@
+datadir = @datadir@
+sysconfdir = @sysconfdir@
+sharedstatedir = @sharedstatedir@
+localstatedir = @localstatedir@
+libdir = @libdir@
+infodir = @infodir@
+mandir = @mandir@
+includedir = @includedir@
+oldincludedir = /usr/include
+
+DESTDIR =
+
+pkgdatadir = $(datadir)/@PACKAGE@
+pkglibdir = $(libdir)/@PACKAGE@
+pkgincludedir = $(includedir)/@PACKAGE@
+
+top_builddir = ..
+
+ACLOCAL = @ACLOCAL@
+AUTOCONF = @AUTOCONF@
+AUTOMAKE = @AUTOMAKE@
+AUTOHEADER = @AUTOHEADER@
+
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_SCRIPT = @INSTALL_SCRIPT@
+INSTALL_STRIP_FLAG =
+transform = @program_transform_name@
+
+NORMAL_INSTALL = :
+PRE_INSTALL = :
+POST_INSTALL = :
+NORMAL_UNINSTALL = :
+PRE_UNINSTALL = :
+POST_UNINSTALL = :
+CC = @CC@
+MAKEINFO = @MAKEINFO@
+PACKAGE = @PACKAGE@
+TUXRACER_EXTRA_CFLAGS = @TUXRACER_EXTRA_CFLAGS@
+VERSION = @VERSION@
+
+CFLAGS = -Wall -ansi -pedantic -g @TUXRACER_EXTRA_CFLAGS@ 		  -I/usr/X11R6/include -I/usr/local/include
+
+
+bin_PROGRAMS = tuxracer
+
+tuxracer_SOURCES =  	alglib.c					alglib.h					course_load.c					course_load.h					course_render.c					course_render.h					fps.c						fps.h					        game_config.c				        game_config.h				        game_over.c				        game_over.h					gl_util.c					gl_util.h					hier.c						hier.h						hier_cb.c					hier_cb.h					hier_util.c					hier_util.h					image.c						image.h						intro.c						intro.h						keyboard.c					keyboard.h					keyboard_util.c					keyboard_util.h					keyframe.c					keyframe.h					loop.c						loop.h						main.c						multiplayer.c					multiplayer.h				        nmrcl.c					        nmrcl.h						part_sys.c					part_sys.h					phys_sim.c					phys_sim.h					pic.c						pic.h						preview.c					preview.h					racing.c					racing.h					render_util.c					render_util.h					screenshot.c					screenshot.h					start_screen.c					start_screen.h					string_util.c					string_util.h					tcl_util.c					tcl_util.h					textures.c					textures.h					tux.c						tux.h					        tux_shadow.c				        tux_shadow.h					tux_types.h					tuxracer.h					view.c						view.h
+
+mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
+CONFIG_HEADER = ../config.h
+CONFIG_CLEAN_FILES = 
+PROGRAMS =  $(bin_PROGRAMS)
+
+
+DEFS = @DEFS@ -I. -I$(srcdir) -I..
+CPPFLAGS = @CPPFLAGS@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+X_CFLAGS = @X_CFLAGS@
+X_LIBS = @X_LIBS@
+X_EXTRA_LIBS = @X_EXTRA_LIBS@
+X_PRE_LIBS = @X_PRE_LIBS@
+tuxracer_OBJECTS =  alglib.o course_load.o course_render.o fps.o \
+game_config.o game_over.o gl_util.o hier.o hier_cb.o hier_util.o \
+image.o intro.o keyboard.o keyboard_util.o keyframe.o loop.o main.o \
+multiplayer.o nmrcl.o part_sys.o phys_sim.o pic.o preview.o racing.o \
+render_util.o screenshot.o start_screen.o string_util.o tcl_util.o \
+textures.o tux.o tux_shadow.o view.o
+tuxracer_LDADD = $(LDADD)
+tuxracer_DEPENDENCIES = 
+tuxracer_LDFLAGS = 
+COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+CCLD = $(CC)
+LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
+DIST_COMMON =  Makefile.am Makefile.in
+
+
+DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
+
+TAR = gtar
+GZIP_ENV = --best
+SOURCES = $(tuxracer_SOURCES)
+OBJECTS = $(tuxracer_OBJECTS)
+
+all: all-redirect
+.SUFFIXES:
+.SUFFIXES: .S .c .o .s
+$(srcdir)/Makefile.in: Makefile.am $(top_srcdir)/configure.in $(ACLOCAL_M4) 
+	cd $(top_srcdir) && $(AUTOMAKE) --gnu --include-deps src/Makefile
+
+Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status
+	cd $(top_builddir) \
+	  && CONFIG_FILES=$(subdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+
+mostlyclean-binPROGRAMS:
+
+clean-binPROGRAMS:
+	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+
+distclean-binPROGRAMS:
+
+maintainer-clean-binPROGRAMS:
+
+install-binPROGRAMS: $(bin_PROGRAMS)
+	@$(NORMAL_INSTALL)
+	$(mkinstalldirs) $(DESTDIR)$(bindir)
+	@list='$(bin_PROGRAMS)'; for p in $$list; do \
+	  if test -f $$p; then \
+	    echo "  $(INSTALL_PROGRAM) $(INSTALL_STRIP_FLAG) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`"; \
+	     $(INSTALL_PROGRAM) $(INSTALL_STRIP_FLAG) $$p $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
+	  else :; fi; \
+	done
+
+uninstall-binPROGRAMS:
+	@$(NORMAL_UNINSTALL)
+	list='$(bin_PROGRAMS)'; for p in $$list; do \
+	  rm -f $(DESTDIR)$(bindir)/`echo $$p|sed 's/$(EXEEXT)$$//'|sed '$(transform)'|sed 's/$$/$(EXEEXT)/'`; \
+	done
+
+.c.o:
+	$(COMPILE) -c $<
+
+.s.o:
+	$(COMPILE) -c $<
+
+.S.o:
+	$(COMPILE) -c $<
+
+mostlyclean-compile:
+	-rm -f *.o core *.core
+
+clean-compile:
+
+distclean-compile:
+	-rm -f *.tab.c
+
+maintainer-clean-compile:
+
+tuxracer: $(tuxracer_OBJECTS) $(tuxracer_DEPENDENCIES)
+	@rm -f tuxracer
+	$(LINK) $(tuxracer_LDFLAGS) $(tuxracer_OBJECTS) $(tuxracer_LDADD) $(LIBS)
+
+tags: TAGS
+
+ID: $(HEADERS) $(SOURCES) $(LISP)
+	list='$(SOURCES) $(HEADERS)'; \
+	unique=`for i in $$list; do echo $$i; done | \
+	  awk '    { files[$$0] = 1; } \
+	       END { for (i in files) print i; }'`; \
+	here=`pwd` && cd $(srcdir) \
+	  && mkid -f$$here/ID $$unique $(LISP)
+
+TAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) $(LISP)
+	tags=; \
+	here=`pwd`; \
+	list='$(SOURCES) $(HEADERS)'; \
+	unique=`for i in $$list; do echo $$i; done | \
+	  awk '    { files[$$0] = 1; } \
+	       END { for (i in files) print i; }'`; \
+	test -z "$(ETAGS_ARGS)$$unique$(LISP)$$tags" \
+	  || (cd $(srcdir) && etags $(ETAGS_ARGS) $$tags  $$unique $(LISP) -o $$here/TAGS)
+
+mostlyclean-tags:
+
+clean-tags:
+
+distclean-tags:
+	-rm -f TAGS ID
+
+maintainer-clean-tags:
+
+distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
+
+subdir = src
+
+distdir: $(DISTFILES)
+	@for file in $(DISTFILES); do \
+	  d=$(srcdir); \
+	  if test -d $$d/$$file; then \
+	    cp -pr $$d/$$file $(distdir)/$$file; \
+	  else \
+	    test -f $(distdir)/$$file \
+	    || ln $$d/$$file $(distdir)/$$file 2> /dev/null \
+	    || cp -p $$d/$$file $(distdir)/$$file || :; \
+	  fi; \
+	done
+alglib.o: alglib.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h
+course_load.o: course_load.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h course_load.h \
+	course_render.h image.h textures.h phys_sim.h tcl_util.h \
+	keyframe.h
+course_render.o: course_render.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h course_load.h \
+	course_render.h textures.h phys_sim.h hier_util.h gl_util.h
+fps.o: fps.c fps.h tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h render_util.h
+game_config.o: game_config.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h
+game_over.o: game_over.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h multiplayer.h gl_util.h \
+	fps.h render_util.h phys_sim.h course_load.h view.h \
+	course_render.h tux.h tux_shadow.h keyboard.h loop.h
+gl_util.o: gl_util.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h gl_util.h
+hier.o: hier.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h hier_util.h
+hier_cb.o: hier_cb.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h hier.h tcl_util.h
+hier_util.o: hier_util.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h
+image.o: image.c image.h
+intro.o: intro.c keyframe.h tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h course_render.h \
+	multiplayer.h gl_util.h fps.h loop.h render_util.h view.h tux.h \
+	tux_shadow.h
+keyboard.o: keyboard.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h keyboard.h keyboard_util.h
+keyboard_util.o: keyboard_util.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h keyboard_util.h
+keyframe.o: keyframe.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h tux.h phys_sim.h \
+	course_load.h hier.h
+loop.o: loop.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h loop.h
+main.o: main.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h course_load.h course_render.h textures.h \
+	tux.h phys_sim.h view.h part_sys.h keyframe.h preview.h \
+	gl_util.h screenshot.h fps.h tux_shadow.h loop.h multiplayer.h \
+	render_util.h start_screen.h intro.h racing.h game_over.h \
+	keyboard.h
+multiplayer.o: multiplayer.c
+nmrcl.o: nmrcl.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h nmrcl.h
+part_sys.o: part_sys.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h part_sys.h phys_sim.h \
+	course_load.h gl_util.h
+phys_sim.o: phys_sim.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h course_load.h \
+	course_render.h hier.h hier_util.h tux.h part_sys.h phys_sim.h \
+	nmrcl.h
+pic.o: pic.c pic.h
+preview.o: preview.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h course_load.h
+racing.o: racing.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h keyboard.h keyframe.h course_render.h \
+	multiplayer.h gl_util.h fps.h loop.h render_util.h view.h tux.h \
+	tux_shadow.h phys_sim.h course_load.h part_sys.h
+render_util.o: render_util.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h gl_util.h
+screenshot.o: screenshot.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h screenshot.h pic.h
+start_screen.o: start_screen.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h keyboard.h keyframe.h \
+	course_render.h multiplayer.h gl_util.h fps.h loop.h \
+	render_util.h view.h preview.h screenshot.h course_load.h
+string_util.o: string_util.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h
+tcl_util.o: tcl_util.c tcl_util.h tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h
+textures.o: textures.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h textures.h image.h
+tux.o: tux.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h hier_cb.h hier.h gl_util.h
+tux_shadow.o: tux_shadow.c tux_shadow.h tuxracer.h ../config.h \
+	string_util.h game_config.h tux_types.h alglib.h gl_util.h \
+	tux.h hier.h phys_sim.h course_load.h textures.h
+view.o: view.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h view.h phys_sim.h course_load.h tux.h \
+	hier.h
+
+info-am:
+info: info-am
+dvi-am:
+dvi: dvi-am
+check-am: all-am
+check: check-am
+installcheck-am:
+installcheck: installcheck-am
+install-exec-am: install-binPROGRAMS
+install-exec: install-exec-am
+
+install-data-am:
+install-data: install-data-am
+
+install-am: all-am
+	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
+install: install-am
+uninstall-am: uninstall-binPROGRAMS
+uninstall: uninstall-am
+all-am: Makefile $(PROGRAMS)
+all-redirect: all-am
+install-strip:
+	$(MAKE) $(AM_MAKEFLAGS) INSTALL_STRIP_FLAG=-s install
+installdirs:
+	$(mkinstalldirs)  $(DESTDIR)$(bindir)
+
+
+mostlyclean-generic:
+
+clean-generic:
+
+distclean-generic:
+	-rm -f Makefile $(CONFIG_CLEAN_FILES)
+	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
+
+maintainer-clean-generic:
+mostlyclean-am:  mostlyclean-binPROGRAMS mostlyclean-compile \
+		mostlyclean-tags mostlyclean-generic
+
+mostlyclean: mostlyclean-am
+
+clean-am:  clean-binPROGRAMS clean-compile clean-tags clean-generic \
+		mostlyclean-am
+
+clean: clean-am
+
+distclean-am:  distclean-binPROGRAMS distclean-compile distclean-tags \
+		distclean-generic clean-am
+
+distclean: distclean-am
+
+maintainer-clean-am:  maintainer-clean-binPROGRAMS \
+		maintainer-clean-compile maintainer-clean-tags \
+		maintainer-clean-generic distclean-am
+	@echo "This command is intended for maintainers to use;"
+	@echo "it deletes files that may require special tools to rebuild."
+
+maintainer-clean: maintainer-clean-am
+
+.PHONY: mostlyclean-binPROGRAMS distclean-binPROGRAMS clean-binPROGRAMS \
+maintainer-clean-binPROGRAMS uninstall-binPROGRAMS install-binPROGRAMS \
+mostlyclean-compile distclean-compile clean-compile \
+maintainer-clean-compile tags mostlyclean-tags distclean-tags \
+clean-tags maintainer-clean-tags distdir info-am info dvi-am dvi check \
+check-am installcheck-am installcheck install-exec-am install-exec \
+install-data-am install-data install-am install uninstall-am uninstall \
+all-redirect all-am all installdirs mostlyclean-generic \
+distclean-generic clean-generic maintainer-clean-generic clean \
+mostlyclean distclean maintainer-clean
+
+
+# Tell versions [3.59,3.63) of GNU make to not export all variables.
+# Otherwise a system limit (for SysV at least) may be exceeded.
+.NOEXPORT:
