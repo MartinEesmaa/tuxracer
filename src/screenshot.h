@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _SCREENSHOT_H_
 #define _SCREENSHOT_H_
@@ -25,3 +29,7 @@ void screenshot();
 char* take_screenshot ( char* filename );
 
 #endif /* _SCREENSHOT_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

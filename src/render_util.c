@@ -19,6 +19,7 @@
 
 #include "tuxracer.h"
 #include "gl_util.h"
+#include "render_util.h"
 
 /*
  * Constants 
@@ -55,7 +56,7 @@ void print_string_centered( scalar_t y, void *font, char *string )
 
     width = glutBitmapLength( font, (unsigned char*) string );
     width = width / getparam_x_resolution() * 640.;
-    glRasterPos2i( 640. / 2. - width / 2., y );
+    glRasterPos2i( (int)(640. / 2. - width / 2.), (int) y );
     print_string( font, string );
 }
 
@@ -66,7 +67,7 @@ void reshape( int w, int h )
     glViewport( 0, 0, (GLint) w, (GLint) h );
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-    gluPerspective( getparam_fov(), (scalar_t)w/h, 0.1, 10000 );
+    gluPerspective( getparam_fov(), (scalar_t)w/h, NEAR_CLIP_DIST, 10000 );
 
     glMatrixMode( GL_MODELVIEW );
 } 
@@ -96,6 +97,18 @@ void print_time()
 
     glColor3f( text_colour.r, text_colour.g, text_colour.b );
     glRasterPos2i( 5, 5 ); 
+    print_string( GLUT_BITMAP_HELVETICA_10, buff );
+}
+
+void print_health(scalar_t health_pct)
+{
+    char buff[30];
+
+    flat_mode();
+    sprintf( buff, "Health: %3d%%", ROUND_TO_NEAREST(health_pct) );
+
+    glColor3f( text_colour.r, text_colour.g, text_colour.b );
+    glRasterPos2i( 5, 20 ); 
     print_string( GLUT_BITMAP_HELVETICA_10, buff );
 }
 

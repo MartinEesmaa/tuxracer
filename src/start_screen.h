@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _START_SCREEN_H_
 #define _START_SCREEN_H_
@@ -25,4 +29,8 @@ void start_screen_init();
 void start_screen_loop( scalar_t time_step );
 void start_screen_register();
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

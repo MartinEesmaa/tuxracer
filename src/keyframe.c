@@ -59,18 +59,33 @@ void update_key_frame( player_data_t *plyr, scalar_t dt )
     scalar_t frac;
     point_t pos;
     scalar_t v;
+    matrixgl_t cob_mat, rot_mat;
 
     char *root;
     char *lsh;
     char *rsh;
     char *lhp;
     char *rhp;
+    char *lkn;
+    char *rkn;
+    char *lank;
+    char *rank;
+    char *head;
+    char *neck;
+    char *tail;
 
     root = get_tux_root_node();
     lsh  = get_tux_left_shoulder_joint();
     rsh  = get_tux_right_shoulder_joint();
     lhp  = get_tux_left_hip_joint();
     rhp  = get_tux_right_hip_joint();
+    lkn  = get_tux_left_knee_joint();
+    rkn  = get_tux_right_knee_joint();
+    lank = get_tux_left_ankle_joint();
+    rank = get_tux_right_ankle_joint();
+    head = get_tux_head();
+    neck = get_tux_neck();
+    tail = get_tux_tail_joint();
 
     keyTime += dt;
 
@@ -89,6 +104,13 @@ void update_key_frame( player_data_t *plyr, scalar_t dt )
     reset_scene_node( rsh );
     reset_scene_node( lhp );
     reset_scene_node( rhp );
+    reset_scene_node( lkn );
+    reset_scene_node( rkn );
+    reset_scene_node( lank );
+    reset_scene_node( rank );
+    reset_scene_node( head );
+    reset_scene_node( neck );
+    reset_scene_node( tail );
 
     check_assertion( idx > 0, "invalid keyframe index" );
 
@@ -106,11 +128,17 @@ void update_key_frame( player_data_t *plyr, scalar_t dt )
 
     set_tux_pos( plyr, pos );
 
+    make_identity_matrix( cob_mat );
+
     v = interp( frac, frames[idx-1].yaw, frames[idx].yaw );
     rotate_scene_node( root, 'y', v );
+    make_rotation_matrix( rot_mat, v, 'y' );
+    multiply_matrices( cob_mat, cob_mat, rot_mat );
 
     v = interp( frac, frames[idx-1].pitch, frames[idx].pitch );
     rotate_scene_node( root, 'x', v );
+    make_rotation_matrix( rot_mat, v, 'x' );
+    multiply_matrices( cob_mat, cob_mat, rot_mat );
 
     v = interp( frac, frames[idx-1].l_shldr, frames[idx].l_shldr );
     rotate_scene_node( lsh, 'z', v );
@@ -123,7 +151,10 @@ void update_key_frame( player_data_t *plyr, scalar_t dt )
 
     v = interp( frac, frames[idx-1].r_hip, frames[idx].r_hip );
     rotate_scene_node( rhp, 'z', v );
-    
+
+    /* Set orientation */
+    plyr->orientation = make_quaternion_from_matrix( cob_mat );
+    plyr->orientation_initialized = True;
 } 
 
 static int key_frame_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[]) 

@@ -1,5 +1,5 @@
-CFLAGS		= -Wall -ansi -pedantic -g @TUXRACER_EXTRA_CFLAGS@ \
-		  -I/usr/X11R6/include -I/usr/local/include
+CFLAGS		= -Wall -ansi -pedantic @TUXRACER_EXTRA_CFLAGS@
+CXXFLAGS	= -Wall -pedantic @TUXRACER_EXTRA_CFLAGS@
 
 bin_PROGRAMS = tuxracer
 
@@ -8,6 +8,8 @@ tuxracer_SOURCES =				\
 	alglib.h				\
 	course_load.c				\
 	course_load.h				\
+	course_quad.cpp				\
+	course_quad.h				\
 	course_render.c				\
 	course_render.h				\
 	debug.c					\
@@ -53,12 +55,18 @@ tuxracer_SOURCES =				\
         nmrcl.h					\
 	part_sys.c				\
 	part_sys.h				\
+	paused.c				\
+	paused.h				\
 	phys_sim.c				\
 	phys_sim.h				\
 	pic.c					\
 	pic.h					\
 	preview.c				\
 	preview.h				\
+	quadgeom.cpp				\
+	quadgeom.hpp				\
+	quadtree.cpp				\
+	quadtree.hpp				\
 	racing.c				\
 	racing.h				\
 	render_util.c				\
@@ -80,4 +88,6 @@ tuxracer_SOURCES =				\
 	tux_types.h				\
 	tuxracer.h				\
 	view.c					\
-	view.h
+	view.h					\
+	viewfrustum.c				\
+	viewfrustum.h

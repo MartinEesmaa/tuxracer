@@ -1,6 +1,6 @@
                                   Tux Racer
                                    
-                               Version 0.11.1
+                                Version 0.12
 
                    Copyright (C) 1999-2000 Jasmin F. Patry
                           <jfpatry@cgl.uwaterloo.ca>
@@ -12,9 +12,9 @@ Contents
    * Requirements
    * Getting Tux Racer
    * Installation
+   * Configuring Tux Racer
    * Notes for Voodoo Owners
    * Playing Tux Racer
-   * Configuring Tux Racer
    * Creating New Courses
    * Mailing Lists
    * Reporting Bugs and Submitting Patches
@@ -29,25 +29,9 @@ Penguin.  I wrote it as a final project for a graphics course I took in
 1999.  While I've made a few enhancements since then, the basic game
 hasn't changed much, which is to say it still needs a lot of work. :-)
 
-The game is currently incomplete, but is still playable.  Things
-that would be nice to add in the future include:
-
-   * More courses, bigger courses
-   * Sound support
-   * Joystick support
-   * Better textures, backgrounds and sky
-   * Better menus, score displays
-   * More realistic physical model
-   * Rendering optimizations
-   * More characters
-   * Head-to-head/network play
-   * Power-ups, damage system
-   * Ability to do flips, tricks, etc., with a point system
-   * More flexible course description (tunnels, bridges, different
-     types of trees, etc.)
-   * Level editor
-   * Plus lots that I've forgotten, I'm sure...
-
+The game is currently incomplete, but is still playable.  A roadmap
+has been created for version 1.0 of the game; you can view it (and
+monitor our progress) at http://tuxracer.sourceforge.net/plan.html .
 
 Requirements
 ------------
@@ -74,7 +58,8 @@ Tux Racer requires the following components in order to build and run:
 
    * A (reasonably recent, fast, and supported) accelerated 3D video
      card.  Tux Racer is not playable on most current systems without 3D
-     acceleration.
+     acceleration.  Unfortunately, cards without direct rendering
+     support do not seem to give adequate performance.
 
    * GNU make (gmake).
 
@@ -109,11 +94,12 @@ That should do it for most people.  If that doesn't work, try
 ./configure --help for a list of options.  If that still doesn't work,
 please fix it and send me a patch. ;-)
 
-Once you've got the tuxracer executable compiled, try running it.  This
-will fail if you've installed the data files someplace other than the
-default location.  To fix this, edit ~/.tuxracer (which has just been
-created) to set the data_dir variable to the directory where you
-installed the Tux Racer data files.  Then try running tuxracer again.
+*** IMPORTANT ***: Once you've got the tuxracer executable compiled,
+try running it. THIS WILL FAIL if you've installed the data files
+someplace other than the default location.  To fix this, edit
+~/.tuxracer (which has just been created) to set the data_dir variable
+to the directory where you installed the Tux Racer data files.  Then
+try running tuxracer again.
 
 
 Configuring Tux Racer
@@ -126,7 +112,7 @@ these are self-explanatory.  Here's a quick rundown:
     * data_dir: The location of the Tux Racer data files
 
     * fullscreen: Set this to 1 to force the window to be the same
-      size as your screen (for developers: this activates "GameGLUT"
+      size as your screen (for developers: this activates ``GameGLUT''
       mode).  Voodoo users: This is NOT what you want to use to
       activate fullscreen rendering on your card.  See ``Notes for
       Voodoo{1,2} Owners'' below.
@@ -138,13 +124,15 @@ these are self-explanatory.  Here's a quick rundown:
 
     * warp_pointer: If true, then the mouse pointer will be moved to
       the middle of the window at every frame.  This is very handy if
-      you're using a fullscreen-only card (like a Voodoo)
+      you're using a fullscreen-only card (like a Voodoo).  Most
+      people not using fullscreen mode will probably want to set this
+      to false.
 
-    * control_mode: unused.
+    * control_mode: currently unused.
 
     * *_key: These settings allow you to change the default
       keybindings.  Alphabetic keys are case-insensitive.  The
-      following "special" keys are recognized: f1-f12, left, up,
+      following ``special'' keys are recognized: f1-f12, left, up,
       right, down, page_up, page_down, home, end, insert, tab, space,
       backspace, enter, delete, escape.  You can bind multiple keys to
       an action by listing all of the keys, separated by a space
@@ -153,6 +141,30 @@ these are self-explanatory.  Here's a quick rundown:
 
     * display_fps: Set this to true to display the current framerate
       in Hz.
+
+    * tux_slides_on_belly: As of version 0.12, Tux slides on his belly
+      instead of his backside by default.  If you prefer the old
+      style, set this to false.
+
+    * course_detail_level: This controls how accurately the course
+      terrain is rendered.  A high value results in greater accuracy
+      at the cost of performance, and vice versa.  This value can be
+      decreased and increased in 10% increments at runtime using the
+      F9 and F10 keys.  To better see the effect, activate wireframe
+      mode using the F11 key (this is a toggle).
+
+    * forward_clip_distance: Controls how far ahead the course of the
+      camera the course is rendered.  Larger values mean that more of
+      the course is rendered, resulting in slower performance.
+      Decreasing this value is an effective way to improve
+      framerates.
+
+    * backward_clip_distance: Some objects aren't yet clipped to the
+      view frustum, so this value is used to control how far up the
+      course these objects are drawn.
+
+    * tree_detail_distance: Controls the distance at which trees are
+      drawn with two rectangles instead of one.
 
     * draw_tux_shadow: Set this to true to display Tux's shadow.  Note
       that this is a hack and is quite expensive in terms of
@@ -177,10 +189,6 @@ these are self-explanatory.  Here's a quick rundown:
     * nice_fog: If true, then the GL_NICEST hint will be used when
       rendering fog.  On some cards, setting this to false may improve
       performance.
-
-    * compile_course: This compiles the entire course mesh into a big
-      display list.  If you're using indirect rendering, setting this
-      to true might improve performance.
 
     * use_sphere_display_list: Mesa 3.1 sometimes renders Tux
       strangely when display lists are used.  Setting this to false
@@ -213,14 +221,20 @@ these are self-explanatory.  Here's a quick rundown:
     * fov: field-of-view in degrees.
 
     * debug: This is parsed as a space-delimited string of keywords,
-      each of which may be preceeded with a `-'.  Currently, the 
-      recognized keywords are: 
+      each of which may be preceeded with a `-'.  Each keyword
+      activates a set of debugging messages.  Currently, the
+      recognized keywords are:
 
           all: activates all debugging messages
-	  ode: activates ODE debugging messages
+	  ode: ODE solver statistics
+	  quadtree: quadtree terrain LOD statistics
+	  control: messages related to player controls
+	  health: displays player's health (currently, health doesn't
+   	          have any effect on gameplay)
 
       Preceeding a keyword with `-' will suppress those types of
-      debugging messages.
+      debugging messages.  To see all debugging messages except for
+      the ode messages, you would set debug to "all -ode".
 
     * warning_level: Valid values are between 0 and 100; 0 suppresses
       all warnings, while 100 displays all warnings.  It is
@@ -235,9 +249,9 @@ Notes for Voodoo Owners
 -----------------------
 
 Assuming your Voodoo card is set up properly, Tux Racer should run
-properly on fullscreen-only Voodoo cards "out of the tarball".  There
-are some settings in the .tuxracer file that apply particularly to
-Voodoo owners, but these should have the proper default values:
+properly on fullscreen-only Voodoo cards ``out of the tarball''.
+There are some settings in the .tuxracer file that apply particularly
+to Voodoo owners, but these should have the proper default values:
  
     * fullscreen: Do NOT set this to true.  This will make the Tux
       Racer window the same size as your X desktop, which is probably
@@ -257,6 +271,21 @@ Note that I don't do fullscreen rendering with my Voodoo3 anymore, so
 I can't test this -- therefore, please report any inaccuracies or
 ommisions.
 
+I commonly get questions from people that can play Quake and other
+commercial games on their Voodoo cards at good rates, yet report very
+slow performance when playing Tux Racer.  Almost invariably the
+problem is that Mesa hasn't been compiled with Voodoo support (Quake
+and other games come with their own Mesa-for-Voodoo libs, which is why
+it works for those games).  If you got your Mesa from an RPM or other
+binary package, chances are it doesn't have Voodoo support.  Download
+the source from http://mesa3d.sourceforge.net, read the documentation,
+and compile it with Voodoo support (make linux-glide, for example).
+Then read the documentation about installing the libraries and header
+files so that applications like Tux Racer will be able to find them.
+(There is now a standard location for these files: the libs go in
+/usr/lib and the header files go in /usr/include/GL.  See
+http://oss.sgi.com/projects/ogl-sample/ABI/ for details.)
+
 
 Playing Tux Racer
 -----------------
@@ -268,14 +297,21 @@ hand corner of the screen.
 You can steer Tux and make him ``hit the brakes'' to slow him
 down. When steering, you will notice that his left or right arm moves
 down to drag on the surface; when braking, both his arms will move down.
-By default, the `J' key turns Tux left, and the `L' key turns Tux right.
-Hold down the space bar to make him hit the brakes.
+Tux can also ``paddle'' to speed up, but note that above a certain
+speed paddling will actually slow Tux down!  (In future versions of the
+game, paddling will also consume energy.)  By default, these actions
+are bound to the following keys:
+
+    J: turns left
+    L: turns right
+    K: paddle
+    space: brake
 
 The viewpoint can be changed using the following keys:
     
-   1: Places the viewpoint behind and above Tux.  This is the default.
-   2: Places the viewpoint behind Tux.
-   3: Places the viewpoint at Tux's head.
+    1: Places the viewpoint behind and above Tux.  This is the default.
+    2: Places the viewpoint behind Tux.
+    3: Places the viewpoint at Tux's head.
 
 If you get stuck on the course and can't make any forward progress,
 `Q' will quit the game.  You can press this key at any time to stop
@@ -283,6 +319,10 @@ the race.
 
 After the game ends, you will see a ``Game Over'' screen; hit any key
 to return to the start screen.
+
+During a race the game can be paused with the `P' key.
+
+Key bindings can be changed in the ~/.tuxracer file.
 
 
 Creating New Courses
@@ -302,8 +342,8 @@ Here are a few pointers:
       dimensions as the elevation bitmap.
 
     * Trees are specified using (yet another) bitmap.  This bitmap can
-      have arbitrary size.  Black pixels correspond to "no tree",
-      while "non-black" pixels correspond to trees.  "Non-black"
+      have arbitrary size.  Black pixels correspond to ``no tree'',
+      while ``non-black'' pixels correspond to trees.  ``Non-black''
       actually means any pixel with total intensity (measured as the
       sum of the (R,G,B) values of the pixel, each measured on a scale
       of 0-255) greater than 128.
@@ -318,7 +358,7 @@ Please develop new courses!  You don't need any special tools to do so
 (The GIMP is all that's needed), and you'll get fame and fortune for
 doing so (ok, maybe not, but you'll have my eternal gratitude :-).
 If you do develop a new course, please announce it on the
-tuxracer-main mailing list (see below), and we'll incorporate it into
+tuxracer-devel mailing list (see below), and we'll incorporate it into
 the next Tux Racer release.
 
 

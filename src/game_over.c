@@ -31,6 +31,7 @@
 #include "keyboard.h"
 #include "loop.h"
 #include "fog.h"
+#include "viewfrustum.h"
 
 static const colour_t text_colour = { 0.0, 0.0, 0.0 };
 
@@ -61,11 +62,14 @@ void game_over_loop( scalar_t time_step )
     update_player_pos( plyr, EPS );
     update_view( plyr );
 
+    setup_view_frustum( plyr, NEAR_CLIP_DIST, 
+			getparam_forward_clip_distance() );
+
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
     render_course();
     draw_background( getparam_fov(), (scalar_t)width/height );
-    draw_trees( plyr );
+    draw_trees();
 
     draw_tux();
     draw_tux_shadow();

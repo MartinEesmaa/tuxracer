@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _KEYBOARD_H_
 #define _KEYBOARD_H_
 
@@ -52,4 +57,8 @@ void init_keyboard();
 int add_keymap_entry( game_mode_t mode, keymap_class_t keymap_class,
 		      char *keys, key_func_t key_func, key_cb_t key_cb );
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

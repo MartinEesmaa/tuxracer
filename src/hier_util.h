@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _HIER_UTIL_H
 #define _HIER_UTIL_H
 
@@ -42,3 +47,7 @@ bool_t  check_polyhedron_collision_with_dag(
 
 #endif
 
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

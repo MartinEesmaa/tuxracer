@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _ERROR_UTIL_H_
 #define _ERROR_UTIL_H_
 
@@ -32,3 +37,7 @@ void handle_error( int exit_code, char *fmt, ... );
 void handle_system_error( int exit_code, char *fmt, ... );
 
 #endif /* _ERROR_UTIL_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

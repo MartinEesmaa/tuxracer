@@ -25,7 +25,10 @@
 
 static bool_t debug_setting[ NUM_DEBUG_MODES ];
 static char* debug_desc[ NUM_DEBUG_MODES ] = {
-    "ode"
+    "ode",
+    "quadtree",
+    "control",
+    "health"
 };
 
 /* Parse the debug parameter, fill in the debug_setting array */
@@ -66,22 +69,33 @@ void init_debug()
 	    continue;
 	}
 
-	for ( i=0; i<NUM_DEBUG_MODES; i++ ) {
-	    if ( string_cmp_no_case( p, debug_desc[i] ) == 0 ||
-		 string_cmp_no_case( p, "all" ) == 0 ) {
-		debug_setting[i] = new_setting;
-		break;
-	    }
-	}
 
-	if ( i == NUM_DEBUG_MODES ) {
-	    print_warning( CONFIGURATION_WARNING,
-			   "unrecognized debug mode `%s'", p );
+	if ( string_cmp_no_case( p, "all" ) == 0 ) {
+	    for (i=0; i<NUM_DEBUG_MODES; i++) {
+		debug_setting[i] = new_setting;
+	    }
+	} else {
+	    for ( i=0; i<NUM_DEBUG_MODES; i++ ) {
+		if ( string_cmp_no_case( p, debug_desc[i] ) == 0 ) {
+		    debug_setting[i] = new_setting;
+		    break;
+		}
+	    }
+
+	    if ( i == NUM_DEBUG_MODES ) {
+		print_warning( CONFIGURATION_WARNING,
+			       "unrecognized debug mode `%s'", p );
+	    }
 	}
     }
 
 #endif /* TUXRACER_NO_DEBUG */
 
+}
+
+bool_t debug_mode_is_active( debug_mode_t mode )
+{
+    return debug_setting[ mode ];
 }
 
 void print_debug( debug_mode_t mode, char *fmt, ... )
@@ -93,7 +107,7 @@ void print_debug( debug_mode_t mode, char *fmt, ... )
     check_assertion( 0 <= mode && mode < NUM_DEBUG_MODES,
 		     "invalid debugging mode" );
 
-    if ( ! debug_setting[ mode ] ) {
+    if ( ! debug_mode_is_active( mode ) ) {
 	return;
     }
 

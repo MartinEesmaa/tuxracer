@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _FOG_H_
 #define _FOG_H_
 
@@ -36,4 +41,8 @@ void setup_fog();
 void disable_fog();
 void register_fog_callbacks( Tcl_Interp *ip );
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

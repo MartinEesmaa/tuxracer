@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 
 #ifndef _COURSE_LOAD_H_
 #define _COURSE_LOAD_H_
@@ -44,7 +49,13 @@ char         *get_course_name();
 light_t      *get_course_lights();
 void          set_course_mirroring( bool_t state );
 bool_t        get_course_mirroring( );
+void          fill_gl_arrays();
+void          get_gl_arrays( GLfloat **vertex_normal_arr );
 
 void          register_course_load_tcl_callbacks( Tcl_Interp *interp );
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

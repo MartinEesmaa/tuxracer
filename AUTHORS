@@ -7,7 +7,9 @@ Alan Levy <alanlevy@pcug.org.au>
 
 Ingo Ruhnke <grumbel@gmx.de>
 	* Helped to track down nasty particle generation bug
-	* Designed a track
+	* Designed several courses
+	* Wrote several Gimp script-fu scripts to help with course
+	design
 
 Michael Dale Long <mlong@long.custom.net>
 	* Lighting patch to make dark areas of terrain brighter
@@ -15,7 +17,17 @@ Michael Dale Long <mlong@long.custom.net>
 Steve Baker <sjbaker1@airmail.net>
 	* LOTS of very helpful suggestions, tips for supporting
 	Voodoo{1,2} cards
+	* Designed a track
 
 Sten Eriksson <sten.eriksson@udac.se>
         * Patch to fix coredump in 0.11
 
+Tuomas Jormola <tj@sgic.fi>
+	* Patch to add Tcl 8.3 check to configure
+
+Thatcher Ulrich <tu@tulrich.com>
+	* Code for quadtree adaptive LOD terrain algorithm
+	(see http://www.gamasutra.com/features/20000228/ulrich_01.htm) 
+
+Julien Canet <jools@free.fr>
+	* Designed two courses

@@ -40,7 +40,7 @@ point_t get_preview_eye_pt()
     return eye_pt;
 }
 
-void update_preview()
+void update_preview( player_data_t *plyr )
 {
     scalar_t courseWidth, courseLength;
     point_t  coursePt;
@@ -57,6 +57,10 @@ void update_preview()
     coursePt = make_point( courseWidth / 2., 
 			   -courseLength * tan( courseAngle*M_PI/180.0 ) / 2.,
 			   -courseLength / 2.);
+
+    plyr->view.pos = eye_pt;
+    plyr->view.dir = subtract_points( coursePt, eye_pt );
+    plyr->view.up = make_vector( 0, 1, 0 );
 
     gluLookAt( eye_pt.x, eye_pt.y, eye_pt.z, 
 	       coursePt.x, coursePt.y, coursePt.z, 

@@ -17,15 +17,26 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#include "tuxracer.h"
+
 #ifndef _DEBUG_H_
 #define _DEBUG_H_
 
 typedef enum {
     DEBUG_ODE,
+    DEBUG_QUADTREE,
+    DEBUG_CONTROL,
+    DEBUG_HEALTH,
     NUM_DEBUG_MODES
 } debug_mode_t;
 
 void init_debug();
+bool_t debug_mode_is_active( debug_mode_t mode );
 void print_debug( debug_mode_t mode, char *fmt, ... );
 
 #ifdef TUXRACER_NO_DEBUG
@@ -48,3 +59,7 @@ void print_debug( debug_mode_t mode, char *fmt, ... );
     check_assertion( 0, "supposedly unreachable code reached!" )
 
 #endif /* _DEBUG_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

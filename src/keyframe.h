@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _KEYFRAME_H_
 #define _KEYFRAME_H_
 
@@ -29,4 +34,8 @@ void update_key_frame( player_data_t *plyr, scalar_t dt );
 void mirror_keyframe();
 void register_key_frame_callbacks( Tcl_Interp *ip );
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

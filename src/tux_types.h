@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _TUX_TYPES_H_
 #define _TUX_TYPES_H_
@@ -24,6 +28,16 @@
 #include "tuxracer.h"
 
 typedef double scalar_t;
+
+/* Not sure where these are getting defined, but it shouldn't hurt to
+   undef them. */
+#ifdef True
+#undef True
+#endif
+
+#ifdef False
+#undef False
+#endif
 
 typedef enum {
     False = 0,
@@ -124,6 +138,9 @@ typedef enum {
 /* Data for Sphere node type. */
 typedef struct {
     double radius;
+
+    /* How many divisions do we use to draw a sphere? */
+    int divisions;
 } sphere_t;
 
 /* Tux's eyes */
@@ -146,6 +163,7 @@ typedef struct scene_node_struct {
       
     material_t* mat;
 
+
     /* Do we draw the shadow of this node? */
     bool_t render_shadow;
 
@@ -166,7 +184,8 @@ typedef struct scene_node_struct {
 typedef enum {
     Ice = 0,
     Rock = 1,
-    Snow = 2
+    Snow = 2,
+    NumTerrains
 } terrain_t;
 
 typedef struct {
@@ -175,4 +194,14 @@ typedef struct {
     scalar_t diam;
 } tree_t;
 
+typedef struct {
+    vector_t nml;
+    scalar_t d;
+} plane_t;
+
+
 #endif /* TUX_TYPES */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

@@ -1,8 +1,33 @@
+/* 
+ * Tux Racer 
+ * Copyright (C) 1999-2000 Jasmin F. Patry
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _TUXRACER_H_
 #define _TUXRACER_H_
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#   include <config.h>
+#endif
 
 #include <math.h>
 #include <unistd.h>
@@ -19,10 +44,15 @@
 
 #include <GL/gl.h>
 #include <GL/glut.h>
+
+#ifdef HAVE_GL_XMESA_H
+#   include <GL/xmesa.h>
+#endif
+
 #include <tcl.h>
 
 #ifndef M_PI
-#define M_PI 3.1415926535
+#   define M_PI 3.1415926535
 #endif
 
 #define EPS 1e-13
@@ -47,12 +77,14 @@
 
 /* Game state */
 typedef enum {
+    ALL_MODES = -2,
     NO_MODE = -1,
     START = 0,
     INTRO = 1,
     RACING = 2,
     GAME_OVER = 3,
-    NUM_GAME_MODES = 4
+    PAUSED = 4,
+    NUM_GAME_MODES = 5
 } game_mode_t;
 
 /* Course data */
@@ -90,6 +122,8 @@ typedef struct {
     control_mode_t mode;                /* control mode */
     scalar_t turn_fact;                 /* amount turning [-1,1] */
     bool_t is_braking;                  /* is player braking? */
+    bool_t is_paddling;                 /* is player paddling? */
+    scalar_t paddle_time;               /* time player started paddling */
 } control_t;
 
 /* Player data */
@@ -99,16 +133,20 @@ typedef struct {
     quaternion_t orientation;           /* current orientation */
     bool_t orientation_initialized;     /* is orientation initialized? */
     vector_t plane_nml;                 /* vector sticking out of
-					   bellybutton */
+					   bellybutton (assuming on back) */
     vector_t direction;                 /* vector sticking out of feet */
     vector_t net_force;                 /* net force on player */
+    vector_t normal_force;              /* terrain force on player */
+    bool_t collision;                   /* has plyr collided with obstacle? */
     control_t control;                  /* player control data */
     view_t view;                        /* player's view point */
+    scalar_t health;                    /* player's health */
 } player_data_t;
 
 /* All global data is stored in a variable of this type */
 typedef struct {
     game_mode_t mode;                   /* game mode */
+    game_mode_t prev_mode;              /* previous game mode */
     scalar_t time;                      /* game time */
     scalar_t time_step;                 /* size of current time step 
 					   (i.e., time between frames) */
@@ -122,4 +160,8 @@ extern game_data_t g_game;
 
 #define get_player_data( plyr ) ( & g_game.player[ (plyr) ] )
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

@@ -1,3 +1,352 @@
+2000-04-02  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+	
+	* Making version 0.12
+
+	* src/phys_sim.c, src/tux.c, src/tux.h:
+	Added code to move Tux's legs in response to force exterted
+
+	* src/alglib.c, src/alglib.h:
+	Added quaternion_conjugate()
+
+	* src/tuxracer.h:
+	- Added prev_mode field to g_game
+	- Added PAUSED game mode
+
+	* src/tux.c, src/tux.h:
+	- Added new joints to Tux model
+	- Added extra animation when Tux slides on belly
+
+	* src/start_screen.c:
+	Added message indicating where configuration parameters can be
+	changed.
+
+	* src/racing.c: Added pause key and callback
+
+	* src/phys_sim.c:
+	Changes because of name change of tux_slides_on_belly parameter.
+
+	* src/paused.c, src/paused.h:
+	Initial checkin
+
+	* src/main.c: - Initialize g_game.prev_mode
+	- Initialize paused mode callbacks
+
+	* src/loop.c:
+	g_game.prev_mode is now updated so that mode initialization routines
+	can know what the previous mode was.
+
+	* src/keyframe.c:
+	Player orientation is updated during keyframe sequence to
+	improve "smoothness" of transition to racing mode
+
+	* src/intro.c:
+	Intro animation now skipped if a key is pressed
+
+	* src/game_config.c, src/game_config.h:
+	- Added pause_key
+	- Removed compile_course
+	- Changed tux_slides_on_stomach to tux_slides_on_belly
+
+	* src/debug.h:
+	- Added debug_mode_is_active()
+	- Added "health" debug mode (DEBUG_HEALTH)
+
+	* src/debug.c:
+	- Fixed handling of "all" keyword in debug config. variable
+	- Added debug_mode_is_active()
+
+	* src/course_render.c:
+	Removed code to deal with course when compiled into display list
+	(obsolete)
+
+	* src/course_load.c:
+	Removed call to reset_course_list() (obsolete)
+
+	* src/Makefile.am: Added paused.[ch]
+
+	* configure.in: Changed version to 0.12
+
+	* README: Updates for 0.12
+
+2000-04-01  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* src/phys_sim.c:
+	Changed Tux orientation calculation code to handle sliding on stomach.
+
+	* src/keyframe.c:
+	All Tux joints are now reset before each key frame.
+
+	* src/game_config.c, src/game_config.h:
+	Added tux_slides_on_stomach parameter.
+
+	* src/phys_sim.c:
+	Damage is now calculated based on *unclamped* force exterted on player
+	by terrain.  Damage parameters still need to be tuned to give
+	reasonable gameplay.
+
+	* src/nmrcl.c: Minor documentation change.
+
+2000-03-25  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* src/tuxracer.h:
+	Added fields to control_t and player_data_t to support paddling and
+	health/damage.
+
+	* src/tux.h:
+	Added paddling animation to adjust_tux_joints
+
+	* src/render_util.c, src/render_util.h:
+	Added print_health()
+
+	* src/racing.c:
+	Added paddling keyboard handlers.
+	Initialize health to full on race start.
+
+	* src/quadtree.hpp, src/quadtree.cpp:
+	Changed vertex array indices to GLuint to support larger elevation
+	datasets.
+
+	* src/phys_sim.c: Added paddling code.
+	Added health/damage code.
+
+	* src/main.c: Added version to window title.
+	Print version and copyright to console on startup.
+
+	* src/game_config.c, src/game_config.h:
+	Added paddle_key parameter.
+
+	* src/debug.c, src/debug.h:
+	Added "control" debugging mode.
+
+	* src/tux.c:
+	Added code for paddling animation, improved error handling in Tcl
+	callbacks.
+
+	* src/hier_cb.c:
+	Improved error handling in Tcl callbacks.
+
+	* src/course_load.c:
+	Added better error handling for Tcl callbacks.
+
+2000-03-18  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* src/game_config.c:
+	Increased default tree_detail_distance value.
+
+	* src/start_screen.c:
+	Added better bounds checking to detail callbacks
+
+	* src/render_util.c, src/screenshot.c:
+	Minor changes to suppress warnings
+
+	* src/quadtree.hpp:
+	*** empty log message ***
+
+	* src/quadtree.cpp:
+	Fixed bug in terrain type error code (could index outside of
+	Terrain array)
+
+	* src/phys_sim.c:
+	Changed find_barycentric_coords() to reflect meshing of terrain used
+	by quadtree
+
+	* src/game_config.c:
+	Changed defaults for course_detail_level and forward_clip_distance.
+
+	* src/course_load.c: Fixed get_gl_arrays().
+
+	* src/part_sys.h:
+	Removed extra declaration of draw_particles()
+
+	* src/mirror_course.c:
+	Minor fix (was using a float as temporary storage for interchanging
+	two ints)
+
+	* src/game_over.c, src/intro.c, src/racing.c:
+	Corrected calls to draw_trees().
+
+	* src/course_render.c, src/course_render.h:
+	Changed normal generation code to match new terrain meshing of
+	quadtree code.
+
+	* src/course_load.h, src/course_load.c:
+	Changed from separate vertex and normal arrays to a single interleaved
+	vertex/normal array.
+
+2000-03-15  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* src/start_screen.c:
+	Minor change to callback for decreasing level of detail
+
+	* src/quadtree.cpp, src/quadtree.hpp:
+	- Terrain is now rendered with 3 calls to glDrawElements (one for each
+	  terrain type) -- this speeds things up quite a bit.
+
+	- Terrain type errors were incorporated into the Error[] array for
+	  each square -- this signifcantly improves the handling of different
+	  terrain types by the algorithm.
+
+	* src/mirror_course.c:
+	Fixed mirroring bug (vertex arrays weren't being updated)
+
+	* src/course_render.c:
+	Vertex array locking is now disabled (seemed to actually slow things
+	down)
+
+	* src/course_quad.cpp:
+	Re-activated culling code (this works now since terrain is incorporated into
+	error)
+
+	* src/course_load.c, src/course_load.h:
+	Removed array locking code
+
+2000-03-14  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* src/quadtree.cpp, src/viewfrustum.c, src/viewfrustum.h:
+	Replaced AABB VFC algorithm with a significantly more efficient
+	version
+
+	* src/quadtree.hpp, src/quadtree.cpp:
+	- Now use (compiled) vertex arrays for vertices and normals
+
+	- Terrain error checks now use a terrain error metric instead of just
+	  being yes/no; this allows preview screens to be rendered more
+	  quickly
+
+	* src/quadgeom.cpp:
+	Minor change to suppress warnings
+
+	* src/course_render.c:
+	Cleaned up render_course()
+
+	* src/course_quad.cpp:
+	Added some documentation
+
+	* src/course_load.c:
+	Activated compiled vertex array code
+
+	* configure.in:
+	Added check for glLockArraysEXT
+
+	* AUTHORS: Added Thatcher Ulrich
+
+2000-03-13  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* src/tuxracer.h:
+	Added ALL_MODES to game_mode_t enum.
+
+	* src/tux_types.h: Added plane_t type
+
+	* src/error_util.h, src/fog.h, src/fps.h, src/hier.h, src/hier_cb.h, src/hier_util.h, src/image.h, src/keyboard_util.h, src/keyframe.h, src/lights.h, src/loop.h, src/multiplayer.h, src/nmrcl.h, src/part_sys.h, src/phys_sim.h, src/pic.h, src/preview.h, src/screenshot.h, src/string_util.h, src/tcl_util.h, src/textures.h, src/tux.h, src/tux_shadow.h, src/view.h:
+	Wrapped in extern "C" { } for inclusion in C++ code.
+
+	* src/Makefile.am: Several files added
+
+	* configure.in: Added checks for C++
+
+	* src/viewfrustum.c, src/viewfrustum.h:
+	Initial checkin
+
+	* src/start_screen.c, src/start_screen.h:
+	Added global keyboard callbacks: f11 activates wireframe mode; f9
+	decreases the detail level, and f10 increases it.
+
+	* src/render_util.c, src/render_util.h:
+	Made near clip distance a #define constant (so that it can be used
+	when updating view frustum)
+
+	* src/preview.c:
+	Player view data structure now updated
+
+	* src/part_sys.c:
+	Changes to use automatic texture coordinate generation
+
+	* src/mirror_course.c, src/mirror_course.h:
+	Changes to support mirroring with quadtrees
+
+	* src/main.c:
+	Initialized view position so that quadtree has a reasonable initial estimate
+
+	* src/keyboard.c, src/keyboard.h:
+	Added support for keyboard callbacks that work in all modes.
+
+	* src/intro.c, src/intro.h, src/racing.c, src/racing.h:
+	Added code to update view frustum
+
+	* src/gl_util.c, src/gl_util.h:
+	Added code to automatically generated texture coordinates
+
+	* src/game_over.c, src/game_over.h:
+	Added code to update view frustum
+
+	* src/game_config.c, src/game_config.h:
+	Added course_detail_level configuration parameter
+
+	* src/debug.c, src/debug.h:
+	Added DEBUG_QUADTREE category
+
+	* src/course_render.c, src/course_render.h:
+	Added automatic texture coordinate generation setup code, quadtree
+	rendering code.
+
+	* src/course_load.c, src/course_load.h:
+	Added quadtree initialization code, some CVA code (not currently used)
+
+	* src/alglib.c, src/alglib.h:
+	Added make_plane function.
+
+	* src/course_quad.cpp, src/course_quad.h, src/quadgeom.cpp, src/quadgeom.hpp, src/quadtree.cpp, src/quadtree.hpp:
+	Initial checkin
+
+2000-03-10  Ingo Ruhnke  <grumbel@users.sourceforge.net>
+
+	* src/Makefile.in:
+	Removed some more automatic generated files from CVS
+
+	* src/Makefile.in:
+	Removed Makefile, Makefile.in, configure, since they are automatical generated my automake/autoconf
+	Added autogen.sh script, which generates these files by running automake, autoconf and co.
+
+2000-03-10  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* course_render.c, game_config.c, game_config.h:
+	Added forward_clip_distance, backward_clip_distance, and
+	tree_detail_distance configuration parameters.
+
+2000-03-09  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* config.h.in, configure, configure.in:
+	Added options to specify GL paths, debug mode (default now -02),
+	profile mode (untested)
+
+	* tuxracer.h:
+	Now include config.h (created by autoconf)
+
+	* phys_sim.c:
+	Changed ODE parameters to increase speed (at the cost of some
+	accuracy); increased distance that Tux moves before collisions are
+	recalculated to speed up movement through areas with lots of trees.
+
+	* main.c:
+	Removed some unecessary #includes
+
+	* hier.c, hier.h, hier_cb.c, hier_util.c, tux_types.h:
+	Changed tux_sphere callback; now requires a third "resolution"
+	argument.  A value of 1.0 means the sphere is rendered using the
+	number of divisions specified by the tux_sphere_divisions parameter;
+	values less than 1 use less divisions, while values greater than 1 use
+	more.
+
+	* alglib.h: Added ROUND_TO_NEAREST macro
+
+	* Makefile.am, Makefile.in:
+	Removed -g and redundant -I specifications from CFLAGS
+
+2000-03-08  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* configure.in: Integrated patch from Tuomas Jormola <tj@sgic.fi>
+	to add Tcl 8.3 check to configure
+
 2000-03-06  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
 
 	* Making version 0.11.1. 

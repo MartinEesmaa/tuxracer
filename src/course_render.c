@@ -27,6 +27,7 @@
 #include "gl_util.h"
 #include "render_util.h"
 #include "fog.h"
+#include "course_quad.h"
 
 /* 
  *  Constants 
@@ -36,19 +37,10 @@
 
 #define BACKGROUND_TEXTURE_ASPECT 3.0
 
-/* Clip limits */
-#define FWD_CLIP_LIMIT 100.0
-#define BWD_CLIP_LIMIT 20.0
-#define FWD_TREE_DETAIL_LIMIT 7.0
-
 
 /*
  * Statics 
  */
-
-/* The display list data (only used if the 'compile_course' option is true) */
-static bool_t disp_list_initialized = False;
-static GLuint course_list;
 
 /* The course normal vectors */
 static vector_t *nmls = NULL;
@@ -81,16 +73,6 @@ bool_t get_course_lighting() { return light_course; }
 
 vector_t* get_course_normals() { return nmls; } 
 
-void reset_course_list()
-{
-    if ( ! getparam_compile_course() ) 
-	return;
-
-    if (disp_list_initialized)
-	glDeleteLists( course_list, 1 );
-    disp_list_initialized = False;
-}
-
 void calc_normals()
 {
     scalar_t *elevation;
@@ -119,85 +101,183 @@ void calc_normals()
 
             p0 = make_point( XCD(x), ELEV(x,y), ZCD(y) );
 
-            if ( x > 0 && y > 0 ) {
-                p1 = make_point( XCD(x), ELEV(x,y-1), ZCD(y-1) );
-                p2 = make_point( XCD(x-1), ELEV(x-1,y-1), ZCD(y-1) );
-                v1 = subtract_points( p1, p0 );
-                v2 = subtract_points( p2, p0 );
-                n = cross_product( v2, v1 );
+	    /* The terrain is meshed as follows:
+	             ...
+	          +-+-+-+-+            x<---+
+	          |\|/|\|/|                 |
+	       ...+-+-+-+-+...              V
+	          |/|\|/|\|                 y
+	          +-+-+-+-+
+		     ...
 
-		check_assertion( n.y > 0, "course normal points down" );
+	       So there are two types of vertices: those surrounded by
+	       four triangles (x+y is odd), and those surrounded by
+	       eight (x+y is even).
+	    */
 
-                normalize_vector( &n );
-                nml = add_vectors( nml, n );
+#define POINT(x,y) make_point( XCD(x), ELEV(x,y), ZCD(y) )
 
-                p1 = make_point( XCD(x-1), ELEV(x-1,y-1), ZCD(y-1) );
-                p2 = make_point( XCD(x-1), ELEV(x-1,y), ZCD(y) );
-                v1 = subtract_points( p1, p0 );
-                v2 = subtract_points( p2, p0 );
-                n = cross_product( v2, v1 );
+	    if ( (x + y) % 2 == 0 ) {
+		if ( x > 0 && y > 0 ) {
+		    p1 = POINT(x,  y-1);
+		    p2 = POINT(x-1,y-1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v2, v1 );
 
-		check_assertion( n.y > 0, "course normal points down" );
+		    check_assertion( n.y > 0, "course normal points down" );
 
-                normalize_vector( &n );
-                nml = add_vectors( nml, n );
-            } 
-            if ( x > 0 && y < ny-1 ) {
-                p1 = make_point( XCD(x-1), ELEV(x-1,y), ZCD(y) );
-                p2 = make_point( XCD(x), ELEV(x,y+1), ZCD(y+1) );
-                v1 = subtract_points( p1, p0 );
-                v2 = subtract_points( p2, p0 );
-                n = cross_product( v2, v1 );
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
 
-		check_assertion( n.y > 0, "course normal points down" );
+		    p1 = POINT(x-1,y-1);
+		    p2 = POINT(x-1,y  );
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v2, v1 );
 
-                normalize_vector( &n );
-                nml = add_vectors( nml, n );
-            } 
-            if ( x < nx-1 && y > 0 ) {
-                p1 = make_point( XCD(x+1), ELEV(x+1,y), ZCD(y) );
-                p2 = make_point( XCD(x), ELEV(x,y-1), ZCD(y-1) );
-                v1 = subtract_points( p1, p0 );
-                v2 = subtract_points( p2, p0 );
-                n = cross_product( v2, v1 );
+		    check_assertion( n.y > 0, "course normal points down" );
 
-		check_assertion( n.y > 0, "course normal points down" );
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+		} 
+		if ( x > 0 && y < ny-1 ) {
+		    p1 = POINT(x-1,y  );
+		    p2 = POINT(x-1,y+1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v2, v1 );
 
-                normalize_vector( &n );
-                nml = add_vectors( nml, n );
-            } 
-            if ( x < nx-1 && y < ny-1 ) {
-                p1 = make_point( XCD(x+1), ELEV(x+1,y+1), ZCD(y+1) );
-                p2 = make_point( XCD(x), ELEV(x,y+1), ZCD(y+1) );
-                v1 = subtract_points( p1, p0 );
-                v2 = subtract_points( p2, p0 );
-                n = cross_product( v1, v2 );
+		    check_assertion( n.y > 0, "course normal points down" );
 
-		check_assertion( n.y > 0, "course normal points down" );
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
 
-                normalize_vector( &n );
-                nml = add_vectors( nml, n );
+		    p1 = POINT(x-1,y+1);
+		    p2 = POINT(x  ,y+1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v2, v1 );
 
-                p1 = make_point( XCD(x+1), ELEV(x+1,y), ZCD(y) );
-                p2 = make_point( XCD(x+1), ELEV(x+1,y+1), ZCD(y+1) );
-                v1 = subtract_points( p1, p0 );
-                v2 = subtract_points( p2, p0 );
-                n = cross_product( v1, v2 );
+		    check_assertion( n.y > 0, "course normal points down" );
 
-		check_assertion( n.y > 0, "course normal points down" );
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+		} 
+		if ( x < nx-1 && y > 0 ) {
+		    p1 = POINT(x+1,y  );
+		    p2 = POINT(x+1,y-1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v2, v1 );
 
-                normalize_vector( &n );
-                nml = add_vectors( nml, n );
+		    check_assertion( n.y > 0, "course normal points down" );
 
-            } 
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+
+		    p1 = POINT(x+1,y-1);
+		    p2 = POINT(x  ,y-1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v2, v1 );
+
+		    check_assertion( n.y > 0, "course normal points down" );
+
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+		} 
+		if ( x < nx-1 && y < ny-1 ) {
+		    p1 = POINT(x+1,y  );
+		    p2 = POINT(x+1,y+1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v1, v2 );
+
+		    check_assertion( n.y > 0, "course normal points down" );
+
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+
+		    p1 = POINT(x+1,y+1);
+		    p2 = POINT(x  ,y+1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v1, v2 );
+
+		    check_assertion( n.y > 0, "course normal points down" );
+
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+
+		} 
+	    } else {
+		/* x + y is odd */
+		if ( x > 0 && y > 0 ) {
+		    p1 = POINT(x,  y-1);
+		    p2 = POINT(x-1,y  );
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v2, v1 );
+
+		    check_assertion( n.y > 0, "course normal points down" );
+
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+		} 
+		if ( x > 0 && y < ny-1 ) {
+		    p1 = POINT(x-1,y  );
+		    p2 = POINT(x  ,y+1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v2, v1 );
+
+		    check_assertion( n.y > 0, "course normal points down" );
+
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+		} 
+		if ( x < nx-1 && y > 0 ) {
+		    p1 = POINT(x+1,y  );
+		    p2 = POINT(x  ,y-1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v2, v1 );
+
+		    check_assertion( n.y > 0, "course normal points down" );
+
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+		} 
+		if ( x < nx-1 && y < ny-1 ) {
+		    p1 = POINT(x+1,y  );
+		    p2 = POINT(x  ,y+1);
+		    v1 = subtract_points( p1, p0 );
+		    v2 = subtract_points( p2, p0 );
+		    n = cross_product( v1, v2 );
+
+		    check_assertion( n.y > 0, "course normal points down" );
+
+		    normalize_vector( &n );
+		    nml = add_vectors( nml, n );
+		} 
+	    }
 
             normalize_vector( &nml );
             NORMAL(x,y) = nml;
             continue;
         } 
+#undef POINT
     } 
-    
 } 
+
+void setup_course_tex_gen()
+{
+    static GLfloat xplane[4] = { 1.0 / TEX_SCALE, 0.0, 0.0, 0.0 };
+    static GLfloat zplane[4] = { 0.0, 0.0, 1.0 / TEX_SCALE, 0.0 };
+    glTexGenfv( GL_S, GL_OBJECT_PLANE, xplane );
+    glTexGenfv( GL_T, GL_OBJECT_PLANE, zplane );
+}
 
 int select_tex( int x, int y, int nx,  terrain_t *terrain )
 {
@@ -217,33 +297,14 @@ int select_tex( int x, int y, int nx,  terrain_t *terrain )
 
 
 #define DRAW_POINT \
-    glTexCoord2f( pt.x/TEX_SCALE, pt.z/TEX_SCALE ); \
     glNormal3f( nml.x, nml.y, nml.z ); \
     glVertex3f( pt.x, pt.y, pt.z ); 
 
 void render_course()
 {
-    scalar_t  *elevation;
-    terrain_t *terrain;
-    scalar_t  courseWidth, courseLength;
-    int       nx, ny;
-    scalar_t  dnx, dny;
-    int       x,y;
-    scalar_t  dx,dy;
-    point_t   pt;
-    int       curTex, oldTex;
-    vector_t  nml;
-    bool_t    compile_course;
-    GLuint    *tex_names;
-
-    elevation = get_course_elev_data();
-    terrain   = get_course_terrain_data();
-    get_course_dimensions( &courseWidth, &courseLength );
-    get_course_divisions( &nx, &ny );
-    compile_course = getparam_compile_course();
-    tex_names = get_tex_names();
-
     set_gl_options( COURSE );
+
+    setup_course_tex_gen();
 
     if ( light_course ) {
         glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
@@ -259,102 +320,21 @@ void render_course()
         glShadeModel( GL_FLAT );
     } 
 
-    if ( compile_course ) {
-	if ( disp_list_initialized ) {
-	    glCallList( course_list );
-	    return;
-	}
+    update_course_quadtree( eye_pt, getparam_course_detail_level() );
 
-	disp_list_initialized = True;
+    /* Locking arrays is only useful for multipass rendering
+#if defined(HAVE_GLLOCKARRAYSEXT) && HAVE_GLLOCKARRAYSEXT
+    glLockArraysEXT(0, nx*ny); 
+#endif
+    */
 
-	course_list = glGenLists( 1 );
-	glNewList( course_list, GL_COMPILE );
-    }
+    render_course_quadtree( );
 
-    dnx = (scalar_t) nx - 1.;
-    dny = (scalar_t) ny - 1.;
-    curTex = 0;          /* to suppress warnings */
-    for (y=ny-2; y>=0; y--) {
-        dy = (scalar_t) y;
-        x = 0;
-        dx = (scalar_t) x;
-
-
-        pt.x = dx/dnx * courseWidth;
-        pt.y = ELEV(x, y+1);
-        pt.z = -(dy+1.)/dny * courseLength;
-        nml  = NORMAL(x, y+1);
-
-	if ( clip_course && ! compile_course ) {
-	    if ( eye_pt.z - pt.z > FWD_CLIP_LIMIT ) {
-		continue;
-	    } else if ( pt.z - eye_pt.z  > BWD_CLIP_LIMIT ) {
-		continue;
-	    } 
-	}
-
-        curTex = select_tex( x+1, y, nx, terrain );
-        glBindTexture( GL_TEXTURE_2D, tex_names[curTex] );
-        glBegin( GL_TRIANGLE_STRIP );
-
-        DRAW_POINT;
-
-        pt.y = ELEV(x,y);
-        pt.z = -dy/dny * courseLength;
-        nml  = NORMAL(x, y);
-        DRAW_POINT;
-
-        pt.x = (dx+1.)/dnx * courseWidth;
-        pt.y = ELEV(x+1, y+1);
-        pt.z = -(dy+1.)/dny * courseLength;
-        nml  = NORMAL(x+1, y+1);
-        DRAW_POINT;
-
-        pt.y = ELEV(x+1, y);
-        pt.z = -dy/dny * courseLength;
-        nml  = NORMAL(x+1, y);
-        DRAW_POINT;
-
-        for (x = 2; x<nx; x++ ) {
-            dx = (scalar_t) x;
-            oldTex = curTex;
-            curTex = select_tex( x, y, nx, terrain );
-
-            if ( oldTex != curTex ) {
-                glEnd();
-                glBindTexture( GL_TEXTURE_2D, tex_names[curTex] );
-                glBegin( GL_TRIANGLE_STRIP );
-
-                pt.x = (dx-1.)/dnx * courseWidth;
-                pt.y = ELEV(x-1, y+1);
-                pt.z = -(dy+1.)/dny * courseLength;
-                nml  = NORMAL(x-1, y+1);
-                DRAW_POINT;
-
-                pt.y = ELEV(x-1, y);
-                pt.z = -dy/dny * courseLength;
-                nml  = NORMAL(x-1, y);
-                DRAW_POINT;
-            } 
-            pt.x = dx/dnx * courseWidth;
-            pt.y = ELEV(x, y+1);
-            pt.z = -(dy+1.)/dny * courseLength;
-            nml  = NORMAL(x, y+1);
-            DRAW_POINT;
-
-            pt.y = ELEV(x, y);
-            pt.z = -dy/dny * courseLength;
-            nml  = NORMAL(x, y);
-            DRAW_POINT;
-        } 
-
-        glEnd();
-
-    } 
-
-    if ( compile_course ) {
-	glEndList();
-    }
+    /* 
+#if defined(HAVE_GLLOCKARRAYSEXT) && HAVE_GLLOCKARRAYSEXT
+    glUnlockArraysEXT();
+#endif
+    */
 }
 
 void draw_background(scalar_t fov, scalar_t aspect ) 
@@ -471,7 +451,7 @@ void draw_background(scalar_t fov, scalar_t aspect )
 
 } 
 
-void draw_trees( point_t view_pt ) 
+void draw_trees() 
 {
     tree_t    *treeLocs;
     int       numTrees;
@@ -480,10 +460,15 @@ void draw_trees( point_t view_pt )
     int       i;
     GLuint    *tex_names;
     vector_t  normal;
+    scalar_t  fwd_clip_limit, bwd_clip_limit, fwd_tree_detail_limit;
 
     treeLocs = get_tree_locs();
     numTrees = get_num_trees();
     tex_names = get_tex_names();
+
+    fwd_clip_limit = getparam_forward_clip_distance();
+    bwd_clip_limit = getparam_backward_clip_distance();
+    fwd_tree_detail_limit = getparam_tree_detail_distance();
 
     set_gl_options( TREES );
 
@@ -506,10 +491,10 @@ void draw_trees( point_t view_pt )
     for (i = 0; i< numTrees; i++ ) {
 
 	if ( clip_course ) {
-	    if ( eye_pt.z - treeLocs[i].ray.pt.z > FWD_CLIP_LIMIT ) 
+	    if ( eye_pt.z - treeLocs[i].ray.pt.z > fwd_clip_limit ) 
 		continue;
 	    
-	    if ( treeLocs[i].ray.pt.z - eye_pt.z > BWD_CLIP_LIMIT )
+	    if ( treeLocs[i].ray.pt.z - eye_pt.z > bwd_clip_limit )
 		continue;
 	}
 	
@@ -536,7 +521,7 @@ void draw_trees( point_t view_pt )
         glVertex3f( -treeRadius, treeHeight, 0.0 );
 
 	if ( clip_course ) {
-	    if ( eye_pt.z - treeLocs[i].ray.pt.z > FWD_TREE_DETAIL_LIMIT ) 
+	    if ( eye_pt.z - treeLocs[i].ray.pt.z > fwd_tree_detail_limit ) 
 		goto End_Quads;
 	}
 

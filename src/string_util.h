@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef STRING_UTIL
 #define STRING_UTIL
 
@@ -25,3 +30,7 @@ int string_cmp_no_case( char *s1, char *s2 );
 void string_to_lower( char *s );
 
 #endif /* STRING_UTIL */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

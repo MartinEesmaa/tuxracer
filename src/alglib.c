@@ -212,6 +212,17 @@ point_t transform_point(matrixgl_t mat, point_t p)
     return r;
 }
 
+plane_t make_plane( scalar_t nx, scalar_t ny, scalar_t nz, scalar_t d )
+{
+    plane_t tmp;
+    tmp.nml.x = nx;
+    tmp.nml.y = ny;
+    tmp.nml.z = nz;
+    tmp.d = d;
+
+    return tmp;
+}
+
 void make_identity_matrix(matrixgl_t h)
 {
     int i,j;
@@ -417,6 +428,19 @@ quaternion_t add_quaternions( quaternion_t q, quaternion_t r )
     res.y = q.y + r.y;
     res.z = q.z + r.z;
     res.w = q.w + r.w;
+    return res;
+}
+
+/* Return conjugate of q.  If q is a unit quaternion, this is the
+   multiplicative inverse of q. */
+quaternion_t quaternion_conjugate( quaternion_t q )
+{
+    quaternion_t res; /* the result */
+    res.x = -1 * q.x;
+    res.y = -1 * q.y;
+    res.z = -1 * q.z;
+    res.w = q.w;
+
     return res;
 }
 

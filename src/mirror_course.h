@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _MIRROR_COURSE_H_
 #define _MIRROR_COURSE_H_
 
@@ -26,3 +31,7 @@ void set_course_mirroring( bool_t state );
 bool_t get_course_mirroring( );
 
 #endif /* _MIRROR_COURSE_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

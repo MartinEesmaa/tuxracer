@@ -104,7 +104,7 @@ static void init_keytable( game_mode_t mode )
 
     /* Handle default callbacks first */
     for (i=0; i<num_keymap_entries; i++) {
-	if ( keymap[i].mode == mode && 
+	if ( ( keymap[i].mode == mode || keymap[i].mode == ALL_MODES ) && 
             keymap[i].keymap_class == DEFAULT_CALLBACK ) 
         {
 	    fill_keytable( keymap[i].key_cb );
@@ -113,7 +113,7 @@ static void init_keytable( game_mode_t mode )
 
     /* Handle other classes */
     for (i=0; i<num_keymap_entries; i++) {
-	if ( keymap[i].mode == mode ) {
+	if ( keymap[i].mode == mode || keymap[i].mode == ALL_MODES ) {
 	    switch ( keymap[i].keymap_class ) {
 	    case FIXED_KEY:
 		if ( ! insert_keytable_entries( keymap[i].keys, 

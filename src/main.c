@@ -24,27 +24,24 @@
 #include "textures.h"
 #include "tux.h"
 #include "phys_sim.h"
-#include "view.h"
 #include "part_sys.h"
 #include "keyframe.h"
 #include "preview.h"
 #include "gl_util.h"
-#include "screenshot.h"
-#include "fps.h"
-#include "tux_shadow.h"
 #include "game_config.h"
 #include "loop.h"
-#include "multiplayer.h"
 #include "render_util.h"
 #include "start_screen.h"
 #include "intro.h"
 #include "racing.h"
 #include "game_over.h"
+#include "paused.h"
 #include "keyboard.h"
 #include "fog.h"
 #include "lights.h"
+#include "multiplayer.h"
 
-#define WINDOW_TITLE "Tux Racer (c) 1999-2000 Jasmin F. Patry"
+#define WINDOW_TITLE "Tux Racer " VERSION " (c) 1999-2000 Jasmin F. Patry"
 
 /*
  * Globals 
@@ -77,6 +74,14 @@ void cleanup(void)
 int main( int argc, char **argv ) 
 {
     int width, height;
+
+    /* Print copyright notice */
+    fprintf( stderr, "Tux Racer " VERSION " (c) 1999-2000 Jasmin F. Patry "
+	     "<jfpatry@cgl.uwaterloo.ca>\n"
+	     "Tux Racer comes with ABSOLUTELY NO WARRANTY. "
+	     "This is free software,\nand you are welcome to redistribute "
+	     "it under certain conditions.\n"
+	     "See http://www.gnu.org/copyleft/gpl.html for details.\n\n" );
 
     /* Seed the random number generator */
     srand( time(NULL) );
@@ -159,16 +164,24 @@ int main( int argc, char **argv )
     load_tux();
     init_textures();
 
+    /* Need to set up an initial view position for select_course 
+       (quadtree simplification)
+    */
+
+    g_game.player[local_player()].view.pos = make_point( 0., 0., 0. );
+
     g_game.course.num = 1;
     select_course( g_game.course.num );
     init_preview();
 
     g_game.mode = START;
+    g_game.prev_mode = NO_MODE;
 
     start_screen_register();
     intro_register();
     racing_register();
     game_over_register();
+    paused_register();
 
     init_keyboard();
     

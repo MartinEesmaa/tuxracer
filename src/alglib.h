@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef ALGLIB_H
 #define ALGLIB_H
 
@@ -25,6 +30,10 @@
 #endif
 #ifndef max
 #define max(x,y) ((x)>(y)?(x):(y))
+#endif
+
+#ifndef ROUND_TO_NEAREST
+#   define ROUND_TO_NEAREST(x) ( (int) ((x)+0.5) )
 #endif
 
 /* points and vectors */
@@ -50,6 +59,9 @@ vector_t  transform_vector(matrixgl_t mat, vector_t v);
 vector_t  transform_normal(vector_t n, matrixgl_t mat);
 point_t   transform_point(matrixgl_t mat, point_t p);
 
+/* planes */
+plane_t make_plane( scalar_t nx, scalar_t ny, scalar_t nz, scalar_t d );
+
 /* matrices */
 void make_identity_matrix(matrixgl_t h);
 void multiply_matrices(matrixgl_t ret, matrixgl_t mat1, matrixgl_t mat2);
@@ -70,6 +82,7 @@ quaternion_t make_quaternion( scalar_t x, scalar_t y, scalar_t z, scalar_t w );
 quaternion_t multiply_quaternions( quaternion_t q, quaternion_t r );
 quaternion_t add_quaternions( quaternion_t q, quaternion_t r );
 quaternion_t scale_quaternion( scalar_t s, quaternion_t q );
+quaternion_t quaternion_conjugate( quaternion_t q );
 void make_matrix_from_quaternion( matrixgl_t mat, quaternion_t q );
 quaternion_t make_quaternion_from_matrix( matrixgl_t mat );
 quaternion_t make_rotation_quaternion( vector_t s, vector_t t );
@@ -82,3 +95,7 @@ vector_t rotate_vector( quaternion_t q, vector_t v );
                          (vec).z * (vec).z )
 
 #endif /* ALGLIB_H */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

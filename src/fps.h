@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _FPS_H_
 #define _FPS_H_
@@ -27,4 +31,8 @@ void     new_frame_for_fps_calc();
 scalar_t get_fps();
 void print_fps();
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

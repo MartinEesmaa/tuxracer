@@ -1,11 +1,11 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/tuxracer.h)
-AM_INIT_AUTOMAKE(tuxracer, 0.11.1)
+AM_INIT_AUTOMAKE(tuxracer, 0.12)
 AM_CONFIG_HEADER(config.h)
 
 dnl Checks for programs.
 AC_PROG_CC
-dnl AC_PROG_CXX
+AC_PROG_CXX
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -18,22 +18,35 @@ AC_HEADER_TIME
 dnl Checks for library functions.
 AC_CHECK_FUNCS(getcwd gettimeofday strdup)
 
+dnl General options
+TUXRACER_EXTRA_CFLAGS="-O2"
+
+AC_ARG_ENABLE(debug,  [  --enable-debug          Produce an executable with debugging symbols], TUXRACER_EXTRA_CFLAGS=-g)
+
+AC_ARG_ENABLE(profile,[  --enable-profile        Produce a profiled executable],  TUXRACER_EXTRA_CFLAGS="$TUXRACER_EXTRA_CFLAGS -pg")
+
+dnl Tcl options
 TCL_LIB_NAME=tcl
 
 AC_ARG_WITH(tcl-libs,    [  --with-tcl-libs=DIR     Specify Tcl 8.0 library location],TCL_LIB_PATH="-L$withval")
+
 AC_ARG_WITH(tcl-inc,     [  --with-tcl-inc=DIR      Specify Tcl 8.0 header file location],TUXRACER_EXTRA_CFLAGS="$TUXRACER_EXTRA_CFLAGS -I$withval")
+
 AC_ARG_WITH(tcl-lib-name,[  --with-tcl-lib-name=NAME Specify Tcl 8.0 library base name],TCL_LIB_NAME="$withval")
 
 dnl Check for Tcl >= 8.0
-extra_libs="-lm $TCL_LIB_PATH"
-AC_CHECK_LIB(dl, dlopen, extra_libs="$extra_libs -ldl")
-AC_CHECK_LIB(tcl8.0, Tcl_Free,,,$extra_libs)
+LIBS="$LIBS -lm $TCL_LIB_PATH"
+AC_CHECK_LIB(dl, dlopen)
+AC_CHECK_LIB(tcl8.0, Tcl_Free)
 
 if test "x$ac_cv_lib_tcl8_0_Tcl_Free" = "xno" ; then
-    AC_CHECK_LIB(tcl8.2, Tcl_Free,,,$extra_libs)
-
+    AC_CHECK_LIB(tcl8.2, Tcl_Free)
     if test "x$ac_cv_lib_tcl8_2_Tcl_Free" = "xno" ; then
-	AC_CHECK_LIB($TCL_LIB_NAME, Tcl_Free,,AC_MSG_ERROR(Tcl library version >= 8.0 not found),$extra_libs)
+	    AC_CHECK_LIB(tcl8.3, Tcl_Free)
+
+	    if test "x$ac_cv_lib_tcl8_3_Tcl_Free" = "xno" ; then
+			AC_CHECK_LIB($TCL_LIB_NAME, Tcl_Free,,AC_MSG_ERROR(Tcl library version >= 8.0 not found))
+	    fi
     fi
 fi
 
@@ -41,36 +54,48 @@ dnl Check for X11, taken partly from xracer sources
 
 AC_PATH_XTRA
 
-extra_libs="$X_LIBS $X_PRE_LIBS -lX11 -lXi -lXext -lXmu -lXt $X_EXTRA_LIBS $GL_LIB_PATH $extra_libs"
-
 dnl Check for OpenGL.
 dnl Taken partly from the xracer sources.
+AC_ARG_ENABLE(GL,     [  --disable-GL            Do not use -lGL],ac_cv_lib_GL_glNewList=no; ac_cv_lib_GLU_gluLookAt=no)
 
-AC_CHECK_LIB(GL, glNewList,,,$extra_libs)
+AC_ARG_WITH(gl-libs,  [  --with-gl-libs=DIR      Specify OpenGL library location],GL_LIB_PATH="-L$withval")
+AC_ARG_WITH(gl-inc,   [  --with-gl-inc=DIR       Specify OpenGL header file location],TUXRACER_EXTRA_CFLAGS="$TUXRACER_EXTRA_CFLAGS -I$withval")
+
+AC_ARG_WITH(glut-libs,[  --with-glut-libs=DIR    Specify GLUT library location], GLUT_LIB_PATH="-L$withval")
+AC_ARG_WITH(glut-inc, [  --with-glut-inc=DIR     Specify GLUT header file location],TUXRACER_EXTRA_CFLAGS="$TUXRACER_EXTRA_CFLAGS -I$withval")
+
+
+LIBS="$GL_LIB_PATH $GLUT_LIB_PATH $X_PRE_LIBS $X_LIBS -lX11 -lXi -lXext -lXmu -lXt $X_EXTRA_LIBS $LIBS"
+
+
+AC_CHECK_LIB(GL, glNewList)
 
 if test "x$ac_cv_lib_GL_glNewList" = "xno" ; then
 	dnl Check for MesaGL.
-	AC_CHECK_LIB(MesaGL, glNewList,,AC_MSG_ERROR(GL library was not found),$extra_libs)
+	AC_CHECK_LIB(MesaGL, glNewList,,AC_MSG_ERROR(GL library was not found))
 fi
 
-AC_CHECK_LIB(GLU, gluLookAt,,,$extra_libs)
+AC_CHECK_LIB(GLU, gluLookAt)
 if test "x$ac_cv_lib_GLU_gluLookAt" = "xno" ; then
         dnl Check for MesaGLU.
-        AC_CHECK_LIB(MesaGLU, gluLookAt,,AC_MSG_ERROR(GLU library was not found),$extra_libs)
+        AC_CHECK_LIB(MesaGLU, gluLookAt,,AC_MSG_ERROR(GLU library was not found))
 fi
 
-opengl_LIBS="$LIBS $extra_libs $GLUT_LIB_PATH"
+dnl Check for Voodoo-related stuff
+AC_CHECK_HEADERS( "GL/xmesa.h" )
+AC_CHECK_FUNCS("XMesaSetFXmode")
 
-dnl Check for glut.
-AC_CHECK_LIB(glut, glutKeyboardUpFunc,,AC_MSG_ERROR(GLUT library not found or too old version. 3.7 (beta) or later required.),$opengl_LIBS)
+dnl Check for CVA extension
+AC_CHECK_FUNCS("glLockArraysEXT")
+
+dnl Check for glut
+AC_CHECK_LIB(glut, glutKeyboardUpFunc,,AC_MSG_ERROR(GLUT library not found or too old version. 3.7 (beta) or later required.))
 
 dnl Turn use of stencil buffer on/off
 AC_ARG_ENABLE(stencil-buffer,[  --enable-stencil-buffer Use if your hardware has a stencil buffer],TUXRACER_EXTRA_CFLAGS="$TUXRACER_EXTRA_CFLAGS -DUSE_STENCIL_BUFFER")
 
 dnl Specify data directory
 AC_ARG_WITH(data-dir,[  --with-data-dir=PATH Default tuxracer data directory],TUXRACER_EXTRA_CFLAGS="$TUXRACER_EXTRA_CFLAGS -DDATA_DIR=\\\"$withval\\\"")
-
-LIBS="$LIBS $extra_libs $GLUT_LIB_PATH"
 
 AC_SUBST(TUXRACER_EXTRA_CFLAGS)
 

@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _TUX_SHADOW_H_
 #define _TUX_SHADOW_H_
 
@@ -29,3 +34,7 @@ void draw_shadow_vertex( scalar_t x, scalar_t y, scalar_t z,
 			 matrixgl_t model_matrix );
 
 #endif /* _TUX_SHADOW_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

@@ -17,11 +17,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _TUX_H_
 #define _TUX_H_
 
-void  adjust_tux_joints( scalar_t turnFact, bool_t isBraking );
+void adjust_tux_joints( scalar_t turnFact, bool_t isBraking, 
+			scalar_t paddling_factor, scalar_t speed,
+			vector_t net_force );
 void  load_tux();
 void  draw_tux();
 char* get_tux_root_node();
@@ -29,7 +35,16 @@ char* get_tux_left_shoulder_joint();
 char* get_tux_right_shoulder_joint();
 char* get_tux_left_hip_joint();
 char* get_tux_right_hip_joint();
+char* get_tux_left_knee_joint();
+char* get_tux_right_knee_joint();
+char* get_tux_left_ankle_joint();
+char* get_tux_right_ankle_joint();
+char* get_tux_tail_joint();
 char* get_tux_neck();
 char* get_tux_head();
 
 #endif /* _TUX_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

@@ -95,7 +95,7 @@ double euler_final_estimate(ode_data_t *p)
     euler_data_t *data = (euler_data_t*)p;
     double val = data->init_val;
 
-    val += 0.5 * (data->k[0] + data->k[1] ); /* XXX */
+    val += 0.5 * (data->k[0] + data->k[1] );
     return val;
 }
 

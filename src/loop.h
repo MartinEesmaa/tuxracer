@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _LOOP_H_
 #define _LOOP_H_
 
@@ -28,3 +33,7 @@ void register_loop_funcs( game_mode_t mode, mode_init_func_ptr_t init_func,
 void main_loop();
 
 #endif /* _LOOP_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

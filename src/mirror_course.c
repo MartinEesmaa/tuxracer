@@ -22,6 +22,8 @@
 #include "course_render.h"
 #include "keyframe.h"
 #include "phys_sim.h"
+#include "course_quad.h"
+#include "multiplayer.h"
 
 static bool_t mirrored = False;
 
@@ -30,6 +32,7 @@ void mirror_course()
     int x, y, i;
     int idx1, idx2;
     scalar_t tmp;
+    terrain_t tmp_terrain;
     vector_t tmp_vec;
     scalar_t *elevation;
     vector_t *nmls;
@@ -38,9 +41,9 @@ void mirror_course()
     int num_trees;
     point2d_t start_pt;
     int nx, ny;
-    scalar_t course_width, course_height;
+    scalar_t course_width, course_length;
 
-    get_course_dimensions( &course_width, &course_height );
+    get_course_dimensions( &course_width, &course_length );
     get_course_divisions( &nx, &ny );
     elevation = get_course_elev_data();
     terrain = get_course_terrain_data();
@@ -56,9 +59,9 @@ void mirror_course()
 	    /* first column of texture values not used */
             idx1 = (x+1) + nx*(y);
             idx2 = (nx-1-x) + nx*(y);
-	    tmp = terrain[idx1];
+	    tmp_terrain = terrain[idx1];
 	    terrain[idx1] = terrain[idx2];
-	    terrain[idx2] = tmp;
+	    terrain[idx2] = tmp_terrain;
 
             idx1 = (x) + nx*(y);
             idx2 = (nx-1-x) + nx*(y);
@@ -76,6 +79,17 @@ void mirror_course()
 	tree_locs[i].ray.pt.y = 
 	    find_y_coord( tree_locs[i].ray.pt.x,
 			  tree_locs[i].ray.pt.z );
+    }
+
+    fill_gl_arrays();
+
+    reset_course_quadtree();
+    if ( nx > 0 && ny > 0 ) {
+	print_debug( DEBUG_QUADTREE, "mirroring quadtree" );
+	init_course_quadtree( elevation, nx, ny, course_width/(nx-1), 
+			      -course_length/(ny-1),
+			      g_game.player[local_player()].view.pos, 
+			      getparam_course_detail_level() );
     }
 
     start_pt = get_start_pt();

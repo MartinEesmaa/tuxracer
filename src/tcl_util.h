@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _TCL_UTIL_H_
 #define _TCL_UTIL_H_
@@ -34,3 +38,7 @@ colour_t  make_colour( scalar_t r, scalar_t g, scalar_t b );
 #define NEXT_ARG argc -=1; argv += 1
 
 #endif /* _TCL_UTIL_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _LIGHTS_H_
 #define _LIGHTS_H_
 
@@ -33,3 +38,7 @@ void setup_course_lighting();
 void register_course_light_callbacks( Tcl_Interp *ip );
 
 #endif /* _LIGHTS_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _PHYS_SIM_H_
 #define _PHYS_SIM_H_
@@ -39,3 +43,7 @@ void      update_player_pos( player_data_t *plyr, scalar_t dtime );
 void      init_physical_simulation();
 
 #endif /* _PHYS_SIM_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

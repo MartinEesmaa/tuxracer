@@ -17,13 +17,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _PART_SYS_H_
 #define _PART_SYS_H_
 
 void create_new_particles( point_t loc, vector_t vel, int num );
 void update_particles( scalar_t time_step );
-void draw_particles();
 void clear_particles();
 void reset_particles();
 void draw_particle_shadows( );
@@ -31,3 +34,7 @@ void draw_particles( player_data_t *plyr );
 void register_particle_callbacks( Tcl_Interp *ip );
 
 #endif /* _PART_SYS_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

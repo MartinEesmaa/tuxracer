@@ -28,9 +28,6 @@
 #include "phys_sim.h"
 #include "nmrcl.h"
 
-/* Set this to 1 if Tux sometimes passes through trees... */
-#define USE_MIN_TIME_STEP_FOR_TREE_COLLISIONS 0
-
 /*
  * Constants
  */
@@ -117,19 +114,19 @@ static const double air_log_drag_coeff[] = { 2.25,
 					     -0.9 };
 
 /* Minimum time step for ODE solver (s) */
-#define MIN_TIME_STEP 0.001
+#define MIN_TIME_STEP 0.01
 
 /* Maximum time step for ODE solver (s) */
-#define MAX_TIME_STEP 0.05
+#define MAX_TIME_STEP 0.10
 
 /* Maximum distance of step for ODE solver (m) */
-#define MAX_STEP_DISTANCE 0.10
+#define MAX_STEP_DISTANCE 0.20
 
 /* Tolerance on error in Tux's position (m) */
-#define MAX_POSITION_ERROR 1.e-5
+#define MAX_POSITION_ERROR 0.005
 
 /* Tolerance on error in Tux's velocity (m/s) */
-#define MAX_VELOCITY_ERROR 1.e-4
+#define MAX_VELOCITY_ERROR 0.05
 
 /* To smooth out the terrain, the terrain normals are interpolated
    near the edges of the triangles.  This parameter controls how much
@@ -143,10 +140,39 @@ static const double air_log_drag_coeff[] = { 2.25,
 /* The distance to move Tux up by so that he doesn't sit too low on the 
    ground (m) */
 #define TUX_Y_CORRECTION 0.19
+#define TUX_Y_CORRECTION_ON_STOMACH 0.24
 
 /* The square of the distance that Tux must move before we recompute a 
    collision (m^2) */
-#define COLLISION_TOLERANCE 0.0025
+#define COLLISION_TOLERANCE 0.04
+
+/* Duraction of paddling motion (s) */
+#define PADDLING_DURATION 0.40
+
+/* Force applied against ground when paddling (N) */
+#define PADDLING_FORCE 350
+
+/* Speed at which paddling ceases to be effective (m/s) */
+#define MAX_PADDLING_SPEED 15
+
+/* Magnitude of force before damage is incurred (N) */
+#define DAMAGE_RESISTANCE ( 4.0 * TUX_MASS * EARTH_GRAV )
+
+/* Damage scaling factor (health/(N*s)) */
+#define DAMAGE_SCALE 9e-8
+
+/* Amount to scale tree force by (so that it does more damage than regular
+   collisions) (dimensionless) */
+#define COLLISION_BASE_DAMAGE 0.02
+
+/* Damage incurred by paddling exertion (health/s) */
+#define PADDLING_DAMAGE 0.02
+
+/* Health regeneration rate (health/s) */
+#define REGENERATION_RATE 0.005
+
+/* Healing won't occur if health is below this level (health) */
+#define MIN_REGENERATION_HEALTH 0.1
 
 /*
  * Static variables
@@ -273,25 +299,55 @@ void find_barycentric_coords( scalar_t x, scalar_t z,
     xidx = x / courseWidth * ( (scalar_t) nx - 1. );
     yidx = -z / courseLength * ( (scalar_t) ny - 1. );
 
-    if ( yidx - y0 < xidx - x0 ) {
-        *p0 = make_point( (scalar_t)x0/(nx-1.)*courseWidth, ELEV(x0, y0), 
-                       -(scalar_t)y0/(ny-1.)*courseLength );
 
-        *p1 = make_point( (scalar_t)x1/(nx-1.)*courseWidth, ELEV(x1, y0), 
-                       -(scalar_t)y0/(ny-1.)*courseLength );
+    /* The terrain is meshed as follows:
+	      ...
+	   +-+-+-+-+            x<---+
+	   |\|/|\|/|                 |
+        ...+-+-+-+-+...              V
+	   |/|\|/|\|                 y
+	   +-+-+-+-+
+	      ...
+       
+       So there are two types of squares: those like this (x0+y0 is even):
 
-        *p2 = make_point( (scalar_t)x1/(nx-1.)*courseWidth, ELEV(x1, y1), 
-                       -(scalar_t)y1/(ny-1.)*courseLength );
+       +-+
+       |/|
+       +-+
+
+       and those like this (x0+y0 is odd).
+       
+       +-+
+       |\|
+       +-+
+    */
+
+#define POINT(x,y) make_point( (scalar_t)(x)/(nx-1.)*courseWidth, \
+                   ELEV((x),(y)), -(scalar_t)(y)/(ny-1.)*courseLength ) 
+
+    if ( (x0 + y0) % 2 == 0 ) {
+	if ( yidx - y0 < xidx - x0 ) {
+	    *p0 = POINT(x0, y0); 
+	    *p1 = POINT(x1, y0); 
+	    *p2 = POINT(x1, y1); 
+	} else {
+	    *p0 = POINT(x1, y1); 
+	    *p1 = POINT(x0, y1); 
+	    *p2 = POINT(x0, y0); 
+	} 
     } else {
-        *p0 = make_point( (scalar_t)x1/(nx-1.)*courseWidth, ELEV(x1, y1), 
-                       -(scalar_t)y1/(ny-1.)*courseLength );
-
-        *p1 = make_point( (scalar_t)x0/(nx-1.)*courseWidth, ELEV(x0, y1), 
-                       -(scalar_t)y1/(ny-1.)*courseLength );
-
-        *p2 = make_point( (scalar_t)x0/(nx-1.)*courseWidth, ELEV(x0, y0), 
-                       -(scalar_t)y0/(ny-1.)*courseLength );
-    } 
+	/* x0 + y0 is odd */
+	if ( yidx - y0 + xidx - x0 < 1 ) {
+	    *p0 = POINT(x0, y0); 
+	    *p1 = POINT(x1, y0); 
+	    *p2 = POINT(x0, y1); 
+	} else {
+	    *p0 = POINT(x1, y1); 
+	    *p1 = POINT(x0, y1); 
+	    *p2 = POINT(x1, y0); 
+	} 
+    }
+#undef POINT
 
     dx = p0->x - p2->x;
     dz = p0->z - p2->z;
@@ -397,8 +453,8 @@ terrain_t get_surface_type( scalar_t x, scalar_t z )
     get_course_dimensions( &courseWidth, &courseLength );
     get_course_divisions( &nx, &ny );
 
-    xidx = ceil( x / courseWidth * ( (scalar_t) nx - 1. ) );
-    yidx = floor( -z / courseLength * ( (scalar_t) ny - 1. ) );
+    xidx = (int) ceil( x / courseWidth * ( (scalar_t) nx - 1. ) );
+    yidx = (int) floor( -z / courseLength * ( (scalar_t) ny - 1. ) );
 
     if (xidx < 0) {
         xidx = 0;
@@ -414,6 +470,16 @@ terrain_t get_surface_type( scalar_t x, scalar_t z )
 
     return terrain[ xidx + nx*yidx ];
 } 
+
+static void update_paddling( player_data_t *plyr )
+{
+    if ( plyr->control.is_paddling ) {
+	if ( g_game.time - plyr->control.paddle_time >= PADDLING_DURATION ) {
+	    print_debug( DEBUG_CONTROL, "paddling off" );
+	    plyr->control.is_paddling = False;
+	}
+    }
+}
 
 void set_tux_pos( player_data_t *plyr, point_t new_pos )
 {
@@ -439,7 +505,11 @@ void set_tux_pos( player_data_t *plyr, point_t new_pos )
 
     plyr->pos = new_pos;
 
-    disp_y = new_pos.y + TUX_Y_CORRECTION; 
+    if ( getparam_tux_slides_on_belly() ) {
+	disp_y = new_pos.y + TUX_Y_CORRECTION_ON_STOMACH; 
+    } else {
+	disp_y = new_pos.y + TUX_Y_CORRECTION; 
+    }
 
     tuxRoot = get_tux_root_node();
     reset_scene_node( tuxRoot );
@@ -447,8 +517,8 @@ void set_tux_pos( player_data_t *plyr, point_t new_pos )
 			  make_vector( new_pos.x, disp_y, new_pos.z ) );
 } 
 
-bool_t check_tree_collisions( point_t pos, point_t *tree_loc, 
-			      scalar_t *tree_diam )
+bool_t check_tree_collisions( player_data_t *plyr, point_t pos, 
+			      point_t *tree_loc, scalar_t *tree_diam )
 {
     tree_t *trees;
     int numTrees, i;
@@ -538,6 +608,9 @@ bool_t check_tree_collisions( point_t pos, point_t *tree_loc,
 
     if ( hit ) {
 	last_collision = True;
+
+	/* Record collision in player data so that health can be adjusted */
+	plyr->collision = True;
     } else {
 	last_collision = False;
     }
@@ -562,7 +635,8 @@ scalar_t get_compression_depth( terrain_t surf_type )
 /*
  * Check for tree collisions and adjust position and velocity appropriately.
  */
-void adjust_for_tree_collision( point_t pos, vector_t *vel )
+static void adjust_for_tree_collision( player_data_t *plyr, 
+				       point_t pos, vector_t *vel )
 {
     vector_t treeNml;
     point_t treeLoc;
@@ -571,7 +645,7 @@ void adjust_for_tree_collision( point_t pos, vector_t *vel )
     scalar_t costheta;
     scalar_t tree_diam;
 
-    treeHit = check_tree_collisions( pos, &treeLoc, &tree_diam );
+    treeHit = check_tree_collisions( plyr, pos, &treeLoc, &tree_diam );
     if (treeHit) {
 	/*
 	 * Calculate the normal vector to the tree; here we model the tree
@@ -662,14 +736,30 @@ void adjust_orientation( player_data_t *plyr, scalar_t dtime,
     static vector_t minus_y_vec = { 0., -1., 0. };
 
     if ( pos.y > surf_y ) {
-        new_y = scale_vector( -1., vel );
-        normalize_vector( &new_y );
-        new_z = project_into_plane( new_y, make_vector(0., 1., 0.) );
-        normalize_vector( &new_z);
+
+	if ( getparam_tux_slides_on_belly() ) {
+	    new_y = scale_vector( 1., vel );
+	    normalize_vector( &new_y );
+	    new_z = project_into_plane( new_y, make_vector(0., -1., 0.) );
+	    normalize_vector( &new_z);
+	} else {
+	    new_y = scale_vector( -1., vel );
+	    normalize_vector( &new_y );
+	    new_z = project_into_plane( new_y, make_vector(0., 1., 0.) );
+	    normalize_vector( &new_z);
+	}
+
     } else { 
-        new_z = surf_nml;
-        new_y = project_into_plane( surf_nml, scale_vector( -1., vel ) );
-        normalize_vector(&new_y);
+
+	if ( getparam_tux_slides_on_belly() ) {
+	    new_z = scale_vector( -1., surf_nml );
+	    new_y = project_into_plane( surf_nml, scale_vector( 1., vel ) );
+	    normalize_vector(&new_y);
+	} else {
+	    new_z = surf_nml;
+	    new_y = project_into_plane( surf_nml, scale_vector( -1., vel ) );
+	    normalize_vector(&new_y);
+	}
     }
 
     new_x = cross_product( new_y, new_z );
@@ -693,6 +783,12 @@ void adjust_orientation( player_data_t *plyr, scalar_t dtime,
 
     plyr->plane_nml = rotate_vector( plyr->orientation, z_vec );
     plyr->direction = rotate_vector( plyr->orientation, minus_y_vec );
+
+    if ( getparam_tux_slides_on_belly() ) {
+	/* Fix up if tux sliding on belly */
+	plyr->plane_nml = scale_vector( -1., plyr->plane_nml );
+	plyr->direction = scale_vector( -1., plyr->direction );
+    }
 
     make_matrix_from_quaternion( cob_mat, plyr->orientation );
     transpose_matrix( cob_mat, inv_cob_mat );
@@ -750,9 +846,57 @@ void generate_particles( player_data_t *plyr, scalar_t dtime,
 	left_particles = adjust_particle_count( left_particles );
 	right_particles = adjust_particle_count( right_particles );
 
-        create_new_particles( left_part_pt, part_vector, left_particles );
-        create_new_particles( right_part_pt, part_vector, right_particles );
+        create_new_particles( left_part_pt, part_vector, 
+			      (int)left_particles );
+        create_new_particles( right_part_pt, part_vector, 
+			      (int)right_particles );
     } 
+}
+
+void update_health( player_data_t *plyr, scalar_t dtime )
+{
+    scalar_t f_mag;
+    vector_t nml_f; 
+    scalar_t damage;
+    vector_t tmp_vel;
+    scalar_t speed;
+
+    nml_f = plyr->normal_force;
+
+    f_mag = normalize_vector( &nml_f );
+
+    /* Damage from landing, hitting bumps, etc */
+    if ( f_mag > DAMAGE_RESISTANCE ) {
+	damage = ( f_mag - DAMAGE_RESISTANCE );
+	damage *= damage;
+	damage *= DAMAGE_SCALE * dtime;
+    } else {
+	damage = 0.0;
+    }
+
+    /* Damage from hitting objects */
+    if ( plyr->collision ) {
+	plyr->collision = False;
+
+	tmp_vel = plyr->vel;
+	speed = normalize_vector( &tmp_vel );
+
+	damage += COLLISION_BASE_DAMAGE * speed;
+    }
+
+    /* Tiredness due to paddling */
+    if ( plyr->control.is_paddling ) {
+	damage += PADDLING_DAMAGE * dtime;
+    }
+
+    plyr->health -= damage;
+
+    /* Regeneration */
+    if ( plyr->health < 1.0 && plyr->health > MIN_REGENERATION_HEALTH ) {
+	plyr->health += REGENERATION_RATE * dtime;
+	plyr->health = min( 1.0, plyr->health );
+    }
+
 }
 
 /*
@@ -780,7 +924,7 @@ scalar_t calc_wind_force_mag( scalar_t wind_speed )
 }
 
 static vector_t calc_spring_force( scalar_t compression, vector_t vel, 
-				   vector_t surf_nml )
+				   vector_t surf_nml, vector_t *unclamped_f )
 {
     scalar_t spring_vel; /* velocity perp. to surface (for damping) */
     scalar_t spring_f_mag; /* magnitude of force */
@@ -806,33 +950,38 @@ static vector_t calc_spring_force( scalar_t compression, vector_t vel,
 	? TUX_GLUTE_STAGE_1_DAMPING_COEFF
 	: TUX_GLUTE_STAGE_2_DAMPING_COEFF );
 
-    /* Clamp */
-    spring_f_mag = min( spring_f_mag, TUX_GLUTE_MAX_SPRING_FORCE );
+    /* Clamp to >= 0.0 */
     spring_f_mag = max( spring_f_mag, 0.0 );
+
+    if ( unclamped_f != NULL ) {
+	*unclamped_f = scale_vector( spring_f_mag, surf_nml );
+    }
+
+    /* Clamp to <= TUX_GLUTE_MAX_SPRING_FORCE */
+    spring_f_mag = min( spring_f_mag, TUX_GLUTE_MAX_SPRING_FORCE );
 
     return scale_vector( spring_f_mag, surf_nml );
 }
 
 
-vector_t calc_net_force( player_data_t *plyr, point_t uncorr_pos, 
-			 vector_t vel, bool_t *collision )
+static vector_t calc_net_force( player_data_t *plyr, point_t uncorr_pos, 
+				vector_t vel )
 {
     vector_t nml_f;      /* normal force */
+    vector_t unclamped_nml_f; /* unclamped normal force (for damage calc) */
     scalar_t nml_f_mag;  /* and its magnitude */
     vector_t fric_f;     /* frictional force */
     vector_t fric_dir;   /* direction of frictional force */
     vector_t grav_f;     /* gravitational force */
     vector_t air_f;      /* air resistance force */
     vector_t brake_f;    /* braking force */
+    vector_t paddling_f; /* paddling force */
     vector_t net_force;  /* the net force (sum of all other forces) */
     scalar_t comp_depth; /* depth to which the terrain can be compressed */
     scalar_t speed;      /* speed (m/s) */
     scalar_t surf_y;     /* y coord of terrain surface */
     vector_t surf_nml;   /* normal to terrain at current position */
     terrain_t surf_type; /* type of terrain at current pos */
-    point_t tree_loc;    /* location of tree */
-    scalar_t tree_diam;  /* diameter of tree */
-    vector_t tree_f;     /* force exterted by tree collisions */
     scalar_t glute_compression; /* amt that Tux's tush has been compressed */
     scalar_t steer_angle; /* Angle to rotate fricitonal force for turning */
     matrixgl_t fric_rot_mat; /* Matrix to rotate frictional force */
@@ -858,8 +1007,12 @@ vector_t calc_net_force( player_data_t *plyr, point_t uncorr_pos,
 	check_assertion( glute_compression >= 0, 
 			 "unexpected negative compression" );
 
-	nml_f = calc_spring_force( glute_compression, vel, surf_nml );
+	nml_f = calc_spring_force( glute_compression, vel, surf_nml,
+				   &unclamped_nml_f );
     }
+
+    /* Use the unclamped normal force for damage calculation purposes */
+    plyr->normal_force = unclamped_nml_f;
 
     /* 
      * Calculate frictional force
@@ -909,26 +1062,17 @@ vector_t calc_net_force( player_data_t *plyr, point_t uncorr_pos,
 
 
     /*
-     * Calculate force from tree collisions
+     * Calculate force from paddling
      */
-    tree_f = make_vector( 0., 0., 0. );
-    if ( check_tree_collisions( uncorr_pos, &tree_loc, &tree_diam ) ) {
-	scalar_t tree_dist;
-	vector_t tree_nml;
-
-	*collision = True;
-
-	tree_nml = subtract_points( uncorr_pos, tree_loc );
-	tree_nml.y = 0;
-	tree_dist = normalize_vector( &tree_nml );
-
-	if ( tree_dist < tree_diam ) {
-	    tree_f = calc_spring_force( tree_diam - tree_dist, 
-					vel, tree_nml );
-	}
-
+    update_paddling( plyr );
+    if ( plyr->control.is_paddling && uncorr_pos.y <= surf_y ) {
+	paddling_f = scale_vector( 
+	    -PADDLING_FORCE * 
+	    ( MAX_PADDLING_SPEED - speed ) / MAX_PADDLING_SPEED * 
+	    fricCoeff[surf_type],
+	    fric_dir );
     } else {
-	*collision = False;
+	paddling_f = make_vector( 0., 0., 0. );
     }
 
     
@@ -936,7 +1080,8 @@ vector_t calc_net_force( player_data_t *plyr, point_t uncorr_pos,
      * Add all the forces 
      */
     net_force = add_vectors( grav_f, add_vectors( nml_f, add_vectors( 
-	fric_f, add_vectors( air_f, add_vectors( brake_f, tree_f )))));
+	fric_f, add_vectors( air_f, add_vectors( 
+	    brake_f, paddling_f )))));
 
     return net_force;
 }
@@ -972,7 +1117,6 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
     vector_t new_f;
     point_t saved_pos;
     vector_t saved_vel, saved_f;
-    bool_t collision;
     double pos_err[3], vel_err[3], tot_pos_err, tot_vel_err;
     double err=0, tol=0;
     int i;
@@ -1076,37 +1220,12 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
 		solver.update_estimate( y, i, new_vel.y );
 		solver.update_estimate( z, i, new_vel.z );
 
-		new_f = calc_net_force( plyr, new_pos, new_vel, &collision );
-
-#if USE_MIN_TIME_STEP_FOR_TREE_COLLISIONS
-
-		if ( collision && h > MIN_TIME_STEP + EPS ) {
-		    /* If a collision is detected, use min time step */
-		    break;
-		}
-
-#endif /* USE_MIN_TIME_STEP_FOR_TREE_COLLISIONS */
-
+		new_f = calc_net_force( plyr, new_pos, new_vel );
 
 		solver.update_estimate( vx, i, new_f.x / TUX_MASS );
 		solver.update_estimate( vy, i, new_f.y / TUX_MASS );
 		solver.update_estimate( vz, i, new_f.z / TUX_MASS );
 	    }
-
-#if USE_MIN_TIME_STEP_FOR_TREE_COLLISIONS
-
-	    if ( collision && h > MIN_TIME_STEP + EPS ) {
-		/* If a collision is detected, use min time step */
-		h = MIN_TIME_STEP;
-
-		/* re-start the evaulation */
-		new_pos = saved_pos;
-		new_vel = saved_vel;
-		new_f = saved_f;
-		continue;
-	    }
-
-#endif /* USE_MIN_TIME_STEP_FOR_TREE_COLLISIONS */
 
 	    /* Get final values */
 	    new_pos.x = solver.final_estimate( x );
@@ -1196,6 +1315,12 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
 	    generate_particles( plyr, h, new_pos, speed );
 	}
 
+	/* Calculate the final net force */
+	new_f = calc_net_force( plyr, new_pos, new_vel );
+
+	/* Update the player's health */
+	update_health( plyr, h );
+
 	/* If no failures, compute a new h */
 	if ( !failed && solver.estimate_error != NULL ) {
 	    double temp = 1.25 * pow(err / tol, solver.time_step_exponent());
@@ -1212,7 +1337,7 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
 	/* Important: to make trees "solid", we must manipulate the 
 	   velocity here; if we don't and Tux is moving very quickly,
 	   he can pass through trees */
-	adjust_for_tree_collision( new_pos, &new_vel );
+	adjust_for_tree_collision( plyr, new_pos, &new_vel );
 
     }
 
@@ -1243,6 +1368,8 @@ void update_player_pos( player_data_t *plyr, scalar_t dtime )
     terrain_t surf_type; /* type of terrain */
     vector_t tmp_vel;
     scalar_t speed;
+    scalar_t paddling_factor; 
+    vector_t local_force;
 
     if ( dtime > 2. * EPS ) {
 	solve_ode_system( plyr, dtime );
@@ -1264,7 +1391,20 @@ void update_player_pos( player_data_t *plyr, scalar_t dtime )
     set_tux_pos( plyr, plyr->pos );
     adjust_orientation( plyr, dtime, plyr->pos, plyr->vel, 
 			surf_y, surf_nml );
-    adjust_tux_joints( plyr->control.turn_fact, plyr->control.is_braking );
+
+    if ( plyr->control.is_paddling ) {
+	paddling_factor = (g_game.time - plyr->control.paddle_time) / 
+	    PADDLING_DURATION;
+    } else {
+	paddling_factor = 0.0;
+    }
+
+    /* calculate force in Tux's local coordinate system */
+    local_force = rotate_vector( quaternion_conjugate( plyr->orientation ),
+				 plyr->net_force );
+
+    adjust_tux_joints( plyr->control.turn_fact, plyr->control.is_braking,
+		       paddling_factor, speed, local_force );
 }
 
 
@@ -1294,7 +1434,6 @@ void init_physical_simulation()
 	plyr->pos.z = start_pt.y;
 	plyr->vel = init_vel;
 	plyr->net_force = init_f;
-	plyr->orientation_initialized = False;
 	plyr->control.turn_fact = 0.0;
 	plyr->control.is_braking = False;
     }

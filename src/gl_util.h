@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _GL_UTIL_H_
 #define _GL_UTIL_H_
@@ -42,4 +46,8 @@ void copy_to_glfloat_array( GLfloat dest[], scalar_t src[], int n );
 
 void init_glfloat_array( int num, GLfloat arr[], ... );
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <stdio.h>
 
 /*******************************************************************\
@@ -81,5 +86,6 @@ extern  void       PicClose(Pic* ppmFile);
 /*** THE END ***/
 
 
-
-
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

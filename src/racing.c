@@ -33,18 +33,18 @@
 #include "part_sys.h"
 #include "screenshot.h"
 #include "fog.h"
+#include "viewfrustum.h"
 
 /* Time constant for automatic steering centering (s) */
 #define TURN_DECAY_TIME_CONSTANT 0.5
 
 static bool_t right_turn;
 static bool_t left_turn;
+static bool_t paddling;
 
 void racing_init() 
 {
     player_data_t *plyr = get_player_data( local_player() );
-
-    g_game.time = 0.0;
 
     glutDisplayFunc( main_loop );
     glutIdleFunc( main_loop );
@@ -53,11 +53,18 @@ void racing_init()
     glutPassiveMotionFunc( NULL );
     glutMouseFunc( NULL );
 
-    init_physical_simulation();
-    clear_particles();
-    set_view_mode( plyr, ABOVE );
+    if ( g_game.prev_mode != PAUSED ) {
+	g_game.time = 0.0;
 
-    left_turn = right_turn = False;
+	init_physical_simulation();
+	clear_particles();
+	set_view_mode( plyr, ABOVE );
+
+	left_turn = right_turn = paddling = False;
+	plyr->control.is_paddling = False;
+
+	plyr->health = 1.0;
+    }
 }
 
 void racing_loop( scalar_t time_step )
@@ -88,15 +95,24 @@ void racing_loop( scalar_t time_step )
         }
     }
 
+    if ( paddling && plyr->control.is_paddling == False ) {
+	print_debug( DEBUG_CONTROL, "paddling on" );
+	plyr->control.is_paddling = True;
+	plyr->control.paddle_time = g_game.time;
+    }
+
     update_player_pos( plyr, time_step );
 	
     update_view( plyr );
+
+    setup_view_frustum( plyr, NEAR_CLIP_DIST, 
+			getparam_forward_clip_distance() );
 
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
     render_course();
     draw_background( getparam_fov(), (scalar_t)width/height );
-    draw_trees( plyr );
+    draw_trees();
 
     draw_tux();
     draw_tux_shadow();
@@ -110,8 +126,11 @@ void racing_loop( scalar_t time_step )
     }
 
     print_time();
-
     print_fps();
+
+    if ( debug_mode_is_active( DEBUG_HEALTH ) ) {
+	print_health(plyr->health * 100);
+    }
 
     reshape( width, height );
 
@@ -149,6 +168,13 @@ START_KEYBOARD_CB( brake_cb )
 }
 END_KEYBOARD_CB
 
+START_KEYBOARD_CB( paddle_cb )
+{
+    paddling = !release;
+}
+END_KEYBOARD_CB
+
+
 START_KEYBOARD_CB( above_view_cb )
 {
     if ( release ) return;
@@ -177,6 +203,13 @@ START_KEYBOARD_CB( screenshot_cb )
 }
 END_KEYBOARD_CB
 
+START_KEYBOARD_CB( pause_cb )
+{
+    if ( release ) return;
+    g_game.mode = PAUSED;
+}
+END_KEYBOARD_CB
+
 void racing_register()
 {
     int status = 0;
@@ -190,6 +223,8 @@ void racing_register()
     status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
 				"space", getparam_brake_key, brake_cb );
     status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"k", getparam_paddle_key, paddle_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
 				"1", getparam_above_view_key, above_view_cb );
     status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
 				"2", getparam_behind_view_key, 
@@ -198,6 +233,8 @@ void racing_register()
 				"3", getparam_eye_view_key, eye_view_cb );
     status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
 				"=", getparam_screenshot_key, screenshot_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"p", getparam_pause_key, pause_cb );
 
     check_assertion( status == 0, "out of keymap entries" );
 

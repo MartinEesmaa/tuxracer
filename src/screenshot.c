@@ -41,7 +41,7 @@ char* take_screenshot ( char* filename ) {
     Pic_Pixel *scanline;
     int i, viewport[4];
 
-    glGetIntegerv( GL_VIEWPORT, (void *)viewport );
+    glGetIntegerv( GL_VIEWPORT, viewport );
     scanline = PixelAlloc(viewport[2]);
 
     ppmFile = PicOpen( filename, viewport[2], viewport[3] );

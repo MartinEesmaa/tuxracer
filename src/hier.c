@@ -28,7 +28,9 @@
 #include <sys/stat.h>
 
 #include "tuxracer.h"
+#include "hier.h"
 #include "hier_util.h"
+#include "alglib.h"
 
 /*
  * These hash tables map from names to node pointers and material data, resp.
@@ -49,8 +51,6 @@ material_t g_hier_default_material =
 			      0.0              /* specular exp. = 0.0 */
 			    };
 
-
-GLuint g_hier_sphere_display_list;
 
 /*
  * Functions used to access and update the name-to-pointer hash tables
@@ -359,7 +359,7 @@ create_tranform_node( char *parent_name, char *child_name )
 }
 
 char*
-create_sphere_node( char *parent_name, char *child_name ) 
+create_sphere_node( char *parent_name, char *child_name, scalar_t resolution ) 
 {
     scene_node_t *node;
     char *msg;
@@ -371,6 +371,11 @@ create_sphere_node( char *parent_name, char *child_name )
 
     node->geom = Sphere;
     node->param.sphere.radius = 1.0;
+    node->param.sphere.divisions = min( 
+	MAX_SPHERE_DIVISIONS, max( 
+	    MIN_SPHERE_DIVISIONS, 
+	    ROUND_TO_NEAREST( getparam_tux_sphere_divisions() * resolution ) 
+	    ) );
 
     return NULL;
 }
@@ -403,12 +408,6 @@ create_material( char *mat, colour_t diffuse,
 
 void initialize_scene_graph() 
 {
-    /* Initialize the sphere display list */
-    g_hier_sphere_display_list = glGenLists(1);
-    glNewList( g_hier_sphere_display_list, GL_COMPILE );
-    draw_sphere( getparam_tux_sphere_divisions() );
-    glEndList();
-
     /* Initialize state */
 
     g_hier_default_material.diffuse.r = 0.0;

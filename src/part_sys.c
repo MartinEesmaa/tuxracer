@@ -204,6 +204,8 @@ void draw_particles( player_data_t *plyr )
 	glShadeModel( GL_FLAT );
     }
 
+    setup_course_tex_gen();
+
     for (p=head; p!=NULL; p = p->next) {
         if ( p->age < 0 ) continue;
 
@@ -235,7 +237,6 @@ void draw_particles( player_data_t *plyr )
 
         for ( i=0; i<3; i++) {
             glNormal3f( normal.x, normal.y, normal.z );
-	    glTexCoord2f( p->pt[i].x / TEX_SCALE, p->pt[i].z / TEX_SCALE );
             glVertex3f( p->pt[i].x, p->pt[i].y, p->pt[i].z );
         } 
 

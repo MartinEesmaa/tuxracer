@@ -17,10 +17,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _VIEWMODE_H_
 #define _VIEWMODE_H_
-
 
 void set_view_mode( player_data_t *plyr, view_mode_t mode );
 view_mode_t get_view_mode( player_data_t *plyr );
@@ -30,3 +33,7 @@ void set_tux_eye( tux_eye_t which_eye, point_t pt );
 void update_view( player_data_t *plyr );
 
 #endif /* _VIEWMODE_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

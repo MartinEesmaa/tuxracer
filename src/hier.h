@@ -17,8 +17,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _HIER_H_
 #define _HIER_H_
+
+#define MIN_SPHERE_DIVISIONS 3
+#define MAX_SPHERE_DIVISIONS 16
 
 extern int get_scene_node( char *node_name, scene_node_t **node );
 
@@ -37,11 +45,15 @@ extern char* set_scene_node_shadow_state( char *node, char *state );
 extern char* set_scene_node_eye( char *node, char *which_eye );
 
 extern char* create_tranform_node(char *parent, char *name);
-extern char* create_sphere_node(char *parent, char *name);
+extern char* create_sphere_node( char *parent_name, char *child_name, scalar_t resolution );
 
 extern void initialize_scene_graph();
 
 extern void draw_scene_graph( char *node );
 extern  bool_t collide( char *node, polyhedron_t ph );
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

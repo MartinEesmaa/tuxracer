@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* This code taken from Mesa 3Dfx demos by David Bucciarelli (tech.hmw@plus.it)
  */
 
@@ -36,3 +41,7 @@ typedef struct
 IMAGE *ImageLoad(char *);
 
 #endif /* !__IMAGE_H__! */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

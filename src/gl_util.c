@@ -33,6 +33,8 @@ void set_gl_options( RenderMode mode )
 	   GL_ALPHA_TEST
 	   GL_BLEND
 	   GL_STENCIL_TEST
+	   GL_TEXTURE_GEN_S
+	   GL_TEXTURE_GEN_T
            
 	 Other Functions:
 	   glDepthMask
@@ -51,6 +53,8 @@ void set_gl_options( RenderMode mode )
 	glDisable( GL_ALPHA_TEST );
         glEnable( GL_BLEND );
 	glDisable( GL_STENCIL_TEST );
+	glDisable( GL_TEXTURE_GEN_S );
+	glDisable( GL_TEXTURE_GEN_T );
 	glDepthMask( GL_TRUE );
         break;
 
@@ -63,7 +67,12 @@ void set_gl_options( RenderMode mode )
 	glDisable( GL_ALPHA_TEST );
 	glEnable( GL_BLEND );
 	glDisable( GL_STENCIL_TEST );
+	glEnable( GL_TEXTURE_GEN_S );
+	glEnable( GL_TEXTURE_GEN_T );
 	glDepthMask( GL_TRUE );
+
+	glTexGeni( GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR );
+	glTexGeni( GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR );
 	break;
 
     case TREES:
@@ -75,6 +84,8 @@ void set_gl_options( RenderMode mode )
         glEnable( GL_ALPHA_TEST );
 	glEnable( GL_BLEND );
 	glDisable( GL_STENCIL_TEST );
+	glDisable( GL_TEXTURE_GEN_S );
+	glDisable( GL_TEXTURE_GEN_T );
 	glDepthMask( GL_TRUE );
 
         glAlphaFunc( GL_GEQUAL, 0.9 );
@@ -89,7 +100,12 @@ void set_gl_options( RenderMode mode )
 	glDisable( GL_ALPHA_TEST );
         glEnable( GL_BLEND );
 	glDisable( GL_STENCIL_TEST );
+	glEnable( GL_TEXTURE_GEN_S );
+	glEnable( GL_TEXTURE_GEN_T );
 	glDepthMask( GL_TRUE );
+
+	glTexGeni( GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR );
+	glTexGeni( GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR );
 
         break;
         
@@ -102,6 +118,8 @@ void set_gl_options( RenderMode mode )
 	glDisable( GL_ALPHA_TEST );
         glEnable( GL_BLEND );
 	glDisable( GL_STENCIL_TEST );
+	glDisable( GL_TEXTURE_GEN_S );
+	glDisable( GL_TEXTURE_GEN_T );
 	glDepthMask( GL_TRUE );
 
         break;
@@ -115,6 +133,8 @@ void set_gl_options( RenderMode mode )
 	glDisable( GL_ALPHA_TEST );
 	glEnable( GL_BLEND );
 	glDisable( GL_STENCIL_TEST );
+	glDisable( GL_TEXTURE_GEN_S );
+	glDisable( GL_TEXTURE_GEN_T );
 	glDepthMask( GL_TRUE );
         break;
 
@@ -127,6 +147,8 @@ void set_gl_options( RenderMode mode )
 	glDisable( GL_ALPHA_TEST );
 	glEnable( GL_BLEND );
 	glDisable( GL_STENCIL_TEST );
+	glDisable( GL_TEXTURE_GEN_S );
+	glDisable( GL_TEXTURE_GEN_T );
 	glDepthMask( GL_TRUE );
 
         break;

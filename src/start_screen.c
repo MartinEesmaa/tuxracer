@@ -31,6 +31,7 @@
 #include "screenshot.h"
 #include "course_load.h"
 #include "fog.h"
+#include "viewfrustum.h"
 
 static const colour_t text_colour = { 0.0, 0.0, 0.0 };
 
@@ -48,7 +49,8 @@ static void print_menu( int x, int starty, int endy,
     int i;
 
     for ( i=0; i<n; i++ ) {
-	glRasterPos2i( x, starty + (scalar_t)i/(n-1) * ( endy-starty ) );
+	glRasterPos2i( x, 
+		       (int)( starty + (scalar_t)i/(n-1) * ( endy-starty ) ) );
 	print_string( GLUT_BITMAP_TIMES_ROMAN_24, menu_text[i] );
     }
 }
@@ -66,6 +68,8 @@ void start_screen_init()
 
 void start_screen_loop( scalar_t time_step )
 {
+    player_data_t *plyr = get_player_data( local_player() );
+
     char buff[BUFF_LEN];
 
     check_gl_error();
@@ -74,10 +78,12 @@ void start_screen_loop( scalar_t time_step )
 
     clear_rendering_context();
 
-    update_preview();
+    update_preview( plyr );
 
     set_course_clipping( False );
     set_course_eye_point( get_preview_eye_pt() );
+
+    setup_view_frustum( plyr, 1, 10000 );
 
     disable_fog();
 
@@ -96,15 +102,19 @@ void start_screen_loop( scalar_t time_step )
 		sizeof( menu_text ) / sizeof( menu_text[0] ) );
 
 
+
     if ( get_course_name() != NULL ) {
-	print_string_centered( 40, GLUT_BITMAP_HELVETICA_12, 
+	print_string_centered( 50, GLUT_BITMAP_HELVETICA_12, 
 			       get_course_name() );
     }
 
     if ( get_course_author() != NULL ) {
 	sprintf( buff, "Designed by %s", get_course_author() );
-	print_string_centered( 20, GLUT_BITMAP_HELVETICA_12, buff );
+	print_string_centered( 35, GLUT_BITMAP_HELVETICA_12, buff );
     }
+
+    print_string_centered( 10, GLUT_BITMAP_HELVETICA_12, 
+			   "Hint: edit ~/.tuxracer to change game options" );
 
     print_fps();
 
@@ -185,12 +195,77 @@ START_KEYBOARD_CB( start_menu_cb )
 }
 END_KEYBOARD_CB
 
+START_KEYBOARD_CB( wireframe_cb )
+{
+    static bool_t wireframe = False;
+    if ( release ) return;
+
+    if ( wireframe ) {
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+    } else {
+	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    }
+    wireframe = !wireframe;
+}
+END_KEYBOARD_CB
+
+START_KEYBOARD_CB( increase_detail_cb )
+{
+    int cur_level;
+    int incr;
+    if ( release ) return;
+
+    cur_level = getparam_course_detail_level();
+    incr = (int) ( cur_level * 0.10 );
+
+    if ( incr < 1 ) {
+	incr = 1;
+    }
+
+    if ( cur_level <= INT_MAX - incr ) {
+	setparam_course_detail_level( cur_level + incr );
+    }
+
+    print_debug( DEBUG_QUADTREE, "Current detail level: %d", 
+		 getparam_course_detail_level() );
+}
+END_KEYBOARD_CB
+
+START_KEYBOARD_CB( decrease_detail_cb )
+{
+    int cur_level;
+    int decr;
+    if ( release ) return;
+
+    cur_level = getparam_course_detail_level();
+    decr = (int) ( cur_level * ( 1.0 - 1./1.10 ) );
+
+    if ( decr < 1 ) {
+	decr = 1;
+    }
+
+    if ( cur_level > 1 ) {
+	setparam_course_detail_level( cur_level - decr );
+	
+    }
+
+    print_debug( DEBUG_QUADTREE, "Current detail level: %d", 
+		 getparam_course_detail_level() );
+}
+END_KEYBOARD_CB
+
 void start_screen_register()
 {
     int status = 0;
 
     status |= 
 	add_keymap_entry( START, DEFAULT_CALLBACK, NULL, NULL, start_menu_cb );
+    status |= 
+	add_keymap_entry( ALL_MODES, FIXED_KEY, "f11", NULL, wireframe_cb );
+    status |= add_keymap_entry( ALL_MODES, FIXED_KEY, "f9", NULL, 
+			  decrease_detail_cb );
+    status |= add_keymap_entry( ALL_MODES, FIXED_KEY, "f10", NULL, 
+			  increase_detail_cb );
 
     check_assertion( status == 0, "out of keymap entries" );
 

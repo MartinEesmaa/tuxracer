@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _GAME_OVER_H_
 #define _GAME_OVER_H_
@@ -25,4 +29,8 @@ void game_over_init();
 void game_over_loop( scalar_t time_step );
 void game_over_register();
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

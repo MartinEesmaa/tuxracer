@@ -264,18 +264,24 @@ struct params {
     struct param turn_left_key;
     struct param turn_right_key;
     struct param brake_key;
+    struct param paddle_key;
     struct param above_view_key;
     struct param behind_view_key;
     struct param eye_view_key;
     struct param screenshot_key;
+    struct param pause_key;
     struct param display_fps;
+    struct param tux_slides_on_belly;
+    struct param course_detail_level;
+    struct param forward_clip_distance;
+    struct param backward_clip_distance;
+    struct param tree_detail_distance;
     struct param draw_tux_shadow;
     struct param tux_sphere_divisions;
     struct param tux_shadow_sphere_divisions;
     struct param draw_particles;
     struct param draw_particle_shadows;
     struct param nice_fog;
-    struct param compile_course;
     struct param use_sphere_display_list;
     struct param do_intro_animation;
     struct param mipmap_type; /* 0 = GL_NEAREST,
@@ -310,7 +316,6 @@ void init_game_configuration()
     INIT_PARAM_INT( tux_sphere_divisions, 6 );
     INIT_PARAM_INT( tux_shadow_sphere_divisions, 3 );
     INIT_PARAM_BOOL( nice_fog, True );
-    INIT_PARAM_BOOL( compile_course, False );
     INIT_PARAM_BOOL( use_sphere_display_list, True );
     INIT_PARAM_BOOL( display_fps, False );
     INIT_PARAM_INT( x_resolution, 640 );
@@ -326,13 +331,20 @@ void init_game_configuration()
     INIT_PARAM_STRING( turn_left_key, "j" );
     INIT_PARAM_STRING( turn_right_key, "l" );
     INIT_PARAM_STRING( brake_key, "space" );
+    INIT_PARAM_STRING( paddle_key, "k" );
     INIT_PARAM_STRING( above_view_key, "1" );
     INIT_PARAM_STRING( behind_view_key, "2" );
     INIT_PARAM_STRING( eye_view_key, "3" );
     INIT_PARAM_STRING( screenshot_key, "=" );
+    INIT_PARAM_STRING( pause_key, "p" );
     INIT_PARAM_INT( fov, 60 );
     INIT_PARAM_STRING( debug, "" );
     INIT_PARAM_INT( warning_level, 100 );
+    INIT_PARAM_INT( forward_clip_distance, 100 );
+    INIT_PARAM_INT( backward_clip_distance, 10 );
+    INIT_PARAM_INT( tree_detail_distance, 20 );
+    INIT_PARAM_INT( course_detail_level, 125 );
+    INIT_PARAM_BOOL( tux_slides_on_belly, True );
 }
 
 
@@ -347,7 +359,6 @@ FN_PARAM_BOOL( draw_particle_shadows )
 FN_PARAM_INT( tux_sphere_divisions )
 FN_PARAM_INT( tux_shadow_sphere_divisions )
 FN_PARAM_BOOL( nice_fog )
-FN_PARAM_BOOL( compile_course )
 FN_PARAM_BOOL( use_sphere_display_list )
 FN_PARAM_BOOL( display_fps )
 FN_PARAM_INT( x_resolution )
@@ -362,13 +373,20 @@ FN_PARAM_STRING( quit_key )
 FN_PARAM_STRING( turn_left_key )
 FN_PARAM_STRING( turn_right_key )
 FN_PARAM_STRING( brake_key )
+FN_PARAM_STRING( paddle_key )
 FN_PARAM_STRING( above_view_key )
 FN_PARAM_STRING( behind_view_key )
 FN_PARAM_STRING( eye_view_key )
 FN_PARAM_STRING( screenshot_key )
+FN_PARAM_STRING( pause_key )
 FN_PARAM_INT( fov )
 FN_PARAM_STRING( debug )
 FN_PARAM_INT( warning_level )
+FN_PARAM_INT( forward_clip_distance )
+FN_PARAM_INT( backward_clip_distance )
+FN_PARAM_INT( tree_detail_distance )
+FN_PARAM_INT( course_detail_level )
+FN_PARAM_BOOL( tux_slides_on_belly )
 
 
 /*
@@ -422,8 +440,8 @@ void read_config_file()
 
     /* File is there, so let's try to evaluate it. */
     if ( Tcl_EvalFile( g_game.tcl_interp, config_file ) != TCL_OK ) {
-        fprintf( stderr, "Error evalating %s\n", config_file );
-	exit( 1 );
+        handle_error( 1, "error evalating %s: %s", config_file,
+		      Tcl_GetStringResult( g_game.tcl_interp ) );
     }
 }
 
@@ -446,6 +464,15 @@ void write_config_file()
 		       config_file, strerror(errno) );
 	return;
     }
+
+    fprintf( config_stream, 
+	     "# Tux Racer " VERSION " configuration file\n"
+	     "#\n"
+	     "# See the README file distributed with the program for\n"
+	     "# descriptions of these parameters.\n"
+	     "# Note: this file is parsed using Tcl, so Tcl syntax applies.\n"
+	     "#\n"
+	);
 
     for (i=0; i<sizeof(Params)/sizeof(struct param); i++) {
 	parm = (struct param*)&Params + i;

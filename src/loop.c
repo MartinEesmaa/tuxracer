@@ -86,7 +86,6 @@ static scalar_t calc_time_step()
 
 void main_loop()
 {
-    static game_mode_t prev_mode = NO_MODE;
     game_mode_t cur_mode = g_game.mode;
 
     if ( getparam_warp_pointer() ) {
@@ -94,12 +93,12 @@ void main_loop()
 			 getparam_y_resolution()/2 );
     }
 
-    if ( prev_mode != cur_mode ) {
+    if ( g_game.prev_mode != cur_mode ) {
 	if ( mode_funcs[ cur_mode ].init_func != NULL ) {
             reset_time_step_clock();
 	    ( mode_funcs[ cur_mode ].init_func )( );
 	}
-	prev_mode = cur_mode;
+	g_game.prev_mode = cur_mode;
     }
 
     if ( mode_funcs[ cur_mode ].loop_func != NULL ) {

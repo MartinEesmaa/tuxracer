@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef GAME_CONFIG_H
 #define GAME_CONFIG_H
 
@@ -27,96 +32,97 @@ void read_config_file();
 void write_config_file();
 void clear_config_cache();
 
-char *getparam_data_dir();
-void setparam_data_dir(char *);
+#define PROTO_PARAM( name, type ) \
+    type getparam_ ## name(); \
+    void setparam_ ## name( type val )
 
-bool_t getparam_draw_tux_shadow();
-void setparam_draw_tux_shadow( bool_t );
+#define PROTO_PARAM_STRING( name ) \
+    PROTO_PARAM( name, char* )
 
-bool_t getparam_draw_particles();
-void setparam_draw_particles( bool_t );
+#define PROTO_PARAM_CHAR( name ) \
+    PROTO_PARAM( name, char )
 
-bool_t getparam_draw_particle_shadows();
-void setparam_draw_particle_shadows( bool_t );
+#define PROTO_PARAM_INT( name ) \
+    PROTO_PARAM( name, int )
 
-int getparam_tux_sphere_divisions();
-void setparam_tux_sphere_divisions( int );
+#define PROTO_PARAM_BOOL( name ) \
+    PROTO_PARAM( name, bool_t )
 
-int getparam_tux_shadow_sphere_divisions();
-void setparam_tux_shadow_sphere_divisions( int );
 
-bool_t getparam_nice_fog();
-void setparam_nice_fog( bool_t );
+PROTO_PARAM_STRING( data_dir );
 
-bool_t getparam_compile_course();
-void setparam_compile_course( bool_t );
+PROTO_PARAM_BOOL( draw_tux_shadow );
 
-bool_t getparam_use_sphere_display_list();
-void setparam_use_sphere_display_list( bool_t );
+PROTO_PARAM_BOOL( draw_particles );
 
-bool_t getparam_display_fps();
-void setparam_display_fps( bool_t );
+PROTO_PARAM_BOOL( draw_particle_shadows );
 
-int getparam_x_resolution();
-void setparam_x_resolution( int );
+PROTO_PARAM_INT( tux_sphere_divisions );
 
-int getparam_y_resolution();
-void setparam_y_resolution( int );
+PROTO_PARAM_INT( tux_shadow_sphere_divisions );
 
-bool_t getparam_do_intro_animation();
-void setparam_do_intro_animation( bool_t );
+PROTO_PARAM_BOOL( nice_fog );
 
-int getparam_mipmap_type();
-void setparam_mipmap_type( int );
+PROTO_PARAM_BOOL( use_sphere_display_list );
 
-bool_t getparam_fullscreen();
-void setparam_fullscreen( bool_t );
+PROTO_PARAM_BOOL( display_fps );
 
-bool_t getparam_force_window_position();
-void setparam_force_window_position( bool_t );
+PROTO_PARAM_INT( x_resolution );
 
-bool_t getparam_warp_pointer();
-void setparam_warp_pointer( bool_t );
+PROTO_PARAM_INT( y_resolution );
 
-int getparam_ode_solver();
-void setparam_ode_solver( int );
+PROTO_PARAM_BOOL( do_intro_animation );
 
-int getparam_control_mode();
-void setparam_control_mode( int );
+PROTO_PARAM_INT( mipmap_type );
 
-char *getparam_quit_key();
-void setparam_quit_key( char * );
+PROTO_PARAM_BOOL( fullscreen );
 
-char *getparam_turn_left_key();
-void setparam_turn_left_key( char * );
+PROTO_PARAM_BOOL( force_window_position );
 
-char *getparam_turn_right_key();
-void setparam_turn_right_key( char * );
+PROTO_PARAM_BOOL( warp_pointer );
 
-char *getparam_brake_key();
-void setparam_brake_key( char * );
+PROTO_PARAM_INT( ode_solver );
 
-char *getparam_above_view_key();
-void setparam_above_view_key( char * );
+PROTO_PARAM_INT( control_mode );
 
-char *getparam_behind_view_key();
-void setparam_behind_view_key( char * );
+PROTO_PARAM_STRING( quit_key );
 
-char *getparam_eye_view_key();
-void setparam_eye_view_key( char * );
+PROTO_PARAM_STRING( turn_left_key );
 
-char *getparam_screenshot_key();
-void setparam_screenshot_key( char * );
+PROTO_PARAM_STRING( turn_right_key );
 
-int getparam_fov();
-void setparam_fov( int );
+PROTO_PARAM_STRING( brake_key );
 
-char *getparam_debug();
-void setparam_debug( char * );
+PROTO_PARAM_STRING( paddle_key );
 
-int getparam_warning_level();
-void setparam_warning_level( int );
+PROTO_PARAM_STRING( above_view_key );
+
+PROTO_PARAM_STRING( behind_view_key );
+
+PROTO_PARAM_STRING( eye_view_key );
+
+PROTO_PARAM_STRING( screenshot_key );
+
+PROTO_PARAM_STRING( pause_key );
+
+PROTO_PARAM_INT( fov );
+
+PROTO_PARAM_STRING( debug );
+
+PROTO_PARAM_INT( warning_level );
+
+PROTO_PARAM_INT( forward_clip_distance );
+
+PROTO_PARAM_INT( backward_clip_distance );
+
+PROTO_PARAM_INT( tree_detail_distance );
+
+PROTO_PARAM_INT( course_detail_level );
+
+PROTO_PARAM_BOOL( tux_slides_on_belly );
 
 #endif 
 
-
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef _PREVIEW_H_
 #define _PREVIEW_H_
@@ -25,8 +29,12 @@
 
 void init_preview();
 
-void update_preview();
+void update_preview( player_data_t *plyr );
 
 point_t get_preview_eye_pt();
 
 #endif /* _PREVIEW_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

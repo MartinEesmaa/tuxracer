@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _KEYBOARD_UTIL_H_
 #define _KEYBOARD_UTIL_H_
 
@@ -27,4 +32,8 @@ typedef struct {
 
 int translate_key_string( char *keys, key_desc_t **key_list );
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

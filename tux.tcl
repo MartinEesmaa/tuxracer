@@ -13,7 +13,7 @@ tux_root_node $root
 
 tux_material white_penguin \
             {0.58 0.58 0.58 } {0.2 0.2 0.2} 50.0
-tux_material black_penguin {0.08 0.08 0.08} {0.4 0.4 0.4} 50.0
+tux_material black_penguin {0.1 0.1 0.1} {0.5 0.5 0.5} 20.0
 tux_material beak_colour \
             {0.64 0.54 0.06} {0.4 0.4 0.4} 5
 tux_material nostril_colour \
@@ -28,12 +28,12 @@ tux_material iris_colour {0.01 0.01 0.01} {0.4 0.4 0.4} 90.0
 # Helper function to make torso parts
 proc makeBody { parent } {
     set torso_bl "$parent:b"
-    tux_sphere $parent b
+    tux_sphere $parent b 1.0
     tux_surfaceproperty $torso_bl black_penguin
     tux_scale $torso_bl {0 0 0} { 0.95 1.0 0.8 }
 
     set torso_wh1 $parent:w1
-    tux_sphere $parent w1
+    tux_sphere $parent w1 1.0
     tux_surfaceproperty $torso_wh1 white_penguin
     tux_translate $torso_wh1 { 0.0 0 0.17 }
     tux_scale $torso_wh1 {0 0 0} {0.8 0.9 0.7}
@@ -111,11 +111,11 @@ tux_transform $neck_org scl
 set neck_scale "$neck_org:scl"
 tux_scale $neck_scale {0 0 0} { 0.45 0.5 0.45 }
 
-tux_sphere $neck_scale neck
+tux_sphere $neck_scale neck 0.8
 set neck "$neck_scale:neck"
 tux_surfaceproperty $neck black_penguin
 
-tux_sphere $neck_scale neckw
+tux_sphere $neck_scale neckw 0.66
 set neckw "$neck_scale:neckw"
 tux_surfaceproperty $neckw white_penguin
 tux_translate $neckw {0 -0.08 0.35 }
@@ -143,7 +143,7 @@ set head_org "$head_joint:hdorg"
 tux_rotate $head_org y -90
 tux_translate $head_org {0 0.20 0}
 
-tux_sphere $head_org hd
+tux_sphere $head_org hd 1.0
 set head "$head_org:hd"
 tux_surfaceproperty $head black_penguin
 tux_scale $head {0 0 0} {0.42 0.5 0.42}
@@ -152,7 +152,7 @@ tux_scale $head {0 0 0} {0.42 0.5 0.42}
 # Create beak
 #
 
-tux_sphere $head_org bk1
+tux_sphere $head_org bk1 0.8
 set beak1 "$head_org:bk1"
 tux_surfaceproperty $beak1 beak_colour
 tux_translate $beak1 { 0 -0.205 0.3 }
@@ -167,7 +167,7 @@ tux_scale $beak1 {0 0 0} { 0.23 0.12 0.4 }
 #tux_scale $beak2 {0 0 0} { 0.19 0.15 0.32 }
 #tux_shadow $beak2 off
 
-tux_sphere $head_org bk3
+tux_sphere $head_org bk3 0.66
 set beak3 "$head_org:bk3"
 tux_surfaceproperty $beak3 beak_colour
 tux_translate $beak3 { 0 -0.23 0.3 }
@@ -179,7 +179,7 @@ tux_shadow $beak3 off
 # Create eyes
 #
 
-tux_sphere $head_org le
+tux_sphere $head_org le 0.66
 set left_eye "$head_org:le"
 tux_surfaceproperty $left_eye white_penguin
 tux_translate $left_eye {0.13 -0.03 0.38}
@@ -189,7 +189,7 @@ tux_rotate $left_eye x 5
 tux_scale $left_eye {0 0 0} {0.1 0.13 0.03}
 tux_shadow $left_eye off
 
-tux_sphere $head_org re
+tux_sphere $head_org re 0.66
 set right_eye "$head_org:re"
 tux_surfaceproperty $right_eye white_penguin
 tux_translate $right_eye {-0.13 -0.03 0.38}
@@ -199,7 +199,7 @@ tux_rotate $right_eye x 5
 tux_scale $right_eye {0 0 0} {0.1 0.13 0.03}
 tux_shadow $right_eye off
 
-tux_sphere $head_org li
+tux_sphere $head_org li 0.66
 set left_iris "$head_org:li"
 tux_surfaceproperty $left_iris iris_colour
 tux_translate $left_iris {0.12 -0.045 0.40}
@@ -210,7 +210,7 @@ tux_scale $left_iris {0 0 0} {0.055 0.07 0.03}
 tux_shadow $left_iris off
 tux_eye $left_iris left
 
-tux_sphere $head_org ri
+tux_sphere $head_org ri 0.66
 set right_iris "$head_org:ri"
 tux_surfaceproperty $right_iris iris_colour
 tux_translate $right_iris {-0.12 -0.045 0.40}
@@ -242,7 +242,7 @@ set luparm_org "$lshoulder_joint:luarmorg"
 tux_rotate $luparm_org x -90
 tux_translate $luparm_org {-0.22 0 0}
 
-tux_sphere $luparm_org uparm
+tux_sphere $luparm_org uparm 0.66
 set luparm "$luparm_org:uparm"
 tux_surfaceproperty $luparm black_penguin
 tux_scale $luparm {0 0 0} {0.34 0.1 0.2}
@@ -263,7 +263,7 @@ set ruparm_org "$rshoulder_joint:ruarmorg"
 tux_rotate $ruparm_org x +90
 tux_translate $ruparm_org {-0.22 0 0}
 
-tux_sphere $ruparm_org uparm
+tux_sphere $ruparm_org uparm 0.66
 set ruparm "$ruparm_org:uparm"
 tux_surfaceproperty $ruparm black_penguin
 tux_scale $ruparm {0 0 0} {0.34 0.1 0.2}
@@ -287,7 +287,7 @@ set llowarm_org "$lelbow_joint:llarmorg"
 tux_rotate $llowarm_org x -90
 tux_translate $llowarm_org {-0.19 0 0}
 
-tux_sphere $llowarm_org llowarm
+tux_sphere $llowarm_org llowarm 0.66
 set llowarm "$llowarm_org:llowarm"
 tux_surfaceproperty $llowarm black_penguin
 tux_scale $llowarm {0 0 0} {0.30 0.07 0.15}
@@ -307,7 +307,7 @@ set rlowarm_org "$relbow_joint:rlarmorg"
 tux_rotate $rlowarm_org x +90
 tux_translate $rlowarm_org {-0.19 0 0}
 
-tux_sphere $rlowarm_org rlowarm
+tux_sphere $rlowarm_org rlowarm 0.66
 set rlowarm "$rlowarm_org:rlowarm"
 tux_surfaceproperty $rlowarm black_penguin
 tux_scale $rlowarm {0 0 0} {0.30 0.07 0.15}
@@ -331,7 +331,7 @@ set lhand_org "$lwrist_joint:lhndorg"
 tux_rotate $lhand_org x -90
 tux_translate $lhand_org {-0.10 0 0}
 
-tux_sphere $lhand_org lhand
+tux_sphere $lhand_org lhand 0.5
 set lhand "$lhand_org:lhand"
 tux_surfaceproperty $lhand black_penguin
 tux_scale $lhand {0 0 0} {0.12 0.05 0.12}
@@ -351,7 +351,7 @@ set rhand_org "$rwrist_joint:rhndorg"
 tux_rotate $rhand_org x +90
 tux_translate $rhand_org {-0.10 0 0}
 
-tux_sphere $rhand_org rhand
+tux_sphere $rhand_org rhand 0.5
 set rhand "$rhand_org:rhand"
 tux_surfaceproperty $rhand black_penguin
 tux_scale $rhand {0 0 0} {0.12 0.05 0.12}
@@ -376,12 +376,12 @@ set lthigh_org "$lhip_joint:lthgorg"
 tux_rotate $lthigh_org y -110
 tux_translate $lthigh_org { 0 -0.1 0 } 
 
-tux_sphere $lthigh_org lthigh
+tux_sphere $lthigh_org lthigh 0.5
 set lthigh "$lthigh_org:lthigh"
 tux_surfaceproperty $lthigh beak_colour
 tux_scale $lthigh {0 0 0} {0.07 0.30 0.07}
 
-tux_sphere $lthigh_org lhipball
+tux_sphere $lthigh_org lhipball 0.5
 set lhipball "$lthigh_org:lhipball"
 tux_surfaceproperty $lhipball black_penguin
 tux_translate $lhipball {0.0 0.05 0.0}
@@ -403,12 +403,12 @@ set rthigh_org "$rhip_joint:rthgorg"
 tux_rotate $rthigh_org y +110
 tux_translate $rthigh_org { 0 -0.1 0 } 
 
-tux_sphere $rthigh_org rthigh
+tux_sphere $rthigh_org rthigh 0.5
 set rthigh "$rthigh_org:rthigh"
 tux_surfaceproperty $rthigh beak_colour
 tux_scale $rthigh {0 0 0} {0.07 0.30 0.07}
 
-tux_sphere $rthigh_org rhipball
+tux_sphere $rthigh_org rhipball 0.5
 set rhipball "$rthigh_org:rhipball"
 tux_surfaceproperty $rhipball black_penguin
 tux_translate $rhipball {0.0 0.05 0.0}
@@ -427,13 +427,14 @@ tux_rotate $lcalf_xlate y +90
 
 tux_transform $lcalf_xlate lkneejt               ;# left knee joint
 set lknee_joint "$lcalf_xlate:lkneejt"      
+tux_left_knee $lknee_joint
 
 tux_transform $lknee_joint lclforg
 set lcalf_org "$lknee_joint:lclforg"
 tux_rotate $lcalf_org y -90
 tux_translate $lcalf_org { 0 -0.13 0 } 
 
-tux_sphere $lcalf_org lcalf
+tux_sphere $lcalf_org lcalf 0.5
 set lcalf "$lcalf_org:lcalf"
 tux_surfaceproperty $lcalf beak_colour
 tux_scale $lcalf {0 0 0} {0.06 0.18 0.06}
@@ -446,13 +447,14 @@ tux_rotate $rcalf_xlate y -90
 
 tux_transform $rcalf_xlate rkneejt               ;# right knee joint
 set rknee_joint "$rcalf_xlate:rkneejt"
+tux_right_knee $rknee_joint
 
 tux_transform $rknee_joint rclforg
 set rcalf_org "$rknee_joint:rclforg"
 tux_rotate $rcalf_org y +90
 tux_translate $rcalf_org { 0 -0.13 0 } 
 
-tux_sphere $rcalf_org rcalf
+tux_sphere $rcalf_org rcalf 0.5
 set rcalf "$rcalf_org:rcalf"
 tux_surfaceproperty $rcalf beak_colour
 tux_scale $rcalf {0 0 0} {0.06 0.18 0.06}
@@ -471,25 +473,25 @@ proc makeFoot { parent } {
     tux_surfaceproperty $foot_org beak_colour
     tux_scale $foot_org { 0 0 0 } { 1.1 1.0 1.3 }
 
-    tux_sphere $foot_org base
+    tux_sphere $foot_org base 0.66
     set foot_base "$foot_org:base"
     tux_scale $foot_base {0 0 0} {0.25 0.08 0.18}
 
-    tux_sphere $foot_org toe1
+    tux_sphere $foot_org toe1 0.66
     set toe1 "$foot_org:toe1"
     tux_surfaceproperty $toe1 beak_colour
     tux_translate $toe1 {-0.07 0 0.1}
     tux_rotate $toe1 y 30
     tux_scale $toe1 {0 0 0} {0.27 0.07 0.11}
 
-    tux_sphere $foot_org toe2
+    tux_sphere $foot_org toe2 0.66
     set toe2 "$foot_org:toe2"
     tux_surfaceproperty $toe2 beak_colour
     tux_translate $toe2 {-0.07 0 -0.1}
     tux_rotate $toe2 y -30
     tux_scale $toe2 {0 0 0} {0.27 0.07 0.11}
 
-    tux_sphere $foot_org toe3
+    tux_sphere $foot_org toe3 0.66
     set toe3 "$foot_org:toe3"
     tux_surfaceproperty $toe3 beak_colour
     tux_translate $toe3 {-0.08 0 0}
@@ -504,6 +506,7 @@ tux_rotate $lfoot_xlate y -50
 
 tux_transform $lfoot_xlate lankjt
 set lankle_joint "$lfoot_xlate:lankjt"          ;# left ankle joint
+tux_left_ankle $lankle_joint
 
 makeFoot $lankle_joint
 
@@ -515,6 +518,7 @@ tux_rotate $rfoot_xlate y +50
 
 tux_transform $rfoot_xlate rankjt
 set rankle_joint "$rfoot_xlate:rankjt"          ;# right ankle joint
+tux_right_ankle $rankle_joint
 
 makeFoot $rankle_joint
 
@@ -528,12 +532,13 @@ tux_rotate $tail_xlate x -60
 
 tux_transform $tail_xlate tail_joint
 set tail_joint "$tail_xlate:tail_joint"         ;# tail joint
+tux_tail $tail_joint
 
 tux_transform $tail_joint tail_orig
 set tail_orig "$tail_joint:tail_orig"
 tux_translate $tail_orig {0 0.15 0}
 
-tux_sphere $tail_orig tail
+tux_sphere $tail_orig tail 0.5
 set tail "$tail_orig:tail"
 tux_surfaceproperty $tail black_penguin
 tux_scale $tail {0 0 0} {0.2 0.3 0.1}

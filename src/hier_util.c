@@ -19,10 +19,10 @@
 
 #include "tuxracer.h"
 #include "render_util.h"
+#include "hier.h"
+#include "alglib.h"
 
 #define USE_GLUSPHERE 0
-
-extern GLuint g_hier_sphere_display_list;
 
 #if USE_GLUSPHERE
 
@@ -154,6 +154,46 @@ void draw_sphere( int num_divisions )
 
 #endif /* USE_GLUSPHERE */
 
+static GLuint get_sphere_display_list( int divisions ) {
+    static bool_t initialized = False;
+    static int num_display_lists;
+    static GLuint *display_lists = NULL;
+    int base_divisions;
+    int i, idx;
+
+    if ( !initialized ) {
+	initialized = True;
+	base_divisions = getparam_tux_sphere_divisions();
+
+	num_display_lists = MAX_SPHERE_DIVISIONS - MIN_SPHERE_DIVISIONS + 1;
+
+	check_assertion( display_lists == NULL, "display_lists not NULL" );
+	display_lists = (GLuint*) malloc( sizeof(GLuint) * num_display_lists );
+
+	for (i=0; i<num_display_lists; i++) {
+	    display_lists[i] = 0;
+	}
+    }
+
+
+    idx = divisions - MIN_SPHERE_DIVISIONS;
+
+    check_assertion( idx >= 0 &&
+		     idx < num_display_lists, 
+		     "invalid number of sphere subdivisions" );
+
+    if ( display_lists[idx] == 0 ) {
+	/* Initialize the sphere display list */
+	display_lists[idx] = glGenLists(1);
+	glNewList( display_lists[idx], GL_COMPILE );
+	draw_sphere( divisions );
+	glEndList();
+    }
+
+    return display_lists[idx];
+}
+
+
 
 /*--------------------------------------------------------------------------*/
 
@@ -177,9 +217,10 @@ void traverse_dag( scene_node_t *node, material_t *mat )
                      mat->specular_exp );
 
 	if ( getparam_use_sphere_display_list() ) {
-	    glCallList( g_hier_sphere_display_list );
+	    glCallList( get_sphere_display_list( 
+		node->param.sphere.divisions ) );
 	} else {
-	    draw_sphere( getparam_tux_sphere_divisions() );
+	    draw_sphere( node->param.sphere.divisions );
 	}
     } 
 

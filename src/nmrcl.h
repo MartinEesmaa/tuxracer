@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _NMRCL_H_
 #define _NMRCL_H_
 
@@ -74,3 +79,7 @@ ode_solver_t new_euler_solver();
 double lin_interp( const double x[], const double y[], double val, int n );
 
 #endif /* _NMRCL_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

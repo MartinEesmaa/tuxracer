@@ -17,8 +17,15 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _RENDER_UTIL_H_
 #define _RENDER_UTIL_H_
+
+#define NEAR_CLIP_DIST 0.1
 
 extern const colour_t white;
 extern const colour_t grey;
@@ -41,5 +48,10 @@ void set_material_alpha( colour_t diffuse_colour, colour_t specular_colour,
 			 scalar_t specular_exp, scalar_t alpha );
 void set_material( colour_t diffuse_colour, colour_t specular_colour,
 		   scalar_t specular_exp );
+void print_health(scalar_t health_pct);
 
 #endif /* _RENDER_UTIL_H_ */
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

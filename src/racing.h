@@ -17,6 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #ifndef _RACING_H_
 #define _RACING_H_
 
@@ -24,4 +29,8 @@ void racing_init();
 void racing_loop( scalar_t time_step );
 void racing_register();
 
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif
