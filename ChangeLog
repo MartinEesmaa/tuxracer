@@ -1,3 +1,13 @@
+2000-10-16  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+	* Making version 0.60.3
+
+	* tuxracer/Makefile.am:
+	Removed 'html/images/manual' directory (causes it to be included twice).
+
+	* tuxracer/configure.in:
+	Fixes for building with Cygwin.
+	Updated version to 0.60.3.
+	
 2000-10-15  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
 	* Making version 0.60.2
 
