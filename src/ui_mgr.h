@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,21 +27,10 @@ extern "C"
 
 #include "tuxracer.h"
 
-typedef enum {
-    UI_MOUSE_DOWN = GLUT_DOWN,
-    UI_MOUSE_UP = GLUT_UP
-} ui_button_state_t;
-
-typedef enum {
-    UI_LEFT_BUTTON = GLUT_LEFT_BUTTON,
-    UI_MIDDLE_BUTTON = GLUT_MIDDLE_BUTTON,
-    UI_RIGHT_BUTTON = GLUT_RIGHT_BUTTON
-} ui_mouse_button_t;
-
 typedef void (*mouse_motion_event_cb_t)( void *widget, int x, int y );
 typedef void (*mouse_button_event_cb_t)( void *widget, 
-					  ui_mouse_button_t button,
-					  int x, int y );
+					 winsys_mouse_button_t button,
+					 int x, int y );
 typedef void (*widget_draw_cb_t)( void *widget );
 
 void init_ui_manager();

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,6 +23,23 @@
 #if defined( __CYGWIN__ )
 #  include <sys/cygwin.h>
 #endif
+
+#ifndef MAX_PATH
+#  ifdef PATH_MAX
+#    define MAX_PATH PATH_MAX
+#  else
+#    define MAX_PATH 8192 /* this ought to be more than enough */
+#  endif
+#endif
+
+static void convert_path( char *new_path, char *orig_path ) 
+{
+#if defined( __CYGWIN__ )
+    cygwin_conv_to_posix_path( orig_path, new_path );
+#else
+    strcpy( new_path, orig_path );
+#endif /* defined( __CYGWIN__ ) */
+}
 
 bool_t file_exists( char *filename )
 {
@@ -48,22 +65,9 @@ bool_t file_exists( char *filename )
     
     struct stat stat_info;
     bool_t file_exists = False;
-
-#  if defined( __CYGWIN__ )
-
-    /* If cygwin we need to convert from DOS paths (used in data files)
-       to posix paths */
     char filename_copy[MAX_PATH];
-    cygwin_conv_to_posix_path( filename, filename_copy );
 
-#  else
-
-    /* Create a dummy copy to keep things consistent with the cygwin
-       case -- yuck! */
-    char *filename_copy;
-    filename_copy = string_copy( filename );
-
-#  endif /* defined( __CYGWIN__ ) */
+    convert_path( filename_copy, filename );
 
     if ( stat( filename_copy, &stat_info ) != 0 ) {
 	if ( errno != ENOENT ) {
@@ -74,14 +78,149 @@ bool_t file_exists( char *filename )
 	file_exists = True;
     }
 
-#  if !defined( __CYGWIN__ )
-
-    /* Free up dummy copy -- double yuck! */
-    free( filename_copy );
-
-#  endif /* !defined( __CYGWIN__ ) */
-
     return file_exists;
 
 #endif /* defined( WIN32 ) && !defined( __CYGWIN__ ) */
+}
+
+
+bool_t dir_exists( char *dirname )
+{
+#if defined( WIN32 ) && !defined( __CYGWIN__ )
+
+    /* Win32 */
+
+    char curdir[MAX_PATH];
+    bool_t dir_exists = False;
+
+    if ( getcwd( curdir, BUFF_LEN - 1 ) == NULL ) {
+	handle_system_error( 1, "getcwd failed" );
+    }
+
+    if ( chdir( dirname ) == -1 ) {
+	return False;
+    }
+
+    if ( chdir( curdir ) == -1 ) {
+	handle_system_error( 1, "Couldn't access directory %s", curdir );
+    }
+    return True;
+
+#else
+
+    /* Unix/Linux/Cygwin */
+
+    char dir_copy[MAX_PATH];
+    DIR *d;
+
+    convert_path( dir_copy, dirname );
+
+    if ( ( d = opendir( dir_copy ) ) == NULL ) {
+	return ((errno != ENOENT) && (errno != ENOTDIR));
+    } 
+
+    if ( closedir( d ) != 0 ) {
+	handle_system_error( 1, "Couldn't close directory %s", dirname );
+    }
+
+    return True;
+
+#endif /* defined( WIN32 ) && !defined( __CYGWIN__ ) */
+}
+
+list_t get_dir_file_list( char *dirname ) 
+{
+#if defined ( WIN32 ) && !defined( __CYGWIN__ ) 
+
+    /* Win32 */
+
+    char curdir[MAX_PATH];
+    list_t dirlist = NULL;
+    list_elem_t cur_elem = NULL;
+    HANDLE hFind;
+    WIN32_FIND_DATA finddata;
+
+    if ( getcwd( curdir, BUFF_LEN - 1 ) == NULL ) {
+	handle_system_error( 1, "getcwd failed" );
+    }
+
+    if ( chdir( dirname ) == -1 ) {
+	return NULL;
+    }
+
+    dirlist = create_list();
+
+    if ( ( hFind = FindFirstFile( "*.*", &finddata ) ) == 
+	 INVALID_HANDLE_VALUE ) 
+    {
+	return dirlist;
+    }
+
+    do {
+	cur_elem = insert_list_elem( dirlist, cur_elem, 
+				     string_copy( finddata.cFileName ) );
+    } while ( FindNextFile( hFind, &finddata ) );
+
+    if ( !FindClose( hFind ) ) {
+	handle_system_error( 1, "Couldn't close directory %s", dirname );
+    }
+
+    if ( chdir( curdir ) == -1 ) {
+	handle_system_error( 1, "Couldn't access directory %s", curdir );
+    }
+
+    return dirlist;
+
+#else
+
+    /* Unix/Linux/Cygwin */
+
+    DIR *dir_stream;
+    list_t dirlist = NULL;
+    list_elem_t cur_elem = NULL;
+    struct dirent* cur_entry;
+    char dir_copy[MAX_PATH];
+
+    convert_path( dir_copy, dirname );
+
+    dir_stream = opendir( dir_copy );
+
+    if ( dir_stream == NULL ) {
+	return NULL;
+    }
+
+    dirlist = create_list();
+
+    while ( ( cur_entry = readdir( dir_stream ) ) != NULL ) {
+	cur_elem = insert_list_elem( dirlist, cur_elem,
+				     string_copy( cur_entry->d_name ) );
+    }
+
+    if ( closedir( dir_stream ) != 0 ) {
+	handle_system_error( 1, "Couldn't close directory %s", dirname );
+    }
+
+    return dirlist;
+
+#endif /* defined ( WIN32 ) && !defined( __CYGWIN__ ) */
+}
+
+void free_dir_file_list( list_t dirlist )
+{
+    list_elem_t cur_elem;
+    char *string;
+
+    if ( dirlist == NULL ) {
+	return;
+    }
+
+    for ( cur_elem = get_list_head( dirlist );
+	  cur_elem != NULL;
+	  cur_elem = get_next_list_elem( dirlist, cur_elem ) )
+    {
+	string = (char*) get_list_elem_data( cur_elem );
+	free( string );
+    }
+
+    del_list( dirlist );
 }

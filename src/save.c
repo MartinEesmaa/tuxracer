@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,10 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <stdio.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <string.h>
+#include "tuxracer.h"
 #include "save.h"
 #include "hash.h"
 #include "game_config.h"
@@ -201,8 +198,8 @@ bool_t set_high_score( char* event, char* cup, char* player, int score )
 	this_score = (score_info_t*)malloc(sizeof(score_info_t));
 	strcpy(this_score->event.event, event);
 	strcpy(this_score->event.cup, cup);
-	this_score->event.difficulty = 0;
-	this_score->data_type = 0;
+	this_score->event.difficulty = (difficulty_level_t)0;
+	this_score->data_type = (score_data_t)0;
 	add_hash_entry( *cup_table, cup, this_score );
     }
 
@@ -265,8 +262,6 @@ bool_t get_sav_index( char* str, int *index )
 void init_saved_games( void ) 
 {
     char dir_name[BUFF_LEN];
-    DIR* dir_stream;
-    struct dirent* this_entry;
     FILE* save_stream;
     save_info_t this_save;
     char player_name[BUFF_LEN];
@@ -274,6 +269,10 @@ void init_saved_games( void )
     char file_name[BUFF_LEN];
     int i;
     char magic[4];
+    list_t dir_file_list = NULL;
+    list_elem_t cur_dir_file = NULL;
+    char *cur_dir_filename = NULL;
+
 
     progress_save_table = create_hash_table();
 
@@ -285,23 +284,27 @@ void init_saved_games( void )
 	return;
     }
 
-    dir_stream = opendir(dir_name);
-    if ( dir_stream == NULL ) {
+    dir_file_list = get_dir_file_list(dir_name);
+    if ( dir_file_list == NULL ) {
 	/* Config dir doesn't exist.  Don't print warning since this is a
 	   normal condition the first time the program is run. */
 	return;
     }
 
-    while ((this_entry = readdir(dir_stream)) != NULL) {
+    for ( cur_dir_file = get_list_head( dir_file_list );
+	  cur_dir_file != NULL;
+	  cur_dir_file = get_next_list_elem( dir_file_list, cur_dir_file ) )
+    {
+	cur_dir_filename = (char*) get_list_elem_data( cur_dir_file );
 
-	if (get_sav_index(this_entry->d_name, &sav_index)) {
+	if (get_sav_index(cur_dir_filename, &sav_index)) {
 
-	    strncpy(player_name, this_entry->d_name, sav_index);
+	    strncpy(player_name, cur_dir_filename, sav_index);
 	    player_name[sav_index] = '\0';
 
 	    sprintf( file_name, "%s" DIR_SEPARATOR "%s", 
 		     dir_name,
-		     this_entry->d_name );
+		     cur_dir_filename );
 
 	    save_stream = fopen( file_name, "r" );
 
@@ -326,8 +329,8 @@ void init_saved_games( void )
 						this_save.data.event.cup );
 			print_debug( DEBUG_SAVE,
 				     "Read completed from `%s': "
-				     "name: %s, event: %s, dfclty: %d, cup: %s",
-				     this_entry->d_name, 
+				     "name: %s, event: %s, difficulty: %d, cup: %s",
+				     cur_dir_filename, 
 				     player_name,
 				     this_save.data.event.event,
 				     this_save.data.event.difficulty,
@@ -346,9 +349,9 @@ void init_saved_games( void )
 			print_debug( DEBUG_SAVE,
 				     "Read results from `%s': "
 				     "name: %s, event: %s, cup: %s, "
-				     "race: %s, dfclty: %d, time: %g, "
+				     "race: %s, difficulty: %d, time: %g, "
 				     "herring: %d, score: %d",
-				     this_entry->d_name, 
+				     cur_dir_filename, 
 				     player_name,
 				     this_save.data.results.event,
 				     this_save.data.results.cup,
@@ -378,13 +381,7 @@ void init_saved_games( void )
 	}
     }
 
-    if ( closedir( dir_stream ) != 0 ) {
-	print_warning( IMPORTANT_WARNING,
-		       "Couldn't close directory `%s': %s",
-		       dir_name, strerror( errno ) );
-	
-    }
-
+    free_dir_file_list( dir_file_list );
 }
 
 bool_t get_last_completed_cup( char* player, char* event, 
@@ -411,6 +408,7 @@ bool_t set_last_completed_cup( char* player, char* event,
     hash_table_t event_table;
     save_info_t *this_save;
     difficulty_level_t level;
+    int i;
 
     if ( !get_hash_entry( progress_save_table, player, (hash_entry_t*)&event_table ) ) {
 	event_table = create_hash_table();
@@ -422,7 +420,8 @@ bool_t set_last_completed_cup( char* player, char* event,
 					 DIFFICULTY_NUM_LEVELS);
 	memset( this_save, 0, sizeof(save_info_t) * DIFFICULTY_NUM_LEVELS );
 
-	for( level=0; level<DIFFICULTY_NUM_LEVELS; level++ ) {
+	for( i=0; i<DIFFICULTY_NUM_LEVELS; i++ ) {
+	    level = (difficulty_level_t)i;
 	    strcpy( this_save[level].data.event.event, event );
 	    this_save[level].data.event.difficulty = d;
 
@@ -646,7 +645,8 @@ void write_saved_games( void )
 		while ( next_hash_entry( save_scan_ptr, &event_name, 
 					 (hash_entry_t*)&this_save ) ) 
 		{
-		    for( level=0; level<DIFFICULTY_NUM_LEVELS; level++ ) {
+		    for( i=0; i<DIFFICULTY_NUM_LEVELS; i++ ) {
+			level = (difficulty_level_t)i;
 			if ( this_save[level].data_type >= 0 ) {
 			    fwrite( &(this_save[level]), 
 				    sizeof(this_save[level]), 

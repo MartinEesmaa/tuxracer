@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,8 +21,6 @@
 #include "tuxracer.h"
 #include "screenshot.h"
 #include "pic.h"
-#include <sys/types.h>
-#include <sys/stat.h>
 
 static int screenshot_num = 0;
 

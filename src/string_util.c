@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,7 +26,7 @@ char *string_copy( char *src )
 
     check_assertion( src != NULL, "string NULL in string_copy" );
 
-    dest = (char *) malloc( strlen( src ) + 1 );
+    dest = (char *) malloc( sizeof(char) * ( strlen( src ) + 1 ) );
 
     if ( dest == NULL ) {
 	handle_system_error( 1, "malloc failed" );

@@ -62,3 +62,10 @@ James Barnard <james@barnard666.freeserve.co.uk>
         * Created several 3D model that haven't made it into the game yet
           (since engine is still lacking support)
 
+Julie Brandon <julie@computergeeks.co.uk>
+	* Patch for configuring which joystick axes are used to
+	control Tux
+
+Jay Estabrook <Jay.Estabrook@compaq.com>
+	* Patch to fix some 32-bit-isms that enable compiling on 64-bit
+	architectures (like the Alpha).

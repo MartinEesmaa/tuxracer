@@ -56,6 +56,10 @@ right.  How do I fix this?</A>
   <LI><A HREF="#linux_opengl_problems">When compiling under Linux, I get some OpenGL errors.  What's going on?</A>
   <LI><A HREF="#linux_rock_crash">When I run Tux Racer under Linux, the program crashes
 when I slide over rock.  Is there a fix for this?</A>
+  <LI><A HREF="#sdl_glide_conflict">I have a 3dfx video card and am running Linux.  
+                 If I compile the game with SDL, I get no hardware 
+                 acceleration.</A>
+  <LI><A HREF="#rage128_fog">When I play the game, the screen is nearly all white.</A>
 </OL>
 <IMG BORDER=0 SRC="./images/snow_line.gif" ALT="" WIDTH="551" HEIGHT="31"><BR><table cellpadding="0" cellspacing="4" border="0" width="100%">
   <tr>
@@ -72,6 +76,13 @@ OpenGL. Tux Racer has currently been tested and works on:
   <li>nVidia TNT, TNT2, GeForce256, GeForce2 GTS</li>
   <li>3dfx Voodoo3</li>
 </ul>
+</p>
+<p class="bodytext">
+
+Some people have reported problems with 3dfx Voodoo2 cards.  We are
+working on obtaining a Voodoo2 test system so that we can improve
+support for this card.
+
 </p>
 </td>
   </tr>
@@ -126,9 +137,17 @@ href="http://www.lokigames.com">Loki Games</a> has created some pages to help
 	OpenGL drivers page</A>
   </ul>
   <p class="bodytext">
-  Under Windows, you should visit your video card vendor's web site and make sure 
-  you have the latest drivers installed. See also the FAQ <a href="?">What graphics 
-  cards do you support?</a>. If you've done all of this and would like to get 
+
+  Under Windows, you should visit your video card vendor's web site
+  and make sure you have the latest drivers installed.  You can also
+  use <A HREF="http://www.glsetup.com" >GLSetup</A> to install the latest OpenGL drivers for your
+  card.  (See also the FAQ <a href="?">What graphics cards do you
+  support?</a>.)
+
+</p>
+
+  <p class="bodytext">
+  If you've done all of this and would like to get 
   as many frames per second out of Tux Racer as possible, then you need to tweak 
   some settings in the options file. (See the FAQ, <a href="#options">Where is the Tux 
   Racer options file?</a> if you can't find the options file.) The following settings 
@@ -572,6 +591,65 @@ There are two possible solutions:
 </UL>
 </p>
 
+</td>
+  </tr>
+<!--
+  <tr>
+    <td valign="top"></td>
+    <td valign="top"><br><p align="right" class="small"><A HREF="#toc">[back to Contents]</A></p></td>
+  </tr>
+-->
+<BR>
+</table>
+<table cellpadding="0" cellspacing="4" border="0" width="100%">
+  <tr>
+    <td valign="top"><p class="heading3">Q:</p></td>
+    <td valign="top"><A NAME="sdl_glide_conflict"></A><p class="heading3">I have a 3dfx video card and am running Linux.  
+                 If I compile the game with SDL, I get no hardware 
+                 acceleration.</p></td>
+  </tr>
+  <tr>
+    <td valign="top"><p class="heading3">A:</p></td>
+    <td valign="top"><p class="bodytext">
+
+According to Sam Lantinga, author of SDL:
+
+<blockquote>
+This is caused by a conflict between the version of XVidMode that SDL is
+linked with and the one compiled into Glide.  The latest SDL binaries
+(SDL 1.1.7 released today) have a hacked workaround for this problem.
+</blockquote>
+
+Therefore you should either upgrade to SDL &ge; 1.1.7, or disable the use of SDL
+altogether by passing the <tt>--disable-sdl</tt> flag to configure.
+</p>
+</td>
+  </tr>
+<!--
+  <tr>
+    <td valign="top"></td>
+    <td valign="top"><br><p align="right" class="small"><A HREF="#toc">[back to Contents]</A></p></td>
+  </tr>
+-->
+<BR>
+</table>
+<table cellpadding="0" cellspacing="4" border="0" width="100%">
+  <tr>
+    <td valign="top"><p class="heading3">Q:</p></td>
+    <td valign="top"><A NAME="rage128_fog"></A><p class="heading3">When I play the game, the screen is nearly all white.</p></td>
+  </tr>
+  <tr>
+    <td valign="top"><p class="heading3">A:</p></td>
+    <td valign="top"><p class="bodytext">
+
+This appears to be a problem with some drivers for the ATI Rage128 family of 
+video cards.  Make sure you are running the latest drivers for your card.  
+If upgrading the drivers doesn't work or isn't possible, then you can make 
+the game playable
+by disabling fog: set the <tt>disable_fog</tt> variable in the options file to 
+<tt>true</tt>.
+
+</p>
 </td>
   </tr>
 <!--

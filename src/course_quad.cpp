@@ -5,14 +5,14 @@
 
 #define CULL_DETAIL_FACTOR 25
 
-static quadsquare *root = NULL;
-static quadcornerdata root_corner_data = { NULL };
+static quadsquare *root = (quadsquare*) NULL;
+static quadcornerdata root_corner_data = { (quadcornerdata*)NULL };
 
 
 extern "C" void reset_course_quadtree()
 {
     delete root;
-    root = NULL;
+    root = (quadsquare*)NULL;
 }
 
 static int get_root_level( int nx, int nz )
@@ -67,7 +67,7 @@ extern "C" void init_course_quadtree( scalar_t *elevation, int nx, int nz,
     hm.RowWidth = hm.XSize;
     hm.Scale = 0;
 
-    root_corner_data.Square = NULL;
+    root_corner_data.Square = (quadsquare*)NULL;
     root_corner_data.ChildIndex = 0;
     root_corner_data.Level = get_root_level( nx, nz );
     root_corner_data.xorg = 0;

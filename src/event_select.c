@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -351,18 +351,18 @@ static void set_widget_positions_and_draw_decorations()
     }
 }
 
-static void event_select_init()
+static void event_select_init(void)
 {
     list_t event_list = NULL;
     list_t cup_list = NULL;
     point2d_t dummy_pos = {0, 0};
 
-    glutDisplayFunc( main_loop );
-    glutIdleFunc( main_loop );
-    glutReshapeFunc( reshape );
-    glutMouseFunc( ui_event_mouse_func );
-    glutMotionFunc( ui_event_motion_func );
-    glutPassiveMotionFunc( ui_event_motion_func );
+    winsys_set_display_func( main_loop );
+    winsys_set_idle_func( main_loop );
+    winsys_set_reshape_func( reshape );
+    winsys_set_mouse_func( ui_event_mouse_func );
+    winsys_set_motion_func( ui_event_motion_func );
+    winsys_set_passive_motion_func( ui_event_motion_func );
 
     event_list = get_events_list();
 
@@ -462,10 +462,10 @@ static void event_select_loop( scalar_t time_step )
 
     reshape( getparam_x_resolution(), getparam_y_resolution() );
 
-    glutSwapBuffers();
+    winsys_swap_buffers();
 }
 
-static void event_select_term()
+static void event_select_term(void)
 {
     button_delete( back_btn );
     back_btn = NULL;
@@ -488,16 +488,16 @@ START_KEYBOARD_CB( event_select_key_cb )
 
     if ( special ) {
 	switch( key ) {
-	case GLUT_KEY_LEFT:
+	case WSK_LEFT:
 	    listbox_goto_prev_item( event_listbox );
 	    break;
-	case GLUT_KEY_RIGHT:
+	case WSK_RIGHT:
 	    listbox_goto_next_item( event_listbox );
 	    break;
-	case GLUT_KEY_DOWN:
+	case WSK_DOWN:
 	    listbox_goto_next_item( cup_listbox );
 	    break;
-	case GLUT_KEY_UP:
+	case WSK_UP:
 	    listbox_goto_prev_item( cup_listbox );
 	    break;
 	}

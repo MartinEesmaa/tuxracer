@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -179,7 +179,7 @@ void load_tux()
 	*/
     } 
 
-    if ( Tcl_EvalFile( g_game.tcl_interp, "./tux.tcl") == TCL_ERROR ) {
+    if ( Tcl_EvalFile( g_game.tcl_interp, "tux.tcl") == TCL_ERROR ) {
         handle_error( 1, "error evalating %s/tux.tcl: %s\n"
 		      "Please check the value of `data_dir' in ~/.tuxracer/options "
 		      "and make sure it\npoints to the location of the "

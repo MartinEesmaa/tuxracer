@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -101,7 +101,7 @@ static void create_lines( textarea_t *ta )
     char *cur_ptr;
     char *old_space_ptr;
     char *space_ptr;
-    list_elem_t *cur_line;
+    list_elem_t cur_line;
     font_t *font;
 
     check_assertion( ta != NULL, "ta is NULL" );

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -78,7 +78,7 @@ void quit_click_cb( button_t *button, void *userdata )
 {
     check_assertion( userdata == NULL, "userdata is not null" );
 
-    exit( 0 );
+    winsys_exit( 0 );
 }
 
 static void set_widget_positions()
@@ -131,16 +131,16 @@ static void set_widget_positions()
     }
 }
 
-static void game_type_select_init()
+static void game_type_select_init(void)
 {
     point2d_t dummy_pos = {0, 0};
 
-    glutDisplayFunc( main_loop );
-    glutIdleFunc( main_loop );
-    glutReshapeFunc( reshape );
-    glutMouseFunc( ui_event_mouse_func );
-    glutMotionFunc( ui_event_motion_func );
-    glutPassiveMotionFunc( ui_event_motion_func );
+    winsys_set_display_func( main_loop );
+    winsys_set_idle_func( main_loop );
+    winsys_set_reshape_func( reshape );
+    winsys_set_mouse_func( ui_event_mouse_func );
+    winsys_set_motion_func( ui_event_motion_func );
+    winsys_set_passive_motion_func( ui_event_motion_func );
 
     enter_event_btn = button_create( dummy_pos,
 				     300, 40, 
@@ -202,10 +202,10 @@ static void game_type_select_loop( scalar_t time_step )
 
     reshape( getparam_x_resolution(), getparam_y_resolution() );
 
-    glutSwapBuffers();
+    winsys_swap_buffers();
 }
 
-static void game_type_select_term()
+static void game_type_select_term(void)
 {
     button_delete( enter_event_btn );
     enter_event_btn = NULL;
@@ -230,7 +230,7 @@ START_KEYBOARD_CB( game_type_select_cb )
 	switch( key ) {
 	case 'q':
 	case 27: /* Esc */
-	    exit(0);
+	    winsys_exit(0);
 	    break;
 	case 'e':
 	case 13: /* Enter */
@@ -251,7 +251,7 @@ START_KEYBOARD_CB( game_type_select_cb )
 	}
     }
 
-    glutPostRedisplay();
+    winsys_post_redisplay();
 }
 END_KEYBOARD_CB
 

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -768,7 +768,7 @@ race_data_t* create_race_data ( Tcl_Interp *ip, char *string, char **err_msg )
 		goto bail_race_data;
 	    }
 
-	    conditions = i;
+	    conditions = (race_conditions_t)i;
 	} else if ( strcmp( *argv, "-windy" ) == 0 ) {
 	    NEXT_ARG;
 

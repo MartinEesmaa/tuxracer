@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -62,17 +62,17 @@ static bool_t braking;
 static scalar_t charge_start_time;
 static int last_terrain;
 
-void racing_init() 
+void racing_init(void) 
 {
     player_data_t *plyr = get_player_data( local_player() );
 
-    glutDisplayFunc( main_loop );
-    glutIdleFunc( main_loop );
-    glutReshapeFunc( reshape );
-    glutMouseFunc( NULL );
-    glutMotionFunc( NULL );
-    glutPassiveMotionFunc( NULL );
-    glutMouseFunc( NULL );
+    winsys_set_display_func( main_loop );
+    winsys_set_idle_func( main_loop );
+    winsys_set_reshape_func( reshape );
+    winsys_set_mouse_func( NULL );
+    winsys_set_motion_func( NULL );
+    winsys_set_passive_motion_func( NULL );
+    winsys_set_mouse_func( NULL );
 
     /* Initialize view */
     if ( getparam_view_mode() < 0 || 
@@ -80,7 +80,7 @@ void racing_init()
     {
 	setparam_view_mode( ABOVE );
     }
-    set_view_mode( plyr, getparam_view_mode() );
+    set_view_mode( plyr, (view_mode_t)getparam_view_mode() );
 
     /* We need to reset controls here since callbacks won't have been
        called in paused mode. This results in duplication between this
@@ -148,8 +148,9 @@ void racing_loop( scalar_t time_step )
     dir = plyr->vel;
     speed = normalize_vector(&dir);
 
-    airborne = ( plyr->pos.y > ( find_y_coord(plyr->pos.x, plyr->pos.z) + 
-				 JUMP_MAX_START_HEIGHT ) );
+    airborne = (bool_t) ( plyr->pos.y > ( find_y_coord(plyr->pos.x, 
+						       plyr->pos.z) + 
+					  JUMP_MAX_START_HEIGHT ) );
 
     width = getparam_x_resolution();
     height = getparam_y_resolution();
@@ -190,7 +191,7 @@ void racing_loop( scalar_t time_step )
 		is_joystick_button_down( getparam_joystick_brake_button() );
 	} 
 	if ( !joy_braking ) {
-	    joy_braking = joy_y > 0.5;
+	    joy_braking = (bool_t) ( joy_y > 0.5 );
 	}
 
 	if ( getparam_joystick_paddle_button() >= 0 ) {
@@ -198,7 +199,7 @@ void racing_loop( scalar_t time_step )
 		is_joystick_button_down( getparam_joystick_paddle_button() );
 	}
 	if ( !joy_paddling ) {
-	    joy_paddling = joy_y < -0.5;
+	    joy_paddling = (bool_t) ( joy_y < -0.5 );
 	}
 
 	if ( getparam_joystick_jump_button() >= 0 ) {
@@ -213,7 +214,7 @@ void racing_loop( scalar_t time_step )
     }
 
     /* Update braking */
-    plyr->control.is_braking = braking || joy_braking;
+    plyr->control.is_braking = (bool_t) ( braking || joy_braking );
 
     if ( airborne ) {
 	new_terrain = (1<<NumTerrains);
@@ -274,7 +275,7 @@ void racing_loop( scalar_t time_step )
      * Turning 
      */
     if ( ( left_turn || joy_left_turn )  ^ (right_turn || joy_right_turn ) ) {
-	bool_t turning_left = left_turn || joy_left_turn;
+	bool_t turning_left = (bool_t) ( left_turn || joy_left_turn );
 
 	if ( joy_left_turn || joy_right_turn ) {
 	    plyr->control.turn_fact = joy_turn_fact;
@@ -400,10 +401,11 @@ void racing_loop( scalar_t time_step )
 
     draw_sky(plyr->view.pos);
 
-    draw_fog_plane( plyr->view );
+    draw_fog_plane();
 
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
+    setup_course_lighting();
     render_course();
     draw_trees();
 
@@ -417,18 +419,14 @@ void racing_loop( scalar_t time_step )
 
     draw_hud( plyr );
 
-    if ( debug_mode_is_active( DEBUG_HEALTH ) ) {
-	print_health(plyr->health * 100);
-    }
-
     reshape( width, height );
 
-    glutSwapBuffers();
+    winsys_swap_buffers();
 
     g_game.time += time_step;
 } 
 
-static void racing_term()
+static void racing_term(void)
 {
     halt_sound( "flying_sound" );
     halt_sound( "rock_sound" );
@@ -449,34 +447,34 @@ END_KEYBOARD_CB
 
 START_KEYBOARD_CB( turn_left_cb )
 {
-    left_turn = !release;
+    left_turn = (bool_t) !release;
 }
 END_KEYBOARD_CB
 
 
 START_KEYBOARD_CB( turn_right_cb )
 {
-    right_turn = !release;
+    right_turn = (bool_t) !release;
 }
 END_KEYBOARD_CB
 
 
 START_KEYBOARD_CB( trick_modifier_cb )
 {
-    trick_modifier = !release;
+    trick_modifier = (bool_t) !release;
 }
 END_KEYBOARD_CB
 
 
 START_KEYBOARD_CB( brake_cb )
 {
-    braking = !release;
+    braking = (bool_t) !release;
 }
 END_KEYBOARD_CB
 
 START_KEYBOARD_CB( paddle_cb )
 {
-    paddling = !release;
+    paddling = (bool_t) !release;
 }
 END_KEYBOARD_CB
 
@@ -528,7 +526,7 @@ END_KEYBOARD_CB
 
 START_KEYBOARD_CB( jump_cb )
 {
-    charging = !release;
+    charging = (bool_t) !release;
 }
 END_KEYBOARD_CB
 

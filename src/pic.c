@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,8 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <stdlib.h>
-#include <string.h>
+#include "tuxracer.h"
 #include "pic.h"
 
 /*
@@ -109,7 +108,7 @@ Pic *PicOpen(const char *filename, short width, short height)
 
 /*******************************************************************\
                                                         	 
-    boolean    PicWriteLine(ppmFile, pixels)			 
+    bool_t    PicWriteLine(ppmFile, pixels)			 
                                                         	 
     Purpose:							 
         This function writes the given scanline to the given	 
@@ -120,7 +119,7 @@ Pic *PicOpen(const char *filename, short width, short height)
         Pixel   *pixels(in)   : scanline of rendered pixels.	 
                                                         	 
     Returned:							 
-        boolean   status : TRUE - scanline written, else FALSE	 
+        bool_t   status : TRUE - scanline written, else FALSE	 
                                                         	 
     Notes:							 
         The scanline will not be written if the given image	 
@@ -132,7 +131,7 @@ Pic *PicOpen(const char *filename, short width, short height)
                                                         	 
 \*******************************************************************/
 
-boolean PicWriteLine(Pic *ppmFile, Pic_Pixel *pixels)
+bool_t PicWriteLine(Pic *ppmFile, Pic_Pixel *pixels)
 {
     int i;
     /*
@@ -144,7 +143,7 @@ boolean PicWriteLine(Pic *ppmFile, Pic_Pixel *pixels)
 	    "WARNING: PicWriteLine() - `%s' is complete, scanline ignored.\n",
 	    ppmFile->filename);
 
-	return(FALSE);
+	return( False );
     }
 
     for (i = 0; i < ppmFile->width; ++i) {
@@ -158,7 +157,7 @@ boolean PicWriteLine(Pic *ppmFile, Pic_Pixel *pixels)
      */
 
     ++ ppmFile->scanline;
-    return(TRUE);
+    return( True );
 }
 /*** THE END ***/
 

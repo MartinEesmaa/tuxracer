@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -45,7 +45,7 @@
 static void mouse_cb( int button, int state, int x, int y )
 {
     set_game_mode( NEXT_MODE );
-    glutPostRedisplay();
+    winsys_post_redisplay();
 }
 
 
@@ -92,14 +92,14 @@ void draw_paused_text( void )
     }
 }
 
-void paused_init() 
+void paused_init(void) 
 {
-    glutDisplayFunc( main_loop );
-    glutIdleFunc( main_loop );
-    glutReshapeFunc( reshape );
-    glutMouseFunc( mouse_cb );
-    glutMotionFunc( ui_event_motion_func );
-    glutPassiveMotionFunc( ui_event_motion_func );
+    winsys_set_display_func( main_loop );
+    winsys_set_idle_func( main_loop );
+    winsys_set_reshape_func( reshape );
+    winsys_set_mouse_func( mouse_cb );
+    winsys_set_motion_func( ui_event_motion_func );
+    winsys_set_passive_motion_func( ui_event_motion_func );
 
     play_music( "paused" );
 }
@@ -120,7 +120,7 @@ void paused_loop( scalar_t time_step )
 	if ( is_joystick_continue_button_down() )
 	{
 	    set_game_mode( NEXT_MODE );
-	    glutPostRedisplay();
+	    winsys_post_redisplay();
 	    return;
 	}
     }
@@ -141,10 +141,11 @@ void paused_loop( scalar_t time_step )
 
     draw_sky( plyr->view.pos );
 
-    draw_fog_plane( plyr->view );
+    draw_fog_plane( );
 
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
+    setup_course_lighting();
     render_course();
     draw_trees();
 
@@ -165,14 +166,14 @@ void paused_loop( scalar_t time_step )
 
     reshape( width, height );
 
-    glutSwapBuffers();
+    winsys_swap_buffers();
 } 
 
 START_KEYBOARD_CB( paused_cb )
 {
     if ( release ) return;
     set_game_mode( NEXT_MODE );
-    glutPostRedisplay();
+    winsys_post_redisplay();
 }
 END_KEYBOARD_CB
 
@@ -180,12 +181,10 @@ void paused_register()
 {
     int status = 0;
 
-    status |= add_keymap_entry(
-	PAUSED, DEFAULT_CALLBACK, NULL, NULL, paused_cb );
+    status |= add_keymap_entry( PAUSED, 
+				DEFAULT_CALLBACK, NULL, NULL, paused_cb );
 
     check_assertion( status == 0, "out of keymap entries" );
 
     register_loop_funcs( PAUSED, paused_init, paused_loop, NULL );
 }
-
-

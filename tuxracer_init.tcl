@@ -60,15 +60,27 @@ if { [tux_load_sound tree_hit1 sounds/tux_hit_tree1.wav] } {
     tux_bind_sounds tree_hit tree_hit1 
 }
 
+# Fish Pickup
+if { [tux_load_sound fish_pickup_sound_1 sounds/fish_pickup1.wav]&& 
+     [tux_load_sound fish_pickup_sound_2 sounds/fish_pickup2.wav]&& 
+     [tux_load_sound fish_pickup_sound_3 sounds/fish_pickup3.wav] } \
+{
+    tux_bind_sounds item_collect fish_pickup_sound_1 \
+	                         fish_pickup_sound_2 \
+				 fish_pickup_sound_3
+}
+
 # Snow Sliding
 if { [tux_load_sound snow_sound sounds/tux_on_snow1.wav] } {
     tux_bind_sounds snow_sound snow_sound
     tux_bind_sounds flying_sound snow_sound
 }
+
 # Rock Sliding
 if { [tux_load_sound rock_sound sounds/tux_on_rock1.wav] } {
     tux_bind_sounds rock_sound rock_sound
 }
+
 # Ice Sliding
 if { [tux_load_sound ice_sound sounds/tux_on_ice1.wav] } {
     tux_bind_sounds ice_sound ice_sound
@@ -138,6 +150,7 @@ tux_bind_font -binding credits_h2 -font trebuchet_yel_blk -size 20
 tux_bind_font -binding credits_text -font trebuchet_white -size 20
 tux_bind_font -binding credits_text_small -font trebuchet_white -size 14
 
+tux_bind_font -binding loading -font trebuchet_yel_blk -size 30
 
 # HUD
 tux_load_texture herring_icon textures/herringicon.rgb 0

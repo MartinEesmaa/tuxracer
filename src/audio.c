@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -59,10 +59,74 @@ static char *current_music_name_ = NULL;
 */
 void init_audio()
 {
-    if (!initialized_) {
-	sound_contexts_ = create_hash_table();
-	music_contexts_ = create_hash_table();
-	initialized_ = True;
+    int hz, channels, buffer;
+    Uint16 format;
+
+    check_assertion( !initialized_,
+		     "init_audio called twice" );
+
+    sound_contexts_ = create_hash_table();
+    music_contexts_ = create_hash_table();
+    initialized_ = True;
+
+    /*
+     * Init SDL Audio 
+     */    
+    if ( getparam_no_audio() == False ) {
+
+	if ( SDL_Init( SDL_INIT_AUDIO ) < 0 ) {
+	    handle_error( 1, "Couldn't initialize SDL: %s", SDL_GetError() );
+	}
+
+	/* Open the audio device */
+	switch (getparam_audio_freq_mode()) {
+	case 0:
+	    hz = 11025;
+	    break;
+	case 1:
+	    hz = 22050;
+	    break;
+	case 2:
+	    hz = 44100;
+	    break;
+	default:
+	    hz = 22050;
+	    setparam_audio_freq_mode(1);
+	}
+
+	switch ( getparam_audio_format_mode() ) {
+	case 0:
+	    format = AUDIO_U8;
+	    break;
+	case 1:
+	    format = AUDIO_S16SYS;
+	    break;
+	default:
+	    format = AUDIO_S16SYS;
+	    setparam_audio_format_mode( 1 );
+	}
+
+	if ( getparam_audio_stereo() ) {
+	    channels = 2;
+	} else {
+	    channels = 1;
+	}
+
+	buffer = getparam_audio_buffer_size();
+
+	if ( Mix_OpenAudio(hz, format, channels, buffer) < 0 ) {
+	    print_warning( 1,
+			   "Warning: Couldn't set %d Hz %d-bit audio\n"
+			   "  Reason: %s\n", 
+			   hz,  
+			   getparam_audio_format_mode() == 0 ? 8 : 16,
+			   SDL_GetError());
+	} else {
+	    print_debug( DEBUG_SOUND,
+			 "Opened audio device at %d Hz %d-bit audio",
+			 hz, 
+			 getparam_audio_format_mode() == 0 ? 8 : 16 );
+	}
     }
 }
 
@@ -487,6 +551,9 @@ bool_t set_sound_volume( char *sound_context, int volume )
     return True;
 }
 
+
+
+/*---------------------------------------------------------------------------*/
 /*! 
   Play music for the specified music context.
 
@@ -623,7 +690,7 @@ is_music_playing()
 		     ( current_music_name_ != NULL &&
 		       current_music_data_ != NULL ),
 		     "inconsistent state in sound module" );
-    return current_music_name_ != NULL;
+    return (bool_t)(current_music_name_ != NULL);
 }
 
 
@@ -684,6 +751,20 @@ static int bind_music_cb( ClientData cd, Tcl_Interp *ip,
 } 
 
 
+/*---------------------------------------------------------------------------*/
+/*! 
+  Deallocates audio resources in preparation for program termination
+  \author  jfpatry
+  \date    Created:  2000-10-20
+  \date    Modified: 2000-10-20
+*/
+void shutdown_audio()
+{
+    if ( is_audio_open() ) {
+	Mix_CloseAudio();
+    }
+}
+
 
 /*! 
   Registers sound module's Tcl callbacks
@@ -700,7 +781,12 @@ void register_sound_tcl_callbacks( Tcl_Interp *ip )
     Tcl_CreateCommand (ip, "tux_bind_music", bind_music_cb,  0,0);
 }
 
+
+/*---------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
 #else
+/*---------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
 
 void init_audio()
 {
@@ -723,7 +809,6 @@ bool_t play_music( char *music_context )
 {
     return False;
 }
-
 
 void update_audio()
 {
@@ -755,6 +840,10 @@ void register_sound_tcl_callbacks( Tcl_Interp *ip )
 bool_t halt_sound( char *sound_context )
 {
     return True;
+}
+
+void shutdown_audio()
+{
 }
 
 bool_t set_sound_volume( char *sound_context, int volume )

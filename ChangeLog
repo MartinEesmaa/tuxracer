@@ -1,4 +1,247 @@
-2000-10-16  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2001-01-16  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* (Everything)
+	Updated copyright to include 2001.
+
+	* src/image.c, src/image.h, configure.in:
+	Integrated patch from Jay Estabrook <Jay.Estabrook@compaq.com> to fix
+	some 32-bit-isms and enable compiling on 64-bit machines (like Alphas).
+
+2001-01-13  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/game_config.c, src/game_config.h, src/joystick.c:
+	- Joystick axes for turning and accel/braking can now be mapped to any
+	  joystick axis (based on suggestion and patch from Julie Brandon
+	  <julie@computergeeks.co.uk>)
+
+	* src/tex_font_metrics.c, src/audio_data.c:
+	- Changes to suppress warnings when assertions turned off
+
+	* src/debug.c, src/debug.h, src/gl_util.c, src/main.c, src/tuxracer.h, configure.in:
+	- Moved some code that was in main.c into setup_diagnostic_log in
+	  debug.c
+	- Renamed TUXRACER_NO_DEBUG to TUXRACER_NO_ASSERT
+	- Debugging messages are now printed even if TUXRACER_NO_ASSERT is
+	  defined (so that we can generated diagnostic logs in release builds)
+
+	* configure.in: - Changed version to 0.61
+	- Assertion checks now disabled in non-debug build.
+
+2001-01-13  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/game_config.c, src/game_config.h, src/joystick.c:
+	- Joystick axes for turning and accel/braking can now be mapped to any
+	  joystick axis (based on suggestion and patch from Julie Brandon
+	  <julie@computergeeks.co.uk>)
+
+	* src/tex_font_metrics.c, src/audio_data.c:
+	- Changes to suppress warnings when assertions turned off
+
+	* src/debug.c, src/debug.h, src/gl_util.c, src/main.c, src/tuxracer.h, configure.in:
+	- Moved some code that was in main.c into setup_diagnostic_log in
+	  debug.c
+	- Renamed TUXRACER_NO_DEBUG to TUXRACER_NO_ASSERT
+	- Debugging messages are now printed even if TUXRACER_NO_ASSERT is
+	  defined (so that we can generated diagnostic logs in release builds)
+
+	* configure.in: - Changed version to 0.61
+	- Assertion checks now disabled in non-debug build.
+
+2000-12-09  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/keyboard.c, src/loop.h, src/main.c, src/tcl_util.h, src/ui_mgr.c:
+	Added some missing prototypes and #includes.
+
+	* src/tcl_util.c:
+	Tcl channels now only modified under Win32 (not needed under Linux,
+	apparently.)
+
+	* configure.in:
+	Added X libs to TR_LIBS so that glut links properly on all systems.
+
+2000-12-07  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/loading.c: - Removed unused variables
+	- Added missing #includes
+
+	* src/Makefile.am: Added loading.[ch]
+
+2000-12-05  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/fog.c:
+	- fog is not enabled if disable_fog parameter is true.
+
+	* src/game_config.c, src/game_config.h:
+	- Added disable_fog parameter to work around bug in Rage 128 linux drivers.
+	- fullscreen and capture_mouse now default to "true".
+
+	* src/tux.c:
+	Changed "./tux.tcl" to "tux.tcl".
+
+	
+2000-12-01  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/tuxracer.h:
+	Added entry in game_mode_t for LOADING mode.
+
+	* src/tcl_util.c:
+	Added setup_tcl_std_channels().
+
+	* src/race_select.c:
+	- We now always go through the loading screen before starting a race.
+	- We force a mode change at the end of the start button click callback
+	  to ensure that no more event callbacks are processed before the mode
+	  changes.
+
+	* src/loading.c:
+	State regarding what course has been loaded is now stored in this mode.
+
+	* src/loop.c, src/loop.h:
+	Added force_immediate_mode_change().  This is necessary for the race
+	select screen, where we want to make sure that no further event
+	callbacks are processed after the start button is clicked.
+
+	* src/race_select.c:
+	Modified so that courses are now loaded in LOADING mode.
+
+	* src/loading.c, src/loading.h:
+	Initial checkin.
+
+	* src/loading.c, src/loading.h:
+	New file.
+
+	* src/main.c: - Registered new loading mode
+	- Fixed up Tcl stdout and stderr channels under Windows
+
+
+2000-11-19  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/tuxracer.h:
+	Disabled some pedantic warnings in MSVC++.
+
+	* src/quadgeom.hpp:
+	Added #include "tuxracer.h"
+
+	* src/os_util.c:
+	Added missing declaration of len in win32 version.
+
+	* src/tuxracer.h:
+	Disabled some pedantic warnings in MSVC++.
+
+	* src/quadgeom.hpp:
+	Added #include "tuxracer.h"
+
+	* src/os_util.c:
+	Added missing len variable declaration in win32 version.
+
+2000-11-09  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/os_util.c:
+	A few fixes for Linux: got rid of snprintf since it may have
+	portability problems (and isn't defined by including stdio.h for some
+	strange reason); added missing utsname declaration.
+
+	* src/file_util.c:
+	Added hack to define MAX_PATH if it isn't defined (which is the case under
+	Linux).
+
+2000-11-02  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/list.c: Fixed a memory allocation bug.
+
+	* src/splash_screen.c, src/string_util.c, src/tuxracer.h, src/course_load.c, src/credits.c, src/event_select.c, src/game_over.c, src/game_type_select.c, src/intro.c, src/main.c, src/os_util.c, src/paused.c, src/quadtree.hpp, src/race_select.c, src/racing.c, src/reset.c:
+	Fixes for clean compilation under VC++.
+
+2000-10-31  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/pic.c, src/pic.h, src/quadgeom.cpp, src/quadgeom.hpp, src/quadtree.cpp, src/quadtree.hpp, src/race_select.c, src/racing.c, src/reset.c, src/save.c, src/screenshot.c, src/splash_screen.c, src/textarea.c, src/textures.c, src/track_marks.c, src/tux_types.h, src/tuxracer.h, src/ui_mgr.c, src/Makefile.am, src/alglib.c, src/audio.c, src/button.c, src/course_load.h, src/course_mgr.c, src/course_quad.cpp, src/course_render.c, src/debug.c, src/error_util.c, src/file_util.c, src/file_util.h, src/fog.c, src/fonts.c, src/fps.c, src/game_config.c, src/game_over.c, src/gauss.c, src/gl_util.c, src/hash.c, src/hier.c, src/intro.c, src/main.c, src/paused.c, src/phys_sim.c:
+	Fixes for clean compilation under Codewarrior 4.0 (Win32).
+
+	* src/os_util.c, src/os_util.h:
+	Initial checkin
+
+	* src/os_util.h, src/os_util.c:
+	New file.
+
+2000-10-30  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/main.c:
+	Added code to generate diagnostic log.
+
+	* src/game_config.c, src/game_config.h:
+	Changed "bug_report" to "diagnostic_log".
+
+2000-10-27  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/save.c:
+	Expanded my silly abbreviation of `difficulty'.
+
+	* src/debug.c, src/debug.h:
+	Added debug_mode_set_active to manually activate debug modes (for use
+	in bug report)
+
+2000-10-24  Jasmin Patry  <jfpatry@sunspirestudios.com>
+
+	* src/render_util.h, src/render_util.c:
+	Removed some routines that are no longer used
+
+	* src/phys_sim.c: Removed health code
+
+	* src/main.c:
+	- Moved initialization code to audio, joystick, and winsys modules
+	- Updated to use new winsys functions
+
+	* src/loop.c:
+	- Modified to use winsys functions
+
+	* src/keyboard.c, src/keyboard_util.c:
+	- Modified to use winsys functions and constants
+	- Added keysyms for shift, alt, and control keys.
+
+	* src/joystick.c:
+	- Moved SDL joystick initialization to init_joystick().
+
+	* src/gl_util.c, src/gl_util.h:
+	- Modified extension check to use SDL_GL_GetProcAddress if available
+	- Fallback to setting extension func ptrs to NULL if no method for
+	  getting proc addresses is available
+	- Added print_gl_info() method
+
+	* src/game_config.c, src/game_config.h:
+	Added bpp_mode and generate_bug_report configuration variables.
+
+	* src/error_util.c:
+	Updated to use winsys_exit instead of exit.
+
+	* src/debug.c, src/debug.h:
+	- Removed health debug mode
+	- Added gl_info debug mode (prints information about OpenGL renderer)
+
+	* src/credits.c, src/event_select.c, src/game_over.c, src/game_type_select.c, src/image.c, src/intro.c, src/paused.c, src/race_select.c, src/racing.c, src/reset.c, src/splash_screen.c, src/tuxracer.h, src/ui_mgr.c, src/ui_mgr.h, src/button.c:
+	- Updated to use winsys functions and constants (instead of GLUT)
+
+	* src/audio.c, src/audio.h:
+	- Moved SDL sound initialization to init_audio().
+	- Added shutdown_audio()
+
+	* src/winsys.c, src/winsys.h:
+	Initial checkin
+
+	* src/winsys.c, src/winsys.h:
+	New file.
+
+	* src/Makefile.am: Added winsys.[ch]
+
+	* configure.in: - Changed version to 0.61pre
+	- Added check for libm and libdl (needed to detect Tcl on some
+	  platforms)
+	- Added --disable-sdl flag
+	- glXGetProcAddress no longer required
+	- Check for glx only if have glXGetProcAddress
+	- GLUT only required if SDL isn't detected
+
+
+2000-10-16  Jasmin Patry  <jfpatry@sunspirestudios.com>
 	* Making version 0.60.3
 
 	* tuxracer/Makefile.am:
@@ -8,7 +251,7 @@
 	Fixes for building with Cygwin.
 	Updated version to 0.60.3.
 	
-2000-10-15  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-10-15  Jasmin Patry  <jfpatry@sunspirestudios.com>
 	* Making version 0.60.2
 
 	* tuxracer/configure.in:
@@ -18,7 +261,7 @@
 	- Fixed some problems with Tcl and GL checks
 	- Now check in /usr/include/tcl{8.0,8.2,8.3,} for tcl headers.
 
-2000-10-13  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-10-13  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* tuxracer/configure.in:
 	- If GL libs and headers not found in standard location, then search under
@@ -48,24 +291,24 @@
 
 	* tuxracer/configure.in: Added check for ranlib
 
-2000-10-11  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-10-11  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* tuxracer/configure.in:
 	Near total-rewrite of configure script.  Checks for more Tcl header files,
 	and ensures that the OpenGL headers and libraries are up to date.
 	Still needs more testing on different configurations.
 
-2000-10-08  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-10-08  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* tuxracer/configure.in:
 	Fixed problem with check for glx.h and glext.h.
 
-2000-10-05  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-10-05  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* tuxracer/src/game_config.c:
 	Reduced size of audio buffer
 
-2000-10-03  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-10-03  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* tuxracer/ChangeLog: *** empty log message ***
 
@@ -79,7 +322,7 @@
 
 	* tuxracer/configure.in: Added check for glext.h
 
-2000-10-03  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-10-03  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* Making version 0.60.1.
 	
@@ -93,7 +336,7 @@
 
 	* configure.in: Added check for glext.h
 
-2000-10-02  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-10-02  Jasmin Patry  <jfpatry@sunspirestudios.com>
 	
 	* Making version 0.60.
 
@@ -121,7 +364,7 @@
 
 	* AUTHORS: Updated for 0.60 release.
 
-2000-10-01  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-10-01  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/reset.c:
 	Fixed bug in reset code in which array would be indexed at -1 if no
@@ -206,7 +449,7 @@
 	Snow in menus that can be pushed around with the mouse. game_config
 	parameter ui_snow can be used to disable.
 
-2000-09-30  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-30  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/main.c:
 	Changes to window title and startup message.
@@ -219,7 +462,7 @@
 	* src/button.h, src/race_select.c, src/button.c:
 	Race button is highlighted when "Enter" key is pressed.
 
-2000-09-30  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-30  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/ui_mgr.c, src/ui_mgr.h:
 	Added logic to keep track of and draw mouse cursor
@@ -263,7 +506,7 @@
 	Can now use arrow buttons to move through cups and events.
 	Left/Right is used to change event; Up/Down is used to change cup.
 
-2000-09-29  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-29  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/game_config.c:
 	Changes to compile under mingw32
@@ -294,7 +537,7 @@
 
 	* src/credits.c: Added fade-in/fade-out.
 
-2000-09-27  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-27  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/textures.c:
 	Check maximum texture size supported by card and scale textures to
@@ -351,7 +594,7 @@
 	Rewrote item_spec_cb, added -normal option to tux_item_spec (specifies
 	normal vector for object)
 
-2000-09-26  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-26  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/ui_theme.c:
 	Brightened disabled colour a bit
@@ -405,7 +648,7 @@
 	* src/race_select.c:
 	Modified so that course options can be set in completed cups.
 
-2000-09-25  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-25  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/race_select.c:
 	- Added display of life counter
@@ -421,7 +664,7 @@
 	Added sound "item_collect" when herring collected (needs to be
 	added to courses.)
 
-2000-09-25  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-25  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/race_select.c:
 	Now make sure that course is loaded anew when entering mode.
@@ -510,7 +753,7 @@
 	* src/track_marks.c:
 	Track marks no longer broken due to distance or time between marks.
 
-2000-09-22  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-22  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/start_screen.c, src/start_screen.h:
 	Old start screen is no longer needed.
@@ -593,7 +836,7 @@
 	* src/save.c, src/save.h:
 	In progress versions of code to save scores and progress.
 
-2000-09-19  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-19  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/tuxracer.h:
 	Modifications to support new event/cup course structure.
@@ -621,7 +864,7 @@
 	   config/options under Windows
 	Will read and replace deprecated file.
 
-2000-09-19  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-19  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/Makefile.am: Added new files.
 
@@ -635,7 +878,7 @@
 	Removed code to draw particle shadows (was broken since particles were
 	turned into billboards)
 
-2000-09-18  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-18  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/mirror_course.c:
 	item_t objects are now mirrored properly.
@@ -668,7 +911,7 @@
 	* src/Makefile.am:
 	Changed texfont.[ch] to tex_font_metrics.[ch] at Jaz's request.
 
-2000-09-16  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-16  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* tools/txf/Makefile.am:
 	Modified so that gentexfont.c.orig is now patched into gentexfont.c
@@ -749,7 +992,7 @@
 	 couple places)
 	-Added some newlines at the end of warning messages
 
-2000-09-15  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-15  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/course_render.c:
 	Removed some obsolete code
@@ -782,7 +1025,7 @@
 	   - moves 10m up course and to center
 	   - flashes for .5 sec and then continues racing
 
-2000-09-15  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-15  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/racing.c:
 	- Initialized last_terrain to 0; this fixes bug in which terrain
@@ -811,7 +1054,7 @@
 	- added continuous sounds and inserted calls in racing code
 	- adjusted turning so that regular turn keys now roll and turn
 
-2000-09-14  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-14  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/texfont.c:
 	Fix for compiling under Win32.
@@ -889,7 +1132,7 @@
 	* src/error_util.h:
 	Added DEPRECATION_WARNING warning type.
 
-2000-09-11  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-11  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* Makefile.am: Added tools subdir
 
@@ -941,7 +1184,7 @@
 	   - normals are precalculated instead of at draw time
 	   - regular marks are rendered as quadstrips
 
-2000-09-09  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-09  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/quadtree.cpp:
 	Added a workaround for an apparent bug in some drivers that
@@ -1038,7 +1281,7 @@
 	to hold the texture name instead of the texture filename.  Textures are
 	bound to tree_types.name.
 
-2000-09-06  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-06  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/textures.c:
 	Moved call to gluBuild2DMipmaps after textuer parameters are set (may
@@ -1115,13 +1358,13 @@
 	Modifications ensure that tree types are grouped in the tree_loc array
 	so that texture swapping is less frequent when drawing trees.
 
-2000-09-05  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-05  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/audio_data.c:
 	Fixed callbacks in the case where tuxracer is compiled without
 	SDL. (untested)
 
-2000-09-02  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-09-02  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/course_render.c:
 	Set glColour before drawing sky cube (necessary so that we don't
@@ -1169,7 +1412,7 @@
 	- fixed jump code so holding down the button doesn't cause flying when
 	  trying to jump or vice versa
 
-2000-08-31  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-31  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/start_screen.c:
 	Added call to reshape() in start_screen_init() so that far clip plane is
@@ -1216,7 +1459,7 @@
 
 	* src/Makefile.am: Added gauss.[ch]
 
-2000-08-28  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-28  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/view.c:
 	Camera position interpolation is now slowed down (or stopped) when
@@ -1242,13 +1485,13 @@
 	- Inner boundaries to course added. Tux movement restricted to inner
 	 region.
 
-2000-08-27  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-27  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/racing.c:
 	Added code to initialize view in racing_init() (needed if course
 	doesn't have an introductory animation).
 
-2000-08-26  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-26  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/game_over.c, src/paused.c:
 	Fixed time step size (should be EPS when time is stopped).
@@ -1297,7 +1540,7 @@
 	* src/alglib.c:
 	Minor change to use code_not_reached() assertion.
 
-2000-08-23  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-23  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/phys_sim.c:
 	- Adjusted physics for rolling (hard turn)
@@ -1323,7 +1566,7 @@
 	Added a call to glutIgnoreKeyRepeat() to avoid seeing repeated KeyUp
 	messages.
 
-2000-08-17  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-17  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* README: Testing syncmail again.
 
@@ -1335,7 +1578,7 @@
 	Texture mapping additions for double hash table, load and bind paradigm. Sky
 	cube replaces base and background.
 
-2000-08-15  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-15  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* AUTHORS: *** empty log message ***
 
@@ -1356,7 +1599,7 @@
 	Renamed some functions, updated names of stub functions to match names
 	of real functions.
 
-2000-08-14  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-14  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/audio.c, src/audio.h, src/audio_data.c, src/audio_data.h:
 	Initial checkin.
@@ -1393,7 +1636,7 @@
 	Changed to use doxygen (http://www.stack.nl/~dimitri/doxygen/) commenting
 	conventions.
 
-2000-08-13  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-13  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/func_template.txt:
 	Function description template -- Initial checkin.
@@ -1409,7 +1652,7 @@
 	Hash table routines added for use with textures and sound. Currently just
 	a simple interface on top of the TCL hash table routines.
 
-2000-08-13  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-13  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/tux_types.h: Minor code reorganization
 
@@ -1429,11 +1672,11 @@
 
 	* README: Updated development system.
 
-2000-08-12  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-12  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* configure.in: Fixed a typo.
 
-2000-08-09  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-09  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/viewfrustum.c:
 	Changed near & far variable names since those are reserved on WIN32.
@@ -1448,7 +1691,7 @@
 	* configure.in:
 	Added checks for non-standard math functions (finite, isnan, etc.)
 
-2000-08-08  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+2000-08-08  Jasmin Patry  <jfpatry@sunspirestudios.com>
 
 	* src/hier.c: Changes values.h to float.h
 

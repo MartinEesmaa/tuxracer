@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,10 +20,11 @@
 #include "tuxracer.h"
 #include "keyboard.h"
 #include "keyboard_util.h"
+#include "loop.h"
 
 #define KEYMAP_SIZE 1000
-#define KEYTABLE_SIZE UCHAR_MAX
-#define SPECIAL_KEYTABLE_SIZE UCHAR_MAX
+#define KEYTABLE_SIZE WSK_LAST
+#define SPECIAL_KEYTABLE_SIZE WSK_LAST 
 
 static key_cb_t keytable[KEYTABLE_SIZE];
 static key_cb_t special_keytable[SPECIAL_KEYTABLE_SIZE];
@@ -116,7 +117,14 @@ static void init_keytable( game_mode_t mode )
 		break;
 
 	    case CONFIGURABLE_KEY:
+		check_assertion( keymap[i].key_func != NULL,
+				 "No key_func for configurable key" );
+
 		keys = keymap[i].key_func();
+
+		check_assertion( keys != NULL,
+				 "key_func returned NULL keys string" );
+
 		if ( ! insert_keytable_entries( keys, keymap[i].key_cb ) )
 		{
 		    fprintf( stderr, "Tux Racer warning: key specification "
@@ -143,10 +151,16 @@ static void init_keytable( game_mode_t mode )
     }
 }
 
-static void keyboard_handler( int key, bool_t special, bool_t release, int x, int y )
+static void keyboard_handler( unsigned int key, bool_t special, 
+			      bool_t release, int x, int y )
 {
     static game_mode_t last_mode = NO_MODE;
     key_cb_t *table;
+
+    if ( is_mode_change_pending() ) {
+	/* Don't process keyboard events until the mode change happens */
+	return;
+    }
 
     if ( last_mode != g_game.mode ) {
 	last_mode = g_game.mode;
@@ -168,30 +182,7 @@ static void keyboard_handler( int key, bool_t special, bool_t release, int x, in
     }
 }
 
-static void glut_keyboard_cb( unsigned char ch, int x, int y ) 
-{
-    keyboard_handler( ch, False, False, x, y );
-}
-
-static void glut_special_cb( int key, int x, int y ) 
-{
-    keyboard_handler( key, True, False, x, y );
-}
-
-static void glut_keyboard_up_cb( unsigned char ch, int x, int y ) 
-{
-    keyboard_handler( ch, False, True, x, y );
-}
-
-static void glut_special_up_cb( int key, int x, int y ) 
-{
-    keyboard_handler( key, True, True, x, y );
-}
-
 void init_keyboard()
 {
-    glutKeyboardFunc( glut_keyboard_cb );
-    glutKeyboardUpFunc( glut_keyboard_up_cb );
-    glutSpecialFunc( glut_special_cb );
-    glutSpecialUpFunc( glut_special_up_cb );
+    winsys_set_keyboard_func( keyboard_handler );
 }

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -79,6 +79,8 @@ PROTO_PARAM_INT( mipmap_type );
 
 PROTO_PARAM_BOOL( fullscreen );
 
+PROTO_PARAM_INT( bpp_mode );
+
 PROTO_PARAM_BOOL( force_window_position );
 
 PROTO_PARAM_INT( ode_solver );
@@ -123,6 +125,10 @@ PROTO_PARAM_INT( joystick_trick_button );
 
 PROTO_PARAM_INT( joystick_continue_button );
 
+PROTO_PARAM_INT( joystick_x_axis );
+
+PROTO_PARAM_INT( joystick_y_axis );
+
 PROTO_PARAM_INT( fov );
 
 PROTO_PARAM_STRING( debug );
@@ -142,6 +148,8 @@ PROTO_PARAM_BOOL( terrain_blending );
 PROTO_PARAM_BOOL( perfect_terrain_blending );
 
 PROTO_PARAM_BOOL( terrain_envmap );
+
+PROTO_PARAM_BOOL( disable_fog );
 
 PROTO_PARAM_BOOL( use_cva );
 
@@ -168,6 +176,8 @@ PROTO_PARAM_INT( audio_buffer_size );
 PROTO_PARAM_BOOL( track_marks );
 
 PROTO_PARAM_BOOL( ui_snow );
+
+PROTO_PARAM_BOOL( write_diagnostic_log );
 
 #endif 
 

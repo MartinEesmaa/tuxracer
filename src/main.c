@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -52,7 +52,9 @@
 #include "save.h"
 #include "credits.h"
 #include "joystick.h"
-
+#include "os_util.h"
+#include "loading.h"
+#include "tcl_util.h"
 
 #define WINDOW_TITLE "Tux Racer " VERSION
 
@@ -65,13 +67,6 @@
 game_data_t g_game;
 
 
-/*
- * Static Variables
- */
-
-static int glutWindow;
-
-
 /* 
  * Function definitions
  */
@@ -82,93 +77,11 @@ void cleanup(void)
 {
     write_config_file();
     write_saved_games();
-    if ( getparam_fullscreen() ) {
-	glutLeaveGameMode();
-    }
+
+    shutdown_audio();
+
+    winsys_shutdown();
 }
-
-
-#if defined (HAVE_SDL) && defined (HAVE_SDL_MIXER)
-
-void setup_sdl() 
-{
-    int hz, channels, buffer;
-    Uint16 format;
-    Uint32 flags;
-
-    flags = 0;
-
-    if ( getparam_no_audio() == False ) {
-	flags |= SDL_INIT_AUDIO;
-    }
- 
-#ifdef HAVE_SDL_JOYSTICKOPEN
-    flags |= SDL_INIT_JOYSTICK;
-#endif
-
-    /*
-     * Initialize SDL
-     */
-    if ( SDL_Init(flags) < 0 ) {
-	handle_error(1, "Couldn't initialize SDL: %s\n",SDL_GetError());
-    }
-
-    if ( getparam_no_audio() == False ) {
-	/* Open the audio device */
-	switch (getparam_audio_freq_mode()) {
-	case 0:
-	    hz = 11025;
-	    break;
-	case 1:
-	    hz = 22050;
-	    break;
-	case 2:
-	    hz = 44100;
-	    break;
-	default:
-	    hz = 22050;
-	    setparam_audio_freq_mode(1);
-	}
-
-	switch ( getparam_audio_format_mode() ) {
-	case 0:
-	    format = AUDIO_U8;
-	    break;
-	case 1:
-	    format = AUDIO_S16SYS;
-	    break;
-	default:
-	    format = AUDIO_S16SYS;
-	    setparam_audio_format_mode( 1 );
-	}
-
-	if ( getparam_audio_stereo() ) {
-	    channels = 2;
-	} else {
-	    channels = 1;
-	}
-
-	buffer = getparam_audio_buffer_size();
-
-	if ( Mix_OpenAudio(hz, format, channels, buffer) < 0 ) {
-	    print_warning( 1,
-			   "Warning: Couldn't set %d Hz %d-bit audio\n"
-			   "  Reason: %s\n", 
-			   hz,  
-			   getparam_audio_format_mode() == 0 ? 8 : 16,
-			   SDL_GetError());
-	} else {
-	    print_debug( DEBUG_SOUND,
-			 "Opened audio device at %d Hz %d-bit audio",
-			 hz, 
-			 getparam_audio_format_mode() == 0 ? 8 : 16 );
-	}
-    }
-
-    atexit(SDL_Quit);
-}
-
-#endif /* defined (HAVE_SDL) && defined (HAVE_SDL_MIXER) */
 
 void read_game_init_script()
 {
@@ -205,10 +118,10 @@ void read_game_init_script()
     } 
 }
 
+    
+
 int main( int argc, char **argv ) 
 {
-    int width, height;
-
     /* Print copyright notice */
     fprintf( stderr, "Tux Racer " VERSION " -- a Sunspire Studios Production "
 	     "(http://www.sunspirestudios.com)\n"
@@ -245,63 +158,33 @@ int main( int argc, char **argv )
     init_game_configuration();
     read_config_file();
 
-
     /* Set up the debugging modes */
     init_debug();
 
+    /* Setup diagnostic log if requested */
+    if ( getparam_write_diagnostic_log() ) {
+	setup_diagnostic_log();
+    }
+
+    /*
+     * Setup Tcl stdout and stderr channels to point to C stdout and stderr 
+     * streams
+     */
+    setup_tcl_std_channels();
 
 
     /* 
-     * Initialize GLUT 
+     * Initialize rendering context, create window
      */
+    winsys_init( &argc, argv, WINDOW_TITLE, WINDOW_TITLE );
 
-    /* Let GLUT process its command-line options */
-    glutInit( &argc, argv );
-
-#ifdef USE_STENCIL_BUFFER
-    glutInitDisplayMode( GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE | GLUT_STENCIL );
-#else
-    glutInitDisplayMode( GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE );
-#endif
-
-    /* Create a window */
-    if ( getparam_fullscreen() ) {
-	glutInitWindowPosition( 0, 0 );
-	glutEnterGameMode();
-    } else {
-	/* Set the initial window size */
-	width = getparam_x_resolution();
-	height = getparam_y_resolution();
-	glutInitWindowSize( width, height );
-
-	if ( getparam_force_window_position() ) {
-	    glutInitWindowPosition( 0, 0 );
-	}
-
-	glutWindow = glutCreateWindow( WINDOW_TITLE );
-
-	if ( glutWindow == 0 ) {
-	    fprintf( stderr, "Couldn't create a window.\n" );
-	    exit(1);
-	} 
-    }
 
     /* Ingore key-repeat messages */
-    glutIgnoreKeyRepeat(1);
+    winsys_enable_key_repeat(0);
 
-
-    /*
-     * Initialize SDL
-     */
-
-#if defined(HAVE_SDL) && defined(HAVE_SDL_MIXER)
-    setup_sdl();
-#endif
 
     /* Set up a function to clean up when program exits */
-    if ( atexit( cleanup ) != 0 ) {
-	perror( "atexit" );
-    }
+    winsys_atexit( cleanup );
 
     /* 
      * Initial OpenGL settings 
@@ -309,6 +192,13 @@ int main( int argc, char **argv )
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
     init_opengl_extensions();
+
+    /* Print OpenGL debugging information if requested */
+    if ( debug_mode_is_active( DEBUG_GL_INFO ) ) {
+	print_debug( DEBUG_GL_INFO, 
+		     "OpenGL information:" );
+	print_gl_info();
+    }
 
 
     /* 
@@ -361,6 +251,7 @@ int main( int argc, char **argv )
     event_select_register();
     race_select_register();
     credits_register();
+    loading_register();
 
     g_game.mode = NO_MODE;
     set_game_mode( SPLASH );
@@ -370,16 +261,16 @@ int main( int argc, char **argv )
     init_keyboard();
     
 
-    glutSetCursor( GLUT_CURSOR_NONE );
+    winsys_show_cursor( False );
 
     /* We use this to "prime" the GLUT loop */
-    glutIdleFunc( main_loop );
+    winsys_set_idle_func( main_loop );
 
     
     /* 
      * ...and off we go!
      */
-    glutMainLoop();
+    winsys_process_events();
 
     return 0;
 } 

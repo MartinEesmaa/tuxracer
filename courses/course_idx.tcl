@@ -34,6 +34,7 @@ proc get_course_info { } {
         set par_time 120.0
     } 
 
+    # Remove quotes around strings, etc.; e.g. "Jasmin Patry" -> Jasmin Patry
     eval "set name $name"
     eval "set author $author"
     eval "set par_time $par_time"
@@ -81,6 +82,10 @@ cd ..
 cd contrib
 set contrib_course_list {}
 foreach course [glob -nocomplain *] {
+    if { $course == "CVS" } {
+	continue;
+    }
+
     if [catch {cd $course}] {
 	puts stderr "Couldn't change directory to $course"
 	continue;
@@ -162,7 +167,7 @@ tux_events {
 				-name "Bumpy Ride" \
 				-description "This hill has a series of ramps tackle.  Make sure to line yourself up before getting airborne." \
 				-herring { 18 18 18 18 } \
-				-time { 30 28 27 26 } \
+				-time { 35 30 28 27 } \
 				-score { 0 0 0 0 } \
 				-mirrored no -conditions sunny \
 				-windy no -snowing no

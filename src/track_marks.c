@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -136,7 +136,6 @@ static void draw_tri_tracks( void )
 
     glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
     set_material( white, black, 1.0 );
-    glEnable( GL_LIGHTING );
     setup_course_lighting();
 
     for( i = 0; i < track_tris.num_tris; i++ ) {
@@ -361,7 +360,6 @@ void draw_track_marks(void)
 
     glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
     set_material( white, black, 1.0 );
-    glEnable( GL_LIGHTING );
     setup_course_lighting();
 
     num_quads = min( track_marks.current_mark, MAX_TRACK_MARKS -

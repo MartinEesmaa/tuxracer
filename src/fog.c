@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,12 +32,12 @@ void reset_fog()
     fog_settings.density = 0.005;
     fog_settings.start = 0.0;
     fog_settings.end = getparam_forward_clip_distance();
-    init_glfloat_array( 4, fog_settings.colour, 1.0, 1.0, 1.0, 1.0 );;
+    init_glfloat_array( 4, fog_settings.colour, 1.0, 1.0, 1.0, 1.0 );
 }
 
 void setup_fog()
 {
-    if ( !fog_settings.is_on ) {
+    if ( !fog_settings.is_on || getparam_disable_fog() ) {
 	glDisable( GL_FOG );
 	enabled = False;
 	return;
@@ -67,7 +67,7 @@ void disable_fog()
 
 bool_t is_fog_on()
 {
-    return fog_settings.is_on && enabled;
+    return (bool_t) ( fog_settings.is_on && enabled );
 }
 
 GLfloat* get_fog_colour()

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -78,7 +78,7 @@ static credit_line_t credit_lines[] =
     { "credits_text", "University of Waterloo Computer Graphics Lab" },
     { "credits_text", "" },
     { "credits_text_small", "Tux Racer is a trademark of Jasmin F. Patry" },
-    { "credits_text_small", "Tux Racer is copyright 1999,2000 Jasmin F. Patry" },
+    { "credits_text_small", "Tux Racer is copyright 1999, 2000, 2001 Jasmin F. Patry" },
 };
 
 static scalar_t y_offset = 0;
@@ -94,20 +94,20 @@ static scalar_t y_offset = 0;
 static void go_back() 
 {
     set_game_mode( GAME_TYPE_SELECT );
-    glutPostRedisplay();
+    winsys_post_redisplay();
 }
 
 
 /*---------------------------------------------------------------------------*/
 /*! 
-  GLUT mouse callback
+  mouse callback
   \author  jfpatry
   \date    Created:  2000-09-27
   \date    Modified: 2000-09-27
 */
 void mouse_cb( int button, int state, int x, int y )
 {
-    if ( state == GLUT_DOWN ) {
+    if ( state == WS_MOUSE_DOWN ) {
 	go_back();
     }
 }
@@ -211,14 +211,14 @@ static void draw_credits_text( scalar_t time_step )
     glEnable( GL_TEXTURE_2D );
 }
 
-static void credits_init() 
+static void credits_init(void) 
 {
-    glutDisplayFunc( main_loop );
-    glutIdleFunc( main_loop );
-    glutReshapeFunc( reshape );
-    glutMouseFunc( mouse_cb );
-    glutMotionFunc( ui_event_motion_func );
-    glutPassiveMotionFunc( ui_event_motion_func );
+    winsys_set_display_func( main_loop );
+    winsys_set_idle_func( main_loop );
+    winsys_set_reshape_func( reshape );
+    winsys_set_mouse_func( mouse_cb );
+    winsys_set_motion_func( ui_event_motion_func );
+    winsys_set_passive_motion_func( ui_event_motion_func );
 
     y_offset = 0;
 
@@ -254,7 +254,7 @@ static void credits_loop( scalar_t time_step )
 
     reshape( width, height );
 
-    glutSwapBuffers();
+    winsys_swap_buffers();
 } 
 
 START_KEYBOARD_CB( credits_key_cb )
@@ -269,8 +269,9 @@ void credits_register()
 {
     int status = 0;
 
-    status |= add_keymap_entry( 
-	CREDITS, DEFAULT_CALLBACK, NULL, NULL, credits_key_cb );
+    status |= add_keymap_entry( CREDITS, 
+				DEFAULT_CALLBACK, 
+				NULL, NULL, credits_key_cb );
 
     check_assertion( status == 0, "out of keymap entries" );
 

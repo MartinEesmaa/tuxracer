@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -295,8 +295,6 @@ void render_course()
     glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
     set_material( white, black, 1.0 );
     
-    setup_course_lighting();
-
     update_course_quadtree( eye_pt, getparam_course_detail_level() );
 
     render_course_quadtree( );
@@ -417,118 +415,6 @@ void draw_sky(point_t pos)
 
 }
 
-
-void draw_background(scalar_t fov, scalar_t aspect ) 
-{
-    scalar_t courseWidth, courseLength;
-    scalar_t bgndWidth, bgndHeight;
-    scalar_t miny;
-    scalar_t x0, x1, z0;
-    scalar_t total_length;
-	GLuint   texture_id[2];
-
-    set_gl_options( BACKGROUND );
-
-    get_course_dimensions( &courseWidth, &courseLength );
-    miny = get_min_y_coord();
-
-	if (!(get_texture_binding( "background", &texture_id[0] ) &&
-		  get_texture_binding( "snow", &texture_id[1] ) ) )  	{
-      return;
-	}
-
-    total_length = ( 1.0 + FLAT_SEGMENT_FRACTION ) * courseLength;
-
-    /* make background fill field of view */
-    bgndWidth  = 2 * tan( ANGLES_TO_RADIANS( fov/2. ) ) * 
-	aspect * total_length;
-
-    if ( bgndWidth < total_length ) {
-	bgndWidth = total_length;
-    }
-
-    bgndHeight = bgndWidth / BACKGROUND_TEXTURE_ASPECT;
-
-    if (bgndHeight < 1.5 * (-miny)) {
-        bgndHeight =  1.5 * (-miny);
-	bgndWidth = BACKGROUND_TEXTURE_ASPECT * bgndHeight;
-    } 
-
-    x0 = courseWidth / 2. - bgndWidth / 2.;
-    x1 = courseWidth / 2. + bgndWidth / 2.;
-    z0 = -total_length + bgndWidth;
-
-    glBindTexture( GL_TEXTURE_2D, texture_id[0] );
-    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
-
-    glBegin(GL_QUAD_STRIP);
-
-    glTexCoord2f( 0.01, 0.99 );
-    glVertex3f( x0, bgndHeight + miny, z0);
-    glTexCoord2f( 0.01, 0.01 );
-    glVertex3f( x0, miny, z0);
-
-    glTexCoord2f( 0.99, 0.99 );
-    glVertex3f( x0, bgndHeight + miny, -total_length);
-    glTexCoord2f( 0.99, 0.01 );
-    glVertex3f( x0, miny, -total_length);
-
-    glTexCoord2f( 0.01, 0.99 );
-    glVertex3f( x1, bgndHeight + miny, -total_length);
-    glTexCoord2f( 0.01, 0.01 );
-    glVertex3f( x1, miny, -total_length);
-
-    glTexCoord2f( 0.99, 0.99 );
-    glVertex3f( x1, bgndHeight + miny, z0);
-    glTexCoord2f( 0.99, 0.01 );
-    glVertex3f( x1, miny, z0);
-
-    glTexCoord2f( 0.01, 0.99 );
-    glVertex3f( x0, bgndHeight + miny, z0);
-    glTexCoord2f( 0.01, 0.01 );
-    glVertex3f( x0, miny, z0);
-
-    glEnd();
-
-    set_material( sky, black, 0.0 );
-    glDisable( GL_TEXTURE_2D );
-
-    glBegin( GL_QUADS );
-    glVertex3f( x0, bgndHeight + miny, z0 );
-    glVertex3f( x0, bgndHeight + miny, -total_length );
-    glVertex3f( x1, bgndHeight + miny, -total_length );
-    glVertex3f( x1, bgndHeight + miny, z0 );
-    glEnd();
-
-    /* Draw bottom rectangle, light it the same way as the course */
-    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-    set_material( white, black, 1.0 );
-    glEnable( GL_LIGHTING );
-    
-    setup_course_lighting();
-
-    glEnable( GL_TEXTURE_2D );
-    glBindTexture( GL_TEXTURE_2D, texture_id[1] );
-    glNormal3f( 0, 1., 0 );
-
-    glBegin( GL_QUADS );
-
-    glTexCoord2f( x0/TEX_SCALE, z0/TEX_SCALE );
-    glVertex3f( x0, miny, z0 );
-
-    glTexCoord2f( x1/TEX_SCALE, z0/TEX_SCALE );
-    glVertex3f( x1, miny, z0 );
-
-    glTexCoord2f( x1/TEX_SCALE, -total_length/TEX_SCALE );
-    glVertex3f( x1, miny, -total_length );
-
-    glTexCoord2f( x0/TEX_SCALE, -total_length/TEX_SCALE );
-    glVertex3f( x0, miny, -total_length );
-
-    glEnd();
-
-} 
-
 void draw_trees() 
 {
     tree_t    *treeLocs;
@@ -563,10 +449,7 @@ void draw_trees()
 
     glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
     set_material( white, black, 1.0 );
-    glEnable( GL_LIGHTING );
     
-    setup_course_lighting();
-
     for (i = 0; i< numTrees; i++ ) {
 
 	if ( clip_course ) {

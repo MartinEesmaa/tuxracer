@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,10 +20,7 @@
 /* This code taken from Mesa 3Dfx demos by David Bucciarelli (tech.hmw@plus.it)
  */
 
-#include <stdio.h>
-#include <string.h> 
-#include <stdlib.h> 
-#include <GL/glut.h>
+#include "tuxracer.h"
 #include "image.h"
 
 #define IMAGIC      0x01da
@@ -46,22 +43,22 @@
        FILE *file;
        unsigned char *tmp[5];
        unsigned long rleEnd;
-       unsigned long *rowStart;
-       unsigned long *rowSize;
+       unsigned int *rowStart;
+       unsigned int *rowSize;
      } Image;
 
 
 static Image *ImageOpen(char *fileName)
 {
   Image *image;
-  unsigned long *rowStart, *rowSize, ulTmp;
+  unsigned int *rowStart, *rowSize, ulTmp;
   int x, i;
 
   image = (Image *)malloc(sizeof(Image));
   if (image == NULL) 
     {
       fprintf(stderr, "Out of memory!\n");
-      exit(-1);
+      winsys_exit(-1);
     }
   if ((image->file = fopen(fileName, "rb")) == NULL) 
     {
@@ -90,19 +87,19 @@ static Image *ImageOpen(char *fileName)
       if (image->tmp[i] == NULL ) 
 	{
 	  fprintf(stderr, "Out of memory!\n");
-	  exit(-1);
+	  winsys_exit(-1);
 	}
     }
 
   if ((image->type & 0xFF00) == 0x0100) /* RLE image */
     {
-      x = image->sizeY * image->sizeZ * sizeof(long);
-      image->rowStart = (unsigned long *)malloc(x);
-      image->rowSize = (unsigned long *)malloc(x);
+      x = image->sizeY * image->sizeZ * sizeof(int);
+      image->rowStart = (unsigned int *)malloc(x);
+      image->rowSize = (unsigned int *)malloc(x);
       if (image->rowStart == NULL || image->rowSize == NULL) 
 	{
 	  fprintf(stderr, "Out of memory!\n");
-	  exit(-1);
+	  winsys_exit(-1);
 	}
       image->rleEnd = 512 + (2 * x);
       fseek(image->file, 512, SEEK_SET);
@@ -110,7 +107,7 @@ static Image *ImageOpen(char *fileName)
       fread(image->rowSize, 1, x, image->file);
       if (image->imagic == IMAGIC_SWAP) 
 	{
-	  x /= sizeof(long);
+	  x /= sizeof(int);
 	  rowStart = image->rowStart;
 	  rowSize = image->rowSize;
 	  while (x--) 
@@ -229,7 +226,7 @@ IMAGE *ImageLoad(char *fileName)
   if (final == NULL) 
     {
       fprintf(stderr, "Out of memory!\n");
-      exit(-1);
+      winsys_exit(-1);
     }
   final->imagic = image->imagic;
   final->type = image->type;
@@ -249,7 +246,7 @@ IMAGE *ImageLoad(char *fileName)
   if (final->data == NULL) 
     {
       fprintf(stderr, "Out of memory!\n");
-      exit(-1);
+      winsys_exit(-1);
     }
 
   ImageGetRawData(image, final->data);

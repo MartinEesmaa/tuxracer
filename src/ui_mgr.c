@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,16 +22,17 @@
 #include "hash.h"
 #include "textures.h"
 #include "ui_snow.h"
+#include "loop.h"
 
 typedef struct {
     void *widget;
     void *cb;
 } ui_callback_data_t;
 
-static hash_table_t *mouse_motion_cbs;
-static hash_table_t *mouse_down_cbs;
-static hash_table_t *mouse_up_cbs;
-static hash_table_t *widget_draw_cbs;
+static hash_table_t mouse_motion_cbs;
+static hash_table_t mouse_down_cbs;
+static hash_table_t mouse_up_cbs;
+static hash_table_t widget_draw_cbs;
 static bool_t initialized = False;
 static bool_t needs_redraw = True;
 static char key_buffer[12]; /* enough to hold a pointer in hex */
@@ -151,7 +152,7 @@ static ui_callback_data_t* generate_cb_data( void *widget, void *cb )
 void ui_add_mouse_motion_callback( void* widget, mouse_motion_event_cb_t cb ) 
 {
     char *key;
-    hash_table_t *table;
+    hash_table_t table;
     ui_callback_data_t *cb_data;
 
     key = generate_key_from_pointer( widget );
@@ -200,7 +201,7 @@ void ui_delete_mouse_motion_callback( void* widget )
 void ui_add_mouse_down_callback( void* widget, mouse_button_event_cb_t cb ) 
 {
     char *key;
-    hash_table_t *table;
+    hash_table_t table;
     ui_callback_data_t *cb_data;
 
     key = generate_key_from_pointer( widget );
@@ -249,7 +250,7 @@ void ui_delete_mouse_down_callback( void* widget )
 void ui_add_mouse_up_callback( void* widget, mouse_button_event_cb_t cb ) 
 {
     char *key;
-    hash_table_t *table;
+    hash_table_t table;
     ui_callback_data_t *cb_data;
 
     key = generate_key_from_pointer( widget );
@@ -294,7 +295,7 @@ void ui_delete_mouse_up_callback( void* widget )
 void ui_add_widget_draw_callback( void* widget, widget_draw_cb_t cb )
 {
     char *key;
-    hash_table_t *table;
+    hash_table_t table;
     ui_callback_data_t *cb_data;
 
     key = generate_key_from_pointer( widget );
@@ -353,7 +354,7 @@ void ui_set_dirty()
 void ui_check_dirty()
 {
     if ( needs_redraw ) {
-	glutPostRedisplay();
+	winsys_post_redisplay();
 	needs_redraw = False;
     }
 }
@@ -372,8 +373,8 @@ void ui_check_dirty()
   \date    Created:  2000-09-16
   \date    Modified: 2000-09-16
 */
-static void trigger_mouse_button_cbs( hash_table_t *table, 
-				      ui_mouse_button_t button, 
+static void trigger_mouse_button_cbs( hash_table_t table, 
+				      winsys_mouse_button_t button, 
 				      int x, int y )
 {
     hash_search_t iter;
@@ -382,7 +383,13 @@ static void trigger_mouse_button_cbs( hash_table_t *table,
     begin_hash_scan( table, &iter );
     while ( next_hash_entry( iter, NULL, (hash_entry_t*)&cb_data ) ) {
 	((mouse_button_event_cb_t)cb_data->cb)( 
-	    cb_data->widget, button, x, y );
+	    cb_data->widget, (winsys_mouse_button_t)button, x, y );
+
+	if ( is_mode_change_pending() ) {
+	    /* Callback just changed the mode; stop handling events
+	       for this mode. */
+	    break;
+	}
     }
     end_hash_scan( iter );
 }
@@ -400,7 +407,7 @@ static void trigger_mouse_button_cbs( hash_table_t *table,
   \date    Created:  2000-09-16
   \date    Modified: 2000-09-16
 */
-static void trigger_mouse_motion_cbs( hash_table_t *table, 
+static void trigger_mouse_motion_cbs( hash_table_t table, 
 				      int x, int y )
 {
     hash_search_t iter;
@@ -410,13 +417,19 @@ static void trigger_mouse_motion_cbs( hash_table_t *table,
     while ( next_hash_entry( iter, NULL, (hash_entry_t*)&cb_data ) ) {
 	((mouse_motion_event_cb_t)cb_data->cb)( 
 	    cb_data->widget, x, y );
+
+	if ( is_mode_change_pending() ) {
+	    /* Callback just changed the mode; stop handling events
+	       for this mode. */
+	    break;
+	}
     }
     end_hash_scan( iter );
 }
 
 /*---------------------------------------------------------------------------*/
 /*! 
-  GLUT callback for mouse button events
+  callback for mouse button events
 
   \return  None
   \author  jfpatry
@@ -425,23 +438,28 @@ static void trigger_mouse_motion_cbs( hash_table_t *table,
 */
 void ui_event_mouse_func( int button, int state, int x, int y )
 {
+    if ( is_mode_change_pending() ) {
+	/* Don't process events until mode change occurs */
+	return;
+    }
+
     /* Reverse y coordinate */
     y = getparam_y_resolution() - y;
 
-    if ( state == GLUT_DOWN ) {
+    if ( state == WS_MOUSE_DOWN ) {
 	trigger_mouse_button_cbs( mouse_down_cbs, button, x, y );
     } else {
 	trigger_mouse_button_cbs( mouse_up_cbs, button, x, y );
     }
 
-    if ( button == GLUT_LEFT_BUTTON ) {
-	left_mouse_button_down = ( state == GLUT_DOWN );
+    if ( button == WS_LEFT_BUTTON ) {
+	left_mouse_button_down = (bool_t) ( state == WS_MOUSE_DOWN );
     }
-    if ( button == GLUT_MIDDLE_BUTTON ) {
-	middle_mouse_button_down = ( state == GLUT_DOWN );
+    if ( button == WS_MIDDLE_BUTTON ) {
+	middle_mouse_button_down = (bool_t) ( state == WS_MOUSE_DOWN );
     }
-    if ( button == GLUT_RIGHT_BUTTON ) {
-	right_mouse_button_down = ( state == GLUT_DOWN );
+    if ( button == WS_RIGHT_BUTTON ) {
+	right_mouse_button_down = (bool_t) ( state == WS_MOUSE_DOWN );
     }
 
     ui_check_dirty();
@@ -449,7 +467,7 @@ void ui_event_mouse_func( int button, int state, int x, int y )
 
 /*---------------------------------------------------------------------------*/
 /*! 
-  GLUT callback for mouse motion events
+  callback for mouse motion events
 
   \return  None
   \author  jfpatry
@@ -459,6 +477,11 @@ void ui_event_mouse_func( int button, int state, int x, int y )
 void ui_event_motion_func( int x, int y )
 {
     point2d_t old_pos;
+
+    if ( is_mode_change_pending() ) {
+	/* Don't process events until mode change occurs */
+	return;
+    }
 
     /* Reverse y coordinate */
     y = getparam_y_resolution() - y;
@@ -550,6 +573,8 @@ void ui_draw( )
     begin_hash_scan( widget_draw_cbs, &iter );
     while ( next_hash_entry( iter, NULL, (hash_entry_t*)&cb_data ) ) {
 	((widget_draw_cb_t)cb_data->cb)( cb_data->widget );
+	check_assertion( !is_mode_change_pending(),
+			 "widget draw callback changed the mode" );
     }
     end_hash_scan( iter );
 

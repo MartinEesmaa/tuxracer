@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,33 +28,39 @@ typedef struct {
 } key_aliases_t;
 
 static key_aliases_t key_aliases[] = {
-    { "f1",         { GLUT_KEY_F1,            True } },
-    { "f2",         { GLUT_KEY_F2,            True } },
-    { "f3",         { GLUT_KEY_F3,            True } },
-    { "f4",         { GLUT_KEY_F4,            True } },
-    { "f5",         { GLUT_KEY_F5,            True } },
-    { "f6",         { GLUT_KEY_F6,            True } },
-    { "f7",         { GLUT_KEY_F7,            True } },
-    { "f8",         { GLUT_KEY_F8,            True } },
-    { "f9",         { GLUT_KEY_F9,            True } },
-    { "f10",        { GLUT_KEY_F10,           True } },
-    { "f11",        { GLUT_KEY_F11,           True } },
-    { "f12",        { GLUT_KEY_F12,           True } },
-    { "left",       { GLUT_KEY_LEFT,          True } },
-    { "up",         { GLUT_KEY_UP,            True } },
-    { "right",      { GLUT_KEY_RIGHT,         True } },
-    { "down",       { GLUT_KEY_DOWN,          True } },
-    { "page_up",    { GLUT_KEY_PAGE_UP,       True } },
-    { "page_down",  { GLUT_KEY_PAGE_DOWN,     True } },
-    { "home",       { GLUT_KEY_HOME,          True } },
-    { "end",        { GLUT_KEY_END,           True } },
-    { "insert",     { GLUT_KEY_INSERT,        True } },
-    { "tab",        { '\t',                   False } },
-    { "space",      { ' ',                    False } },
-    { "backspace",  { '\010',                 False } },
-    { "enter",      { '\n',                   False } },
-    { "delete",     { '\177',                 False } },
-    { "escape",     { '\033',                 False } }
+    { "f1",         { WSK_F1,            True } },
+    { "f2",         { WSK_F2,            True } },
+    { "f3",         { WSK_F3,            True } },
+    { "f4",         { WSK_F4,            True } },
+    { "f5",         { WSK_F5,            True } },
+    { "f6",         { WSK_F6,            True } },
+    { "f7",         { WSK_F7,            True } },
+    { "f8",         { WSK_F8,            True } },
+    { "f9",         { WSK_F9,            True } },
+    { "f10",        { WSK_F10,           True } },
+    { "f11",        { WSK_F11,           True } },
+    { "f12",        { WSK_F12,           True } },
+    { "left",       { WSK_LEFT,          True } },
+    { "up",         { WSK_UP,            True } },
+    { "right",      { WSK_RIGHT,         True } },
+    { "down",       { WSK_DOWN,          True } },
+    { "page_up",    { WSK_PAGEUP,        True } },
+    { "page_down",  { WSK_PAGEDOWN,      True } },
+    { "home",       { WSK_HOME,          True } },
+    { "end",        { WSK_END,           True } },
+    { "insert",     { WSK_INSERT,        True } },
+    { "right_shift",{ WSK_RSHIFT,        True } },
+    { "left_shift", { WSK_LSHIFT,        True } },
+    { "right_ctrl", { WSK_RCTRL,         True } },
+    { "left_ctrl",  { WSK_LCTRL,         True } },
+    { "right_alt",  { WSK_RALT,          True } },
+    { "left_alt",   { WSK_LALT,          True } },
+    { "tab",        { '\t',              False } },
+    { "space",      { ' ',               False } },
+    { "backspace",  { '\010',            False } },
+    { "enter",      { '\n',              False } },
+    { "delete",     { '\177',            False } },
+    { "escape",     { '\033',            False } }
 };
 
 bool_t translate_key( char *name, key_desc_t *desc ) 

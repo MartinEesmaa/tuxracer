@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -127,4 +127,44 @@ colour_t make_colour( scalar_t r, scalar_t g, scalar_t b, scalar_t a)
     result.b = b;
     result.a = a;
     return result;
+}
+
+
+/*---------------------------------------------------------------------------*/
+/*! 
+  Sets the Tcl stderr and stdout channels to be the same as the C stderr and
+  stdout streams.
+
+  \author  jfpatry
+*/
+void setup_tcl_std_channels()
+{
+    /* Only need to do this under Win32 */
+#if defined( NATIVE_WIN32_COMPILER )
+    Tcl_Channel stdout_chnl, stderr_chnl;
+
+    /* I'm not sure why the _dup is necessary under Windows.  
+
+       See the Tcl_SetStdChannel manpage for more info.
+    */
+    
+    /* Create new stdout channel */
+    Tcl_SetStdChannel( NULL, TCL_STDOUT );
+    
+    stdout_chnl = Tcl_MakeFileChannel( 
+	(ClientData) _get_osfhandle( _dup( _fileno(stdout) ) ),
+	TCL_WRITABLE );
+    
+    check_assertion( stdout_chnl, "Couldn't create new stdout channel" );
+    
+    
+    /* Create a new stderr channel */
+    Tcl_SetStdChannel( NULL, TCL_STDERR );
+    
+    stderr_chnl = Tcl_MakeFileChannel( 
+	(ClientData) _get_osfhandle( _dup( _fileno(stderr) ) ),
+	TCL_WRITABLE );
+    
+    check_assertion( stderr_chnl, "Couldn't create new stderr channel" );
+#endif
 }

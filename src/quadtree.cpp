@@ -49,7 +49,7 @@ VNCArray[j*STRIDE_GL_ARRAY+STRIDE_GL_ARRAY-4+(ch)]
 
 GLuint quadsquare::TexId[NumTerrains];
 GLuint quadsquare::EnvmapTexId;
-GLuint *quadsquare::VertexArrayIndices = NULL;
+GLuint *quadsquare::VertexArrayIndices = (GLuint*) NULL;
 GLuint quadsquare::VertexArrayCounter;
 GLuint quadsquare::VertexArrayMinIdx;
 GLuint quadsquare::VertexArrayMaxIdx;
@@ -67,7 +67,7 @@ quadsquare::quadsquare(quadcornerdata* pcd)
 
     int	i;
     for (i = 0; i < 4; i++) {
-	Child[i] = NULL;
+	Child[i] = (quadsquare*) NULL;
     }
 
     EnabledFlags = 0;
@@ -128,7 +128,7 @@ quadsquare::~quadsquare()
     int	i;
     for (i = 0; i < 4; i++) {
 	if (Child[i]) delete Child[i];
-	Child[i] = NULL;
+	Child[i] = (quadsquare*) NULL;
     }
 }
 
@@ -265,6 +265,8 @@ float	quadsquare::RecomputeError(const quadcornerdata& cd)
 // Also updates MinY & MaxY.
 {
     int	i;
+    int j;
+    int t;
     int	half = 1 << cd.Level;
     int	whole = half << 1;
     float terrain_error;
@@ -411,12 +413,12 @@ float	quadsquare::RecomputeError(const quadcornerdata& cd)
 
     int *terrain_count = new int[(int)NumTerrains];
 
-    for (int t=0; t<NumTerrains; t++) {
+    for (t=0; t<NumTerrains; t++) {
 	terrain_count[t] = 0;
     }
 
-    for (int i=cd.xorg; i<=cd.xorg+whole; i++) {
-	for (int j=cd.zorg; j<=cd.zorg+whole; j++) {
+    for (i=cd.xorg; i<=cd.xorg+whole; i++) {
+	for (j=cd.zorg; j<=cd.zorg+whole; j++) {
 
 	    if ( i < 0 || i >= RowSize ||
 		 j < 0 || j >= NumRows ) 
@@ -435,7 +437,7 @@ float	quadsquare::RecomputeError(const quadcornerdata& cd)
     int max_count = 0;
     int max_type = 0;
     int total = 0;
-    for (int t=0; t<NumTerrains; t++) {
+    for (t=0; t<NumTerrains; t++) {
 	if ( terrain_count[t] > max_count ) {
 	    max_count = terrain_count[t];
 	    max_type = t;

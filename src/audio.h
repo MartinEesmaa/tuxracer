@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -43,6 +43,8 @@ bool_t play_music( char *music_context );
 bool_t is_music_playing();
     
 void update_audio();
+
+void shutdown_audio();
 
 void register_sound_tcl_callbacks( Tcl_Interp *ip );
 

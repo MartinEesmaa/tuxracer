@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -42,27 +42,6 @@ const colour_t light_blue = { 0.5, 0.5, 0.8, 1.0 };
 const colour_t black = { 0., 0., 0., 1.0 };
 const colour_t sky   = { 0.82, 0.86, 0.88, 1.0 };
 
-/* XXX: this will eventually replaced with nicer texture-mapped chars */
-/* This routine taken from Mesa Demos */
-void print_string( void *font, char *string )
-{
-    int len, i;
-
-    len = (int) strlen(string);
-    for (i=0; i<len; i++) 
-        glutBitmapCharacter( font, string[i] );
-} 
-
-void print_string_centered( scalar_t y, void *font, char *string )
-{
-    scalar_t width;
-
-    width = glutBitmapLength( font, (unsigned char*) string );
-    width = width / getparam_x_resolution() * 640.;
-    glRasterPos2i( (int)(640. / 2. - width / 2.), (int) y );
-    print_string( font, string );
-}
-
 void reshape( int w, int h )
 {
     scalar_t far_clip_dist;
@@ -96,18 +75,6 @@ void draw_overlay() {
     glColor4f( 0.0, 0.0, 1.0, 0.1 );
     glRecti( 0, 0, 640, 480 );
 } 
-
-void print_health(scalar_t health_pct)
-{
-    char buff[30];
-
-    flat_mode();
-    sprintf( buff, "Health: %3d%%", ROUND_TO_NEAREST(health_pct) );
-
-    glColor3f( text_colour.r, text_colour.g, text_colour.b );
-    glRasterPos2i( 5, 20 ); 
-    print_string( GLUT_BITMAP_HELVETICA_10, buff );
-}
 
 void clear_rendering_context()
 {

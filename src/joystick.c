@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,13 +25,19 @@
 #include "SDL.h"
 #include "SDL_joystick.h"
 
-SDL_Joystick *joystick = NULL;
-int num_buttons = 0;
+static SDL_Joystick *joystick = NULL;
+static int num_buttons = 0;
+static int num_axes = 0;
 
 void init_joystick()
 {
     int num_joysticks = 0;
     char *js_name;
+
+    /* Initialize SDL SDL joystick module */
+    if ( SDL_Init( SDL_INIT_JOYSTICK ) < 0 ) {
+	handle_error( 1, "Couldn't initialize SDL: %s", SDL_GetError() );
+    }
 
     num_joysticks = SDL_NumJoysticks();
 
@@ -53,9 +59,16 @@ void init_joystick()
 	return;
     }
 
+    /* Get number of buttons */
     num_buttons = SDL_JoystickNumButtons( joystick );
+    print_debug( DEBUG_JOYSTICK, "Joystick has %d button%s", 
+		 num_buttons, num_buttons == 1 ? "" : "s" );
 
-    print_debug( DEBUG_JOYSTICK, "Joystick has %d buttons", num_buttons );
+    /* Get number of axes */
+    num_axes = SDL_JoystickNumAxes( joystick );
+    print_debug( DEBUG_JOYSTICK, "Joystick has %d ax%ss", 
+		 num_axes, num_axes == 1 ? "i" : "e" );
+
 }
 
 bool_t is_joystick_active()
@@ -70,31 +83,74 @@ void update_joystick()
 
 scalar_t get_joystick_x_axis()
 {
+    static bool_t warning_given = False;
+    int axis;
+
     check_assertion( joystick != NULL,
 		     "joystick is null" );
 
-    return SDL_JoystickGetAxis( joystick, 0 )/32768.0;
+    axis = getparam_joystick_x_axis();
+
+    /* Make sure axis is valid */
+    if ( axis >= num_axes || axis < 0 ) {
+
+	if ( !warning_given ) {
+	    print_warning( IMPORTANT_WARNING, 
+			   "joystick x axis mapped to axis %d "
+			   "but joystick only has %d axes", axis, num_axes );
+	    warning_given = True;
+	}
+
+	return 0.0;
+    }
+
+    return SDL_JoystickGetAxis( joystick, axis )/32768.0;
 }
 
 scalar_t get_joystick_y_axis()
 {
+    static bool_t warning_given = False;
+    int axis;
+
     check_assertion( joystick != NULL,
 		     "joystick is null" );
 
-    return SDL_JoystickGetAxis( joystick, 1 )/32768.0;
+    axis = getparam_joystick_y_axis();
+
+    /* Make sure axis is valid */
+    if ( axis >= num_axes || axis < 0 ) {
+
+	if ( !warning_given ) {
+	    print_warning( IMPORTANT_WARNING, 
+			   "joystick y axis mapped to axis %d "
+			   "but joystick only has %d axes", axis, num_axes );
+	    warning_given = True;
+	}
+
+	return 0.0;
+    }
+
+    return SDL_JoystickGetAxis( joystick, getparam_joystick_y_axis() )/32768.0;
 }
 
 bool_t is_joystick_button_down( int button ) 
 {
+    static bool_t warning_given = False;
+
     check_assertion( joystick != NULL,
 		     "joystick is null" );
 
     check_assertion( button >= 0, "button is negative" );
 
     if ( button >= num_buttons ) {
-	print_debug( DEBUG_JOYSTICK,
-		     "WARNING: State of button %d requested, but "
-		     "joystick only has %d buttons", button, num_buttons );
+	if ( !warning_given ) {
+	    print_warning( IMPORTANT_WARNING,
+			   "state of button %d requested, but "
+			   "joystick only has %d buttons.  Further warnings "
+			   "of this type will be suppressed", 
+			   button, num_buttons );
+	    warning_given = True;
+	}
 	return False;
     }
 

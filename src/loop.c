@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -142,7 +142,7 @@ void main_loop()
 	    pos.y = h-1;
 	}
 
-	glutWarpPointer( pos.x, pos.y );
+	winsys_warp_pointer( pos.x, pos.y );
     }
 
     if ( g_game.mode != new_mode ) {
@@ -172,4 +172,16 @@ void main_loop()
     if ( mode_funcs[ g_game.mode ].loop_func != NULL ) {
 	( mode_funcs[ g_game.mode ].loop_func )( g_game.time_step );
     }
+}
+
+
+/*---------------------------------------------------------------------------*/
+/*! 
+  Returns true iff a mode change will occur the next time main_loop() runs.
+
+  \author  jfpatry
+*/
+bool_t is_mode_change_pending()
+{
+    return g_game.mode != new_mode;
 }

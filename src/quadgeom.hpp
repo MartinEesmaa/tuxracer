@@ -12,6 +12,7 @@
 #ifndef GEOMETRY_HPP
 #define GEOMETRY_HPP
 
+#include "tuxracer.h"
 
 class	vector
 // 3-element vector class, for 3D math.
@@ -177,12 +178,5 @@ private:
 	float	S;
 	vector	V;
 };
-
-
-namespace Geometry {
-	vector	Rotate(float Angle, const vector& Axis, const vector& Point);
-};
-
-
 
 #endif // GEOMETRY_HPP

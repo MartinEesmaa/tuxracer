@@ -598,23 +598,3 @@ void	bitmap32::ProcessForColorKeyZero()
 	}		
 }
 #endif // NOT
-
-
-namespace Geometry {
-;
-
-
-vector	Rotate(float Angle, const vector& Axis, const vector& Point)
-// Rotates the given point through the given angle (in radians) about the given
-// axis.
-{
-	quaternion	q(cos(Angle/2), Axis * sin(Angle/2));
-
-	vector	result;
-	q.ApplyRotation(&result, Point);
-
-	return result;
-}
-
-
-};

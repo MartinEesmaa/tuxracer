@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -226,11 +226,6 @@ static const double air_log_drag_coeff[] = { 2.25,
 /* Damage incurred by paddling exertion (health/s) */
 #define PADDLING_DAMAGE 0.02
 
-/* Health regeneration rate (health/s) */
-#define REGENERATION_RATE 0.005
-
-/* Healing won't occur if health is below this level (health) */
-#define MIN_REGENERATION_HEALTH 0.1
 
 /* Wind velocity (hard-coded for now) */
 static vector_t wind_vel = { 250.0/3.6, 0, 0 };
@@ -788,6 +783,7 @@ scalar_t get_compression_depth( terrain_t surf_type )
     default:
 	code_not_reached();
     }
+    return 0;
 }
 
 /*
@@ -1105,55 +1101,6 @@ void generate_particles( player_data_t *plyr, scalar_t dtime,
     } 
 }
 
-void update_health( player_data_t *plyr, scalar_t dtime )
-{
-    scalar_t f_mag;
-    vector_t nml_f; 
-    scalar_t damage;
-    vector_t tmp_vel;
-    scalar_t speed;
-
-    nml_f = plyr->normal_force;
-
-    f_mag = normalize_vector( &nml_f );
-
-    /* Damage from landing, hitting bumps, etc */
-    if ( f_mag > DAMAGE_RESISTANCE ) {
-	damage = ( f_mag - DAMAGE_RESISTANCE );
-	damage *= damage;
-	damage *= DAMAGE_SCALE * dtime;
-    } else {
-	damage = 0.0;
-    }
-
-    /* Damage from hitting objects */
-    if ( plyr->collision ) {
-	plyr->collision = False;
-
-	tmp_vel = plyr->vel;
-	speed = normalize_vector( &tmp_vel );
-
-	damage += COLLISION_BASE_DAMAGE * speed;
-
-	set_sound_volume( "tree_hit", speed*20 );
-	play_sound( "tree_hit", 0 );
-
-    }
-
-    /* Tiredness due to paddling */
-    if ( plyr->control.is_paddling ) {
-	damage += PADDLING_DAMAGE * dtime;
-    }
-
-    plyr->health -= damage;
-
-    /* Regeneration */
-    if ( plyr->health < 1.0 && plyr->health > MIN_REGENERATION_HEALTH ) {
-	plyr->health += REGENERATION_RATE * dtime;
-	plyr->health = min( 1.0, plyr->health );
-    }
-
-}
 
 /*
  * Calculate the magnitude of force due to air resistance (wind)
@@ -1293,7 +1240,7 @@ static vector_t calc_net_force( player_data_t *plyr, point_t pos,
     
     comp_depth = 0;
     for (i=0; i<NumTerrains; i++) {
-	comp_depth += surf_weights[i] * get_compression_depth( i );
+	comp_depth += surf_weights[i] * get_compression_depth( (terrain_t)i );
     }
 
 
@@ -1679,9 +1626,6 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
 	/* Calculate the final net force */
 	new_f = calc_net_force( plyr, new_pos, new_vel );
 
-	/* Update the player's health */
-	update_health( plyr, h );
-
 	/* If no failures, compute a new h */
 	if ( !failed && solver.estimate_error != NULL ) {
 	    double temp = 1.25 * pow(err / tol, solver.time_step_exponent());
@@ -1831,7 +1775,6 @@ void init_physical_simulation()
 	plyr->control.barrel_roll_factor = 0;
 	plyr->control.front_flip = False;
 	plyr->control.back_flip = False;
-	plyr->health = 1.0;
     }
 
     ode_time_step = -1;

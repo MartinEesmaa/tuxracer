@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -48,7 +48,7 @@ static void goto_next_mode()
 	unbind_texture( logo_bindings[i] );
     }
     flush_textures();
-    glutPostRedisplay();
+    winsys_post_redisplay();
 }
 
 static void splash_screen_mouse_func( int button, int state, int x, int y )
@@ -56,16 +56,16 @@ static void splash_screen_mouse_func( int button, int state, int x, int y )
     goto_next_mode();
 }
 
-void splash_screen_init() 
+void splash_screen_init(void) 
 {
     init_ui_snow();
 
-    glutDisplayFunc( main_loop );
-    glutIdleFunc( main_loop );
-    glutReshapeFunc( reshape );
-    glutMouseFunc( splash_screen_mouse_func );
-    glutMotionFunc( ui_event_motion_func );
-    glutPassiveMotionFunc( ui_event_motion_func );
+    winsys_set_display_func( main_loop );
+    winsys_set_idle_func( main_loop );
+    winsys_set_reshape_func( reshape );
+    winsys_set_mouse_func( splash_screen_mouse_func );
+    winsys_set_motion_func( ui_event_motion_func );
+    winsys_set_passive_motion_func( ui_event_motion_func );
 
     play_music( "splash_screen" );
 
@@ -143,7 +143,7 @@ void splash_screen_loop( scalar_t time_step )
 
     reshape( getparam_x_resolution(), getparam_y_resolution() );
 
-    glutSwapBuffers();
+    winsys_swap_buffers();
 } 
 
 START_KEYBOARD_CB( splash_screen_cb )
@@ -156,7 +156,7 @@ START_KEYBOARD_CB( toggle_snow )
 {
     if ( release ) return;
 
-    setparam_ui_snow( !getparam_ui_snow() );
+    setparam_ui_snow( (bool_t) !getparam_ui_snow() );
 }
 END_KEYBOARD_CB
 

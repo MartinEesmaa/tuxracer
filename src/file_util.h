@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,8 +26,12 @@ extern "C"
 #define FILE_UTIL_H
 
 #include "tux_types.h"
+#include "list.h"
 
 bool_t file_exists( char *filename );
+bool_t dir_exists( char *dirname );
+list_t get_dir_file_list( char *dirname ) ;
+void free_dir_file_list( list_t dirlist );
 
 #endif /* FILE_UTIL_H */
 

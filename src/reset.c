@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -43,15 +43,15 @@ static scalar_t reset_start_time;
 static bool_t position_reset;
 
 
-void reset_init() 
+void reset_init(void) 
 {
-    glutDisplayFunc( main_loop );
-    glutIdleFunc( main_loop );
-    glutReshapeFunc( reshape );
-    glutMouseFunc( NULL );
-    glutMotionFunc( NULL );
-    glutPassiveMotionFunc( NULL );
-    glutMouseFunc( NULL );
+    winsys_set_display_func( main_loop );
+    winsys_set_idle_func( main_loop );
+    winsys_set_reshape_func( reshape );
+    winsys_set_mouse_func( NULL );
+    winsys_set_motion_func( NULL );
+    winsys_set_passive_motion_func( NULL );
+    winsys_set_mouse_func( NULL );
     
     reset_start_time = get_clock_time();
     position_reset = False;
@@ -93,10 +93,11 @@ void reset_loop( scalar_t time_step )
 
     draw_sky(plyr->view.pos);
 
-    draw_fog_plane( plyr->view );
+    draw_fog_plane();
 
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
+    setup_course_lighting();
     render_course();
     draw_trees();
 
@@ -159,25 +160,21 @@ void reset_loop( scalar_t time_step )
 	draw_tux_shadow();
     } 
     if (++tux_visible_count > 3) {
-	tux_visible = !tux_visible;
+	tux_visible = (bool_t) !tux_visible;
 	tux_visible_count = 0;
     }
 
     draw_hud( plyr );
 
-    if ( debug_mode_is_active( DEBUG_HEALTH ) ) {
-	print_health(plyr->health * 100);
-    }
-
     reshape( width, height );
 
-    glutSwapBuffers();
+    winsys_swap_buffers();
 
     g_game.time += time_step;
 
     if (elapsed_time > TOTAL_RESET_TIME) {
 	set_game_mode( RACING );
-	glutPostRedisplay();
+	winsys_post_redisplay();
     }
 
     

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -47,7 +47,7 @@ list_t create_list(void)
 {
     dllist_t *dllist;
 
-    dllist = (dllist_t*) malloc( sizeof(dllist) );
+    dllist = (dllist_t*) malloc( sizeof(dllist_t) );
     dllist->head = NULL;
     dllist->tail = NULL;
     dllist->count = 0;

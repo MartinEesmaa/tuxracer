@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -36,6 +36,7 @@ void register_loop_funcs( game_mode_t mode,
 			  mode_term_func_ptr_t term_func );
 void set_game_mode( game_mode_t mode );
 void main_loop();
+bool_t is_mode_change_pending();
 
 #endif /* _LOOP_H_ */
 

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -49,8 +49,6 @@ static ssbutton_t *snow_ssbtn = NULL;
 static ssbutton_t *wind_ssbtn = NULL;
 static ssbutton_t *mirror_ssbtn = NULL;
 static list_elem_t cur_elem = NULL;
-static bool_t course_loaded = False;
-static race_conditions_t course_loaded_conditions = -1;
 static bool_t cup_complete = False; /* has this cup been completed? */
 static list_elem_t last_completed_race = NULL; /* last race that's been won */
 static event_data_t *event_data = NULL;
@@ -395,8 +393,6 @@ static void race_listbox_item_change_cb( listbox_t *listbox, void *userdata )
     } 
 
     update_race_data();
-
-    course_loaded = False;
 }
 
 
@@ -437,21 +433,7 @@ static void start_click_cb( button_t *button, void *userdata )
 
     update_race_data();
 
-    if ( !course_loaded || 
-	 course_loaded_conditions != g_game.race.conditions ) 
-    {
-	load_course( g_game.race.course );
-	course_loaded = True;
-	course_loaded_conditions = g_game.race.conditions;
-    }
-    
-    set_course_mirroring( g_game.race.mirrored );
-    
-    set_game_mode( INTRO );
-    
-    ui_set_dirty();
-
-    cur_elem = listbox_get_current_item( race_listbox );
+    set_game_mode( LOADING );
 }
 
 
@@ -820,18 +802,18 @@ static void set_widget_positions_and_draw_decorations()
   \date    Created:  2000-09-24
   \date    Modified: 2000-09-24
 */
-static void race_select_init()
+static void race_select_init(void)
 {
     listbox_list_elem_to_string_fptr_t conv_func = NULL;
     point2d_t dummy_pos = {0, 0};
     int i;
 
-    glutDisplayFunc( main_loop );
-    glutIdleFunc( main_loop );
-    glutReshapeFunc( reshape );
-    glutMouseFunc( ui_event_mouse_func );
-    glutMotionFunc( ui_event_motion_func );
-    glutPassiveMotionFunc( ui_event_motion_func );
+    winsys_set_display_func( main_loop );
+    winsys_set_idle_func( main_loop );
+    winsys_set_reshape_func( reshape );
+    winsys_set_mouse_func( ui_event_mouse_func );
+    winsys_set_motion_func( ui_event_motion_func );
+    winsys_set_passive_motion_func( ui_event_motion_func );
 
     plyr = get_player_data( local_player() );
 
@@ -862,7 +844,6 @@ static void race_select_init()
     */
     if ( g_game.prev_mode != GAME_OVER ) {
 	/* Make sure we don't play previously loaded course */
-	course_loaded = False;
 	cup_complete = False;
 
 	/* Initialize the race data */
@@ -915,7 +896,6 @@ static void race_select_init()
 		/* Advance to next race */
 		if ( cur_elem != get_list_tail( race_list ) ) {
 		    cur_elem = get_next_list_elem( race_list, cur_elem );
-		    course_loaded = False;
 		}
 	    } else {
 		/* lost race */
@@ -1117,9 +1097,9 @@ static void race_select_loop( scalar_t time_step )
     ui_setup_display();
 
     if (getparam_ui_snow()) {
-	update_ui_snow( time_step,
-			wind_ssbtn != NULL && 
-			ssbutton_get_state( wind_ssbtn )  );
+	update_ui_snow( time_step, 
+			(bool_t) ( wind_ssbtn != NULL && 
+				   ssbutton_get_state( wind_ssbtn ) ) );
 	draw_ui_snow();
     }
 
@@ -1131,7 +1111,7 @@ static void race_select_loop( scalar_t time_step )
 
     reshape( getparam_x_resolution(), getparam_y_resolution() );
 
-    glutSwapBuffers();
+    winsys_swap_buffers();
 }
 
 
@@ -1142,7 +1122,7 @@ static void race_select_loop( scalar_t time_step )
   \date    Created:  2000-09-24
   \date    Modified: 2000-09-24
 */
-static void race_select_term()
+static void race_select_term(void)
 {
     if ( back_btn ) {
 	button_delete( back_btn );
@@ -1237,14 +1217,14 @@ START_KEYBOARD_CB( race_select_key_cb )
 
     if ( special ) {
 	switch (key) {
-	case GLUT_KEY_UP:
-	case GLUT_KEY_LEFT:
+	case WSK_UP:
+	case WSK_LEFT:
 	    if ( race_listbox ) {
 		listbox_goto_prev_item( race_listbox );
 	    }
 	    break;
-	case GLUT_KEY_RIGHT:
-	case GLUT_KEY_DOWN:
+	case WSK_RIGHT:
+	case WSK_DOWN:
 	    if ( race_listbox ) {
 		listbox_goto_next_item( race_listbox );
 	    }

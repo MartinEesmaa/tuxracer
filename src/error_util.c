@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,9 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <stdarg.h>
-#include "error_util.h"
 #include "tuxracer.h"
+#include "error_util.h"
 #include "string_util.h"
 
 /* A note on warning levels:
@@ -62,7 +61,7 @@ void handle_error( int exit_code, char *fmt, ... )
 
     va_end( args );
 
-    exit( exit_code );
+    winsys_exit( exit_code );
 }
 
 void handle_system_error( int exit_code, char *fmt, ... )
@@ -77,5 +76,5 @@ void handle_system_error( int exit_code, char *fmt, ... )
 
     va_end( args );
 
-    exit( exit_code );
+    winsys_exit( exit_code );
 }

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -242,6 +242,9 @@ static tfm_char_data_t* find_char_data( tex_font_metrics_t *tfm, char c )
 	}
 	check_assertion( 0, "font contains no characters" );
     }
+    
+    /* Shouldn't get here */
+    return NULL;
 }
 
 void get_tex_font_string_bbox( tex_font_metrics_t *tfm, 

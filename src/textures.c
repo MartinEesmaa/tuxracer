@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -41,8 +41,8 @@ bool_t get_texture_binding( char *binding, GLuint *texid )
 
 bool_t load_and_bind_texture( char *binding, char *filename )
 {
-    return load_texture( binding, filename, 1 ) &&
-	bind_texture( binding, binding );
+    return (bool_t) ( load_texture( binding, filename, 1 ) &&
+		      bind_texture( binding, binding ) );
 }
 
 void init_textures() 

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,13 +17,14 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
+#include "tuxracer.h"
+#include "gauss.h"
 
+#ifdef EPS
+#   undef EPS
+#endif
 #define EPS 1.0e-10
 
-#include "gauss.h"
 
 /*
   prototype declarations

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -36,8 +36,6 @@ extern const colour_t blue;
 extern const colour_t black;
 extern const colour_t sky;
 
-void print_string( void *font, char *string );
-void print_string_centered( scalar_t y, void *font, char *string );
 void reshape( int w, int h );
 void flat_mode();
 void draw_overlay();
@@ -45,7 +43,6 @@ void clear_rendering_context();
 void configure_fog();
 void set_material( colour_t diffuse_colour, colour_t specular_colour,
 		   scalar_t specular_exp );
-void print_health(scalar_t health_pct);
 
 void draw_billboard( player_data_t *plyr, 
 		     point_t center_pt, scalar_t width, scalar_t height, 

@@ -73,6 +73,8 @@ tuxracer_SOURCES =				\
         list.h					\
         listbox.c				\
         listbox.h				\
+	loading.c				\
+	loading.h				\
 	loop.c					\
 	loop.h					\
 	main.c					\
@@ -82,6 +84,8 @@ tuxracer_SOURCES =				\
 	multiplayer.h				\
         nmrcl.c					\
         nmrcl.h					\
+        os_util.c				\
+        os_util.h				\
 	part_sys.c				\
 	part_sys.h				\
 	paused.c				\
@@ -139,4 +143,6 @@ tuxracer_SOURCES =				\
 	view.c					\
 	view.h					\
 	viewfrustum.c				\
-	viewfrustum.h				
+	viewfrustum.h				\
+	winsys.c				\
+	winsys.h

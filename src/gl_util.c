@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,6 +18,10 @@
  */
 
 #include "tuxracer.h"
+
+#if defined( HAVE_SDL )
+#   include "SDL.h"
+#endif
 
 #if defined( HAVE_GL_GLX_H )
 #   include <GL/glx.h>
@@ -166,7 +170,7 @@ void set_gl_options( RenderMode mode )
 	glEnable( GL_TEXTURE_2D );
 	glEnable( GL_DEPTH_TEST );
         glDisable( GL_CULL_FACE );
-	glDisable( GL_LIGHTING );
+	glEnable( GL_LIGHTING );
 	glDisable( GL_NORMALIZE );
         glEnable( GL_ALPHA_TEST );
 	glEnable( GL_BLEND );
@@ -216,23 +220,6 @@ void set_gl_options( RenderMode mode )
 	glShadeModel( GL_SMOOTH );
 	glDepthFunc( GL_LESS );
 
-        break;
-
-    case BACKGROUND:
-	glEnable( GL_TEXTURE_2D );
-	glEnable( GL_DEPTH_TEST );
-	glDisable( GL_CULL_FACE ); 
-	glDisable( GL_LIGHTING );
-	glDisable( GL_NORMALIZE );
-	glDisable( GL_ALPHA_TEST );
-	glEnable( GL_BLEND );
-	glDisable( GL_STENCIL_TEST );
-	glDisable( GL_TEXTURE_GEN_S );
-	glDisable( GL_TEXTURE_GEN_T );
-	glDisable( GL_COLOR_MATERIAL );
-	glDepthMask( GL_TRUE );
-	glShadeModel( GL_SMOOTH );
-	glDepthFunc( GL_LESS );
         break;
 
     case SKY:
@@ -324,7 +311,7 @@ void set_gl_options( RenderMode mode )
 	glEnable( GL_TEXTURE_2D );
 	glEnable( GL_DEPTH_TEST );
 	glDisable( GL_CULL_FACE );
-	glDisable( GL_LIGHTING );
+	glEnable( GL_LIGHTING );
 	glDisable( GL_NORMALIZE );
 	glDisable( GL_ALPHA_TEST );
 	glEnable( GL_BLEND );
@@ -361,6 +348,13 @@ void set_gl_options( RenderMode mode )
     } 
 } 
 
+/* Checking for GL errors is really just another type of assertion, so we
+   turn off the check if TUXRACER_NO_ASSERT is defined */
+#if defined( TUXRACER_NO_ASSERT )
+void check_gl_error()
+{
+}
+#else 
 void check_gl_error()
 {
     GLenum error;
@@ -371,6 +365,7 @@ void check_gl_error()
 	fflush( stderr );
     }
 }
+#endif /* defined( TUXRACER_NO_ASSERT ) */
 
 void copy_to_glfloat_array( GLfloat dest[], scalar_t src[], int n )
 {
@@ -394,39 +389,141 @@ void init_glfloat_array( int num, GLfloat arr[], ... )
     va_end( args );
 }
 
-PFNGLLOCKARRAYSEXTPROC glLockArraysEXT_p;
-PFNGLUNLOCKARRAYSEXTPROC glUnlockArraysEXT_p;
+/* Extension func ptrs *must* be initialized to NULL */
+PFNGLLOCKARRAYSEXTPROC glLockArraysEXT_p = NULL;
+PFNGLUNLOCKARRAYSEXTPROC glUnlockArraysEXT_p = NULL;
 
 typedef void (*(*get_gl_proc_fptr_t)(const GLubyte *))(); 
 
 void init_opengl_extensions()
 {
     get_gl_proc_fptr_t get_gl_proc;
-#ifdef WIN32
+
+#if defined( HAVE_SDL )
+    get_gl_proc = (get_gl_proc_fptr_t) SDL_GL_GetProcAddress;
+#elif defined( WIN32 )
     get_gl_proc = (get_gl_proc_fptr_t) wglGetProcAddress;
-#else
+#elif defined( HAVE_GLXGETPROCADDRESSARB )
     get_gl_proc = (get_gl_proc_fptr_t) glXGetProcAddressARB;
+#else
+    get_gl_proc = NULL;
 #endif
 
-    if ( glutExtensionSupported( "GL_EXT_compiled_vertex_array" ) ) {
-	print_debug( DEBUG_GL_EXT, "GL_EXT_compiled_vertex_array extension "
-		     "supported" );
+    if ( get_gl_proc ) {
 	glLockArraysEXT_p = (PFNGLLOCKARRAYSEXTPROC) 
-	    get_gl_proc( (GLubyte*) "glLockArraysEXT" );
+	    (*get_gl_proc)( (GLubyte*) "glLockArraysEXT" );
 	glUnlockArraysEXT_p = (PFNGLUNLOCKARRAYSEXTPROC) 
-	    get_gl_proc( (GLubyte*) "glUnlockArraysEXT" );
+	    (*get_gl_proc)( (GLubyte*) "glUnlockArraysEXT" );
+	
+	if ( glLockArraysEXT_p != NULL && glUnlockArraysEXT_p != NULL ) {
+	    print_debug( DEBUG_GL_EXT, 
+			 "GL_EXT_compiled_vertex_array extension "
+			 "supported" );
+	} else {
+	    print_debug( DEBUG_GL_EXT, 
+			 "GL_EXT_compiled_vertex_array extension "
+			 "NOT supported" );
+	    glLockArraysEXT_p = NULL;
+	    glUnlockArraysEXT_p = NULL;
+	}
     } else {
-	print_debug( DEBUG_GL_EXT, "GL_EXT_compiled_vertex_array extension "
-		     "NOT supported" );
-	glLockArraysEXT_p = NULL;
-	glUnlockArraysEXT_p = NULL;
+	print_debug( DEBUG_GL_EXT, 
+		     "No function available for obtaining GL proc addresses" );
+    }
+}
+
+
+
+/*---------------------------------------------------------------------------*/
+/*! 
+  Prints information about the current OpenGL implemenation.
+  \author  jfpatry
+  \date    Created:  2000-10-20
+  \date    Modified: 2000-10-20
+*/
+typedef struct {
+    char *name;
+    GLenum value;
+    GLenum type;
+} gl_value_t;
+
+/* Add more things here as needed */
+gl_value_t gl_values[] = {
+    { "maximum lights", GL_MAX_LIGHTS, GL_INT },
+    { "modelview stack depth", GL_MAX_MODELVIEW_STACK_DEPTH, GL_INT },
+    { "projection stack depth", GL_MAX_PROJECTION_STACK_DEPTH, GL_INT },
+    { "max texture size", GL_MAX_TEXTURE_SIZE, GL_INT },
+    { "double buffering", GL_DOUBLEBUFFER, GL_UNSIGNED_BYTE },
+    { "red bits", GL_RED_BITS, GL_INT },
+    { "green bits", GL_GREEN_BITS, GL_INT },
+    { "blue bits", GL_BLUE_BITS, GL_INT },
+    { "alpha bits", GL_ALPHA_BITS, GL_INT },
+    { "depth bits", GL_DEPTH_BITS, GL_INT },
+    { "stencil bits", GL_STENCIL_BITS, GL_INT } };
+
+void print_gl_info()
+{
+    char *extensions;
+    char *p, *oldp;
+    int i;
+    GLint int_val;
+    GLfloat float_val;
+    GLboolean boolean_val;
+
+    fprintf( stderr,
+	     "  vendor: %s\n", 
+	     glGetString( GL_VENDOR ) );
+
+    fprintf( stderr,
+	     "  renderer: %s\n", 
+	     glGetString( GL_RENDERER ) );
+
+    fprintf( stderr,
+	     "  version: %s\n", 
+	     glGetString( GL_VERSION ) );
+
+    extensions = string_copy( (char*) glGetString( GL_EXTENSIONS ) );
+
+    fprintf( stderr, "  extensions:\n" );
+
+    oldp = extensions;
+    while ( (p=strchr(oldp,' ')) ) {
+	*p='\0';
+	fprintf( stderr, "    %s\n", oldp );
+	oldp = p+1;
+    }
+    if ( *oldp ) {
+	fprintf( stderr, "    %s\n", oldp );
     }
 
-    if ( glutExtensionSupported( "GL_ARB_texture_cube_map" ) ) {
-	print_debug( DEBUG_GL_EXT, "GL_ARB_texture_cube_map extension "
-		     "supported" );
-    } else {
-	print_debug( DEBUG_GL_EXT, "GL_ARB_texture_cube_map extension "
-		     "NOT supported" );
+    free( extensions );
+
+    for ( i=0; i<sizeof(gl_values)/sizeof(gl_values[0]); i++) {
+	fprintf( stderr, "  %s: ", gl_values[i].name );
+
+	switch( gl_values[i].type ) {
+	case GL_INT:
+	    glGetIntegerv( gl_values[i].value, &int_val );
+	    fprintf( stderr, "%d", int_val );
+	    break;
+
+	case GL_FLOAT:
+	    glGetFloatv( gl_values[i].value, &float_val );
+	    fprintf( stderr, "%f", float_val );
+	    break;
+
+	case GL_UNSIGNED_BYTE:
+	    glGetBooleanv( gl_values[i].value, &boolean_val );
+	    fprintf( stderr, "%d", boolean_val );
+	    break;
+
+	default:
+	    code_not_reached();
+	}
+
+	fprintf( stderr, "\n" );
     }
+
+
+    fprintf( stderr, "\n" );
 }

@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/tuxracer.h)
-AM_INIT_AUTOMAKE(tuxracer, "0.60.3")
+AM_INIT_AUTOMAKE(tuxracer, "0.61")
 AM_CONFIG_HEADER(config.h)
 
 dnl Check system type
@@ -50,9 +50,12 @@ TR_LIBS=""
 case "$host" in
 i*86-*-*) TR_CFLAGS="$TR_CFLAGS -malign-loops=2 -malign-jumps=2 -malign-functions=2";
           TR_CXXFLAGS="$TR_CXXFLAGS -malign-loops=2 -malign-jumps=2 -malign-functions=2";;
+alpha*-*-linux-*) TR_CFLAGS="$TR_CFLAGS -mieee";;
 esac
 
-AC_ARG_ENABLE(debug,     [  --enable-debug          Produce an executable with debugging symbols], [TR_CFLAGS="-g -Wall"; TR_CXXFLAGS="-g -Wall"])
+AC_ARG_ENABLE(debug,     [  --enable-debug          Produce an executable with debugging symbols], 
+			 [TR_CFLAGS="-g -Wall"; TR_CXXFLAGS="-g -Wall"],
+			 [TR_CPPFLAGS="$TR_CPPFLAGS -DTUXRACER_NO_ASSERT=1"])
 
 AC_ARG_ENABLE(pedantic,  [  --enable-pedantic       Enable -pedantic (and -ansi for C) when compiling], TR_CFLAGS="$TR_CFLAGS -ansi -pedantic"; TR_CXXFLAGS="$TR_CXXFLAGS -pedantic")
 
@@ -79,6 +82,23 @@ if test "x$is_win32" = "xyes" ; then
     TR_LIBS="$TR_LIBS -luser32 -lgdi32"
 fi
 
+dnl --------------------------------------------------------------------------
+dnl Check for X  
+dnl Note that we only need libs (so that glut links properly on all systems).
+dnl --------------------------------------------------------------------------
+if test "x$is_win32" = "xno" ; then
+    AC_PATH_XTRA
+    if test "x$no_x" = "x" ; then
+	TR_LIBS="$X_PRE_LIBS $X_LIBS -lX11 -lXi -lXext -lXmu -lXt $X_EXTRA_LIBS $TR_LIBS"
+    fi
+fi
+
+dnl --------------------------------------------------------------------------
+dnl Check for some common libraries
+dnl --------------------------------------------------------------------------
+AC_CHECK_LIB( dl, main, TR_LIBS="$TR_LIBS -ldl" )
+AC_CHECK_LIB(  m, main, TR_LIBS="$TR_LIBS -lm" )
+
 
 dnl --------------------------------------------------------------------------
 dnl Check for Tcl libraries
@@ -100,6 +120,10 @@ AC_DEFUN( CHECK_FOR_TCL_LIB, [
     AC_TRY_LINK( ,[ char Tcl_NewStringObj(); Tcl_NewStringObj(); ], 
 		 have_tcl_lib=yes, have_tcl_lib=no )
     AC_MSG_RESULT([$have_tcl_lib])
+
+    if test "x$have_tcl_lib" = "xyes" ; then
+        TR_LIBS="$TR_LIBS $TCL_LDOPTS -l$TCL_LIB_NAME"
+    fi
 ])    
 
 if test "x$with_tcl_lib_name" = "x" ; then
@@ -136,7 +160,6 @@ if test "x$have_tcl_lib" = "xno" ; then
 fi
 
 LIBS="$saved_LIBS"
-TR_LIBS="$TR_LIBS $TCL_LDOPTS -l$TCL_LIB_NAME"
 
 
 dnl --------------------------------------------------------------------------
@@ -222,41 +245,47 @@ TR_CPPFLAGS="$TR_CPPFLAGS $TCL_CPPFLAGS -DTCL_HEADER=\<$TCL_HEADER\>"
 dnl --------------------------------------------------------------------------
 dnl Check for SDL
 dnl --------------------------------------------------------------------------
-SDL_VERSION=1.0.1
-AM_PATH_SDL($SDL_VERSION, have_SDL=yes, have_SDL=no)
+AC_ARG_ENABLE(sdl,[  --disable-sdl           Disable detction and use of SDL])
 
-if test "x$have_SDL" = "xyes" ; then
-    TR_CPPFLAGS="$TR_CPPFLAGS -DHAVE_SDL=1"
-    TR_CFLAGS="$TR_CFLAGS $SDL_CFLAGS"
-    TR_CXXFLAGS="$TR_CXXFLAGS $SDL_CFLAGS"
-    TR_LIBS="$TR_LIBS $SDL_LIBS"
+if test "x$enable_sdl" != "xno" ; then
 
-    dnl Check for joystick support in SDL
-    saved_LIBS="$LIBS"
-    LIBS="$saved_LIBS $TR_LIBS"
+    SDL_VERSION=1.0.1
+    AM_PATH_SDL($SDL_VERSION, have_SDL=yes, have_SDL=no)
 
-    AC_CHECK_FUNCS( SDL_JoystickOpen, 
-                    have_SDL_joystick=yes, have_SDL_joystick=no )
+    if test "x$have_SDL" = "xyes" ; then
+	TR_CPPFLAGS="$TR_CPPFLAGS -DHAVE_SDL=1"
+	TR_CFLAGS="$TR_CFLAGS $SDL_CFLAGS"
+	TR_CXXFLAGS="$TR_CXXFLAGS $SDL_CFLAGS"
+	TR_LIBS="$TR_LIBS $SDL_LIBS"
 
-    if test "x$have_SDL_joystick" = "xno" ; then
-        echo "*** This version of SDL doesn't have joystick support."
-        echo "*** Configuring without joystick support."
-    fi
+	dnl Check for joystick support in SDL
+	saved_LIBS="$LIBS"
+	LIBS="$saved_LIBS $TR_LIBS"
 
-    dnl Check for SDL_mixer
-    AC_CHECK_LIB( SDL_mixer, Mix_OpenAudio, 
-                  have_SDL_mixer=yes, have_SDL_mixer=no )
+	AC_CHECK_FUNCS( SDL_JoystickOpen, 
+			have_SDL_joystick=yes, have_SDL_joystick=no )
 
-    if test "x$have_SDL_mixer" = "xyes" ; then 
-	TR_CPPFLAGS="$TR_CPPFLAGS -DHAVE_SDL_MIXER=1" 
-        TR_LIBS="$TR_LIBS -lSDL_mixer"
+	if test "x$have_SDL_joystick" = "xno" ; then
+	    echo "*** This version of SDL doesn't have joystick support."
+	    echo "*** Configuring without joystick support."
+	fi
+
+	dnl Check for SDL_mixer
+	AC_CHECK_LIB( SDL_mixer, Mix_OpenAudio, 
+		      have_SDL_mixer=yes, have_SDL_mixer=no )
+
+	if test "x$have_SDL_mixer" = "xyes" ; then 
+	    TR_CPPFLAGS="$TR_CPPFLAGS -DHAVE_SDL_MIXER=1" 
+	    TR_LIBS="$TR_LIBS -lSDL_mixer"
+	else
+	    echo "*** SDL_mixer not found.  Configuring without audio support."
+	fi
+
+	LIBS="$saved_LIBS"
     else
-        echo "*** SDL_mixer not found.  Configuring without audio support."
+	echo "*** SDL not found.  Configuring without audio or joystick support."
     fi
 
-    LIBS="$saved_LIBS"
-else
-    echo "*** SDL not found.  Configuring without audio or joystick support."
 fi
 
 
@@ -338,14 +367,9 @@ if test "x$have_GL" = "xno" ; then
     AC_MSG_ERROR([Cannot find GL library])
 fi
 
-if test "x$is_win32" = "xno" ; then
-    dnl Make sure GL lib is up-to-date
-    AC_CHECK_FUNCS( glXGetProcAddressARB, gl_up_to_date=yes, gl_up_to_date=no )
-
-    if test "x$gl_up_to_date" = "xno" ; then
-	AC_MSG_ERROR([Your copy of OpenGL is out of date. If using Mesa, make sure you have version >= 3.2.])
-    fi
-fi
+dnl Check for glXGetProcAddressARB
+AC_CHECK_FUNCS( glXGetProcAddressARB, has_glx_get_proc=yes, 
+                has_glx_get_proc=no )
 
 LIBS="$saved_LIBS"
 
@@ -434,7 +458,7 @@ if test "x$have_gl_h" = "xno" ; then
     AC_MSG_ERROR([Cannot find GL/gl.h])
 fi
 
-if test "x$is_win32" = "xno" ; then 
+if test "x$has_glx_get_proc" = "xyes" ; then 
 
     dnl Check for glx.h
     AC_CHECK_HEADERS([GL/glx.h], have_glx_h=yes, have_glx_h=no )
@@ -497,37 +521,42 @@ dnl Check for glut library
 dnl --------------------------------------------------------------------------
 AC_ARG_WITH(glut-libs,[  --with-glut-libs=DIR    Location of GLUT library])
 
-if test "x$with_glut_libs" = "x" ; then
-    GLUT_LDOPTS=""
-else
-    GLUT_LDOPTS="-L$with_glut_libs"
-fi
+if test "x$have_SDL" != "xyes" ; then
 
-AC_DEFUN( CHECK_FOR_GLUT_LIB, [
-    AC_MSG_CHECKING([for $GLUT_LIB_NAME library])
-    LIBS="$saved_LIBS $TR_LIBS $GLUT_LDOPTS -l$GLUT_LIB_NAME"
-    AC_TRY_LINK( , , have_glut_lib=yes, have_glut_lib=no )
-    AC_MSG_RESULT([$have_glut_lib])
-]) 
-
-saved_LIBS="$LIBS"
-
-GLUT_LIB_LIST="glut glut32"
-
-for GLUT_LIB_NAME in $GLUT_LIB_LIST ; do
-    CHECK_FOR_GLUT_LIB
-
-    if test "x$have_glut_lib" = "xyes" ; then
-        break;
+    if test "x$with_glut_libs" = "x" ; then
+	GLUT_LDOPTS=""
+    else
+	GLUT_LDOPTS="-L$with_glut_libs"
     fi
-done
 
-if test "x$have_glut_lib" = "xno" ; then
-    AC_MSG_ERROR([GLUT library not found or too old version. 3.7 (beta) or later required.])
+    AC_DEFUN( CHECK_FOR_GLUT_LIB, [
+	AC_MSG_CHECKING([for $GLUT_LIB_NAME library])
+	LIBS="$saved_LIBS $TR_LIBS $GLUT_LDOPTS -l$GLUT_LIB_NAME"
+	AC_TRY_LINK( , , have_glut_lib=yes, have_glut_lib=no )
+	AC_MSG_RESULT([$have_glut_lib])
+    ]) 
+
+    saved_LIBS="$LIBS"
+
+    GLUT_LIB_LIST="glut glut32"
+
+    for GLUT_LIB_NAME in $GLUT_LIB_LIST ; do
+	CHECK_FOR_GLUT_LIB
+
+	if test "x$have_glut_lib" = "xyes" ; then
+	    break;
+	fi
+    done
+
+    if test "x$have_glut_lib" = "xno" ; then
+	AC_MSG_ERROR([GLUT library not found or too old version. 3.7 (beta) or later required (or install SDL instead).])
+    fi
+
+    LIBS="$saved_LIBS"
+    TR_CPPFLAGS="$TR_CPPFLAGS -DHAVE_GLUT"
+    TR_LIBS="$TR_LIBS $GLUT_LDOPTS -l$GLUT_LIB_NAME"
+
 fi
-
-LIBS="$saved_LIBS"
-TR_LIBS="$TR_LIBS $GLUT_LDOPTS -l$GLUT_LIB_NAME"
 
 
 dnl --------------------------------------------------------------------------
@@ -536,22 +565,26 @@ dnl --------------------------------------------------------------------------
 
 AC_ARG_WITH(glut-inc, [  --with-glut-inc=DIR     Specify GLUT header file location])
 
-if test "x$with_glut_inc" = "x" ; then
-    GLUT_CPPFLAGS=""
-else
-    GLUT_CPPFLAGS="-I$with_glut_inc"
+if test "x$have_SDL" != "xyes" ; then 
+
+    if test "x$with_glut_inc" = "x" ; then
+	GLUT_CPPFLAGS=""
+    else
+	GLUT_CPPFLAGS="-I$with_glut_inc"
+    fi
+
+    saved_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$saved_CPPFLAGS $TR_CPPFLAGS $GLUT_CPPFLAGS"
+    AC_CHECK_HEADER([GL/glut.h], have_glut_h=yes, have_glut_h=no )
+
+    if test "x$have_glut_h" = "xno" ; then
+	AC_MSG_ERROR([Cannot find GL/glut.h])
+    fi
+
+    CPPFLAGS="$saved_CPPFLAGS"
+    TR_CPPFLAGS="$TR_CPPFLAGS $GLUT_CPPFLAGS"
+
 fi
-
-saved_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$saved_CPPFLAGS $TR_CPPFLAGS $GLUT_CPPFLAGS"
-AC_CHECK_HEADER([GL/glut.h], have_glut_h=yes, have_glut_h=no )
-
-if test "x$have_glut_h" = "xno" ; then
-    AC_MSG_ERROR([Cannot find GL/glut.h])
-fi
-
-CPPFLAGS="$saved_CPPFLAGS"
-TR_CPPFLAGS="$TR_CPPFLAGS $GLUT_CPPFLAGS"
 
 
 dnl --------------------------------------------------------------------------

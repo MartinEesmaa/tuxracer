@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -86,6 +86,8 @@ void copy_to_glfloat_array( GLfloat dest[], scalar_t src[], int n );
 void init_glfloat_array( int num, GLfloat arr[], ... );
 
 void init_opengl_extensions();
+
+void print_gl_info();
 
 #endif
 

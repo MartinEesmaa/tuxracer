@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -59,14 +59,7 @@
 
    6. You're done!  */
 
-#if !defined( WIN32 )
-#   include <pwd.h>
-#endif
-
-#include <sys/types.h>
-#include <sys/stat.h>
 #include "tuxracer.h"
-#include <dirent.h>
 
 #if defined( WIN32 )
 #  define OLD_CONFIG_FILE "tuxracer.cfg"
@@ -346,6 +339,7 @@ struct params {
     struct param fullscreen;
     struct param x_resolution;
     struct param y_resolution;
+    struct param bpp_mode;
     struct param capture_mouse; 
     struct param force_window_position;
     struct param quit_key;
@@ -368,6 +362,8 @@ struct params {
     struct param joystick_jump_button;
     struct param joystick_trick_button;
     struct param joystick_continue_button;
+    struct param joystick_x_axis;
+    struct param joystick_y_axis;
 
     struct param no_audio;
     struct param sound_enabled;
@@ -390,6 +386,7 @@ struct params {
     struct param terrain_blending;
     struct param perfect_terrain_blending;
     struct param terrain_envmap;
+    struct param disable_fog;
     struct param draw_tux_shadow;
     struct param tux_sphere_divisions;
     struct param tux_shadow_sphere_divisions;
@@ -415,6 +412,7 @@ struct params {
     struct param fov; 
     struct param debug; 
     struct param warning_level; 
+    struct param write_diagnostic_log;
 };
 
 static struct params Params;
@@ -482,7 +480,8 @@ void init_game_configuration()
 	capture_mouse, False,
 	"# If true, then the mouse will not be able to leave the \n"
 	"# Tux Racer window.\n"
-	"# Set this to true if you are rendering in fullscreen mode." );
+	"# If you lose keyboard focus while running Tux Racer, try setting\n"
+	"# this to true." );
 
     INIT_PARAM_BOOL( 
 	do_intro_animation, True,
@@ -506,11 +505,19 @@ void init_game_configuration()
         "# decreasing this number, at the cost of lower image quality." );
 
     INIT_PARAM_BOOL( 
-	fullscreen, False,
-	"# Set this to true to force the window to be the same \n"
-	"# size as your screen.\n"
-        "# Linux Voodoo1/Voodoo2 users: This is NOT what you want to use to\n"
-	"# activate fullscreen rendering on your card." );
+	fullscreen, True,
+	"# If true then the game will run in full-screen mode." );
+
+    INIT_PARAM_INT( 
+	bpp_mode, 0,
+	"# Controls how many bits per pixel are used in the game.\n"
+	"# Valid values are:\n"
+	"#\n"
+	"#  0: Use current bpp setting of operating system\n"
+	"#  1: 16 bpp\n"
+	"#  2: 32 bpp\n"
+	"# Note that some cards (e.g., Voodoo1, Voodoo2, Voodoo3) only support\n"
+	"# 16 bits per pixel." );
 
     INIT_PARAM_BOOL( 
 	force_window_position, False ,
@@ -573,7 +580,7 @@ void init_game_configuration()
     INIT_PARAM_STRING( 
 	jump_key, "e" ,
 	"# Key binding for jumping" );
-    
+
     INIT_PARAM_INT( 
 	joystick_paddle_button, 0 ,
 	"# Joystick button for paddling (numbering starts at 0).\n" 
@@ -596,6 +603,14 @@ void init_game_configuration()
 	joystick_continue_button, 0 ,
 	"# Joystick button for moving past intro, paused, and \n"
 	"# game over screens (numbering starts at 0)" );
+    
+    INIT_PARAM_INT(
+	joystick_x_axis, 0 ,
+	"# Joystick axis to use for turning (numbering starts at 0)" );
+
+    INIT_PARAM_INT(
+	joystick_y_axis, 1 ,
+	"# Joystick axis to use for paddling/braking (numbering starts at 0)" );
 
     INIT_PARAM_INT( 
 	fov, 60 ,
@@ -635,6 +650,12 @@ void init_game_configuration()
 	"# If true, then the ice will be drawn with an \"environment map\",\n"
 	"# which gives the ice a shiny appearance.  Setting this to false\n"
 	"# will help improve performance." );
+    INIT_PARAM_BOOL( 
+	disable_fog, False ,
+	"# If true, then fog will be turned off.  Some Linux drivers for the\n"
+	"# ATI Rage128 seem to have a bug in their fog implementation which\n"
+	"# makes the screen nearly pure white when racing; if you experience\n"
+	"# this problem then set this variable to true." );
     INIT_PARAM_BOOL( 
 	use_cva, True ,
 	"# [EXPERT] If true, then compiled vertex arrays will be used when\n"
@@ -696,6 +717,14 @@ void init_game_configuration()
     INIT_PARAM_BOOL( 
 	ui_snow, True ,
 	"# If true, then the ui screens will have falling snow." );
+
+    INIT_PARAM_BOOL( 
+	write_diagnostic_log, False ,
+	"# If true, then a file called diagnostic_log.txt will be generated\n" 
+	"# which you should attach to any bug reports you make.\n"
+	"# To generate the file, set this variable to \"true\", and\n"
+	"# then run the game so that you reproduce the bug, if possible."
+	);
 }
 
 
@@ -717,6 +746,7 @@ FN_PARAM_BOOL( capture_mouse )
 FN_PARAM_BOOL( do_intro_animation )
 FN_PARAM_INT( mipmap_type )
 FN_PARAM_BOOL( fullscreen )
+FN_PARAM_INT( bpp_mode )
 FN_PARAM_BOOL( force_window_position )
 FN_PARAM_INT( ode_solver )
 FN_PARAM_STRING( quit_key )
@@ -738,6 +768,8 @@ FN_PARAM_INT( joystick_brake_button )
 FN_PARAM_INT( joystick_paddle_button )
 FN_PARAM_INT( joystick_trick_button )
 FN_PARAM_INT( joystick_continue_button )
+FN_PARAM_INT( joystick_x_axis )
+FN_PARAM_INT( joystick_y_axis )
 FN_PARAM_INT( fov )
 FN_PARAM_STRING( debug )
 FN_PARAM_INT( warning_level )
@@ -748,6 +780,7 @@ FN_PARAM_INT( course_detail_level )
 FN_PARAM_BOOL( terrain_blending )
 FN_PARAM_BOOL( perfect_terrain_blending )
 FN_PARAM_BOOL( terrain_envmap )
+FN_PARAM_BOOL( disable_fog )
 FN_PARAM_BOOL( use_cva )
 FN_PARAM_BOOL( cva_hack )
 FN_PARAM_BOOL( track_marks )
@@ -762,6 +795,7 @@ FN_PARAM_INT( audio_freq_mode )
 FN_PARAM_INT( audio_format_mode )
 FN_PARAM_BOOL( audio_stereo )
 FN_PARAM_INT( audio_buffer_size )
+FN_PARAM_BOOL( write_diagnostic_log )
     
 
 
@@ -866,7 +900,7 @@ void read_config_file()
     }
 
 
-    if ( opendir( config_dir ) != NULL ) {
+    if ( dir_exists( config_dir ) ) {
 	if ( file_exists( config_file ) ) {
 	    /* File exists -- let's try to evaluate it. */
 	    if ( Tcl_EvalFile( g_game.tcl_interp, config_file ) != TCL_OK ) {
@@ -910,7 +944,7 @@ void write_config_file()
 	return;
     }
 
-    if ( opendir( config_dir ) == NULL) {
+    if ( !dir_exists( config_dir ) ) {
 
 #if defined(WIN32) && !defined(__CYGWIN__)
 	if (mkdir( config_dir ) != 0) {
@@ -1110,7 +1144,7 @@ static int set_param_cb ( ClientData cd, Tcl_Interp *ip,
 	}
 	check_assertion( tmp_int == 0 || tmp_int == 1, 
 			 "invalid boolean value" );
-	set_param_bool( parm, tmp_int );
+	set_param_bool( parm, (bool_t) tmp_int );
 	break;
 
     default:

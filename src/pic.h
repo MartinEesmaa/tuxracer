@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,7 +22,7 @@ extern "C"
 {
 #endif
 
-#include <stdio.h>
+#include "tuxracer.h"
 
 /*******************************************************************\
  								 
@@ -38,13 +38,6 @@ extern "C"
 /*
  *  Data structures
  */
-
-typedef unsigned char   boolean;
-
-#ifndef FALSE
-#define   FALSE   ((boolean) 0)
-#define   TRUE    ((boolean) 1)
-#endif
 
 typedef unsigned char  Pic_byte;
 
@@ -80,7 +73,7 @@ Pic;
  */
 
 extern	Pic       *PicOpen(const char* filename, short width, short height );
-extern	boolean    PicWriteLine(Pic* ppmFile, Pic_Pixel* pixels);
+extern	bool_t    PicWriteLine(Pic* ppmFile, Pic_Pixel* pixels);
 extern  void       PicClose(Pic* ppmFile);
 
 /*** THE END ***/

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -34,6 +34,7 @@ point_t   make_point_from_array ( scalar_t *p );
 vector_t  make_vector_from_array ( scalar_t *v );
 colour_t  make_colour_from_array ( scalar_t *c );
 colour_t  make_colour( scalar_t r, scalar_t g, scalar_t b, scalar_t a );
+void      setup_tcl_std_channels();
 
 /* Useful macro for processing Tcl callbacks */
 #define NEXT_ARG argc -=1; argv += 1

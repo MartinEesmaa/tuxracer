@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -173,6 +173,7 @@ static bool_t load_sound_or_music( char *name, char *filename,
     check_assertion( get_hash_entry( hash, name, (void*) &temp_record_ptr ) &&
 		     ( record_ptr == temp_record_ptr ), 
 		     "failed addition to hash table" );
+    temp_record_ptr = NULL; /* to prevent warnings when assert turned off */
 
     if ( load_music ) {
 	music_dirty_ = True;

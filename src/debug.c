@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,18 +17,18 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <string.h>
-#include <stdarg.h>
 #include "debug.h"
 #include "tuxracer.h"
 #include "string_util.h"
+#include "os_util.h"
+
+#define BUGREPORT_FILE "diagnostic_log.txt"
 
 static bool_t debug_setting[ NUM_DEBUG_MODES ];
 static char* debug_desc[ NUM_DEBUG_MODES ] = {
     "ode",
     "quadtree",
     "control",
-    "health",
     "sound",
     "texture",
     "view",
@@ -37,15 +37,13 @@ static char* debug_desc[ NUM_DEBUG_MODES ] = {
     "ui",
     "game_logic",
     "save",
-    "joystick"
+    "joystick",
+    "gl_info"
 };
 
 /* Parse the debug parameter, fill in the debug_setting array */
 void init_debug()
 {
-
-#ifndef TUXRACER_NO_DEBUG
-
     char *debug_str, *tmp_str;
     char *p;
     int i;
@@ -97,9 +95,6 @@ void init_debug()
 	    }
 	}
     }
-
-#endif /* TUXRACER_NO_DEBUG */
-
 }
 
 bool_t debug_mode_is_active( debug_mode_t mode )
@@ -107,10 +102,17 @@ bool_t debug_mode_is_active( debug_mode_t mode )
     return debug_setting[ mode ];
 }
 
+void debug_mode_set_active( debug_mode_t mode, bool_t active )
+{
+    check_assertion( mode >= 0 &&
+		     mode < NUM_DEBUG_MODES,
+		     "Invalid debug mode" );
+
+    debug_setting[ mode ] = active;
+}
+
 void print_debug( debug_mode_t mode, char *fmt, ... )
 {
-#ifndef TUXRACER_NO_DEBUG
-
     va_list args;
 
     check_assertion( 0 <= mode && mode < NUM_DEBUG_MODES,
@@ -127,7 +129,70 @@ void print_debug( debug_mode_t mode, char *fmt, ... )
     fprintf( stderr, "\n" );
 
     va_end( args );
-
-#endif /* TUXRACER_NO_DEBUG */
 }
 
+
+
+/*---------------------------------------------------------------------------*/
+/*! 
+  Opens the diagnostic log, writes a header, and activates all 
+  debugging modes.  All subsequent output to stderr will be redirected to
+  the diagnostic log.
+
+  \author  jfpatry
+*/
+void setup_diagnostic_log()
+{
+    FILE *newfp;
+    time_t t;
+    char os_buff[BUFF_LEN];
+    char time_buff[BUFF_LEN];
+
+    /* Activate a bunch of debugging modes */
+    debug_mode_set_active( DEBUG_QUADTREE, True );
+    debug_mode_set_active( DEBUG_CONTROL, True );
+    debug_mode_set_active( DEBUG_SOUND, True );
+    debug_mode_set_active( DEBUG_TEXTURE, True );
+    debug_mode_set_active( DEBUG_VIEW, True );
+    debug_mode_set_active( DEBUG_GL_EXT, True );
+    debug_mode_set_active( DEBUG_FONT, True );
+    debug_mode_set_active( DEBUG_UI, True );
+    debug_mode_set_active( DEBUG_GAME_LOGIC, True );
+    debug_mode_set_active( DEBUG_SAVE, True );
+    debug_mode_set_active( DEBUG_JOYSTICK, True );
+    debug_mode_set_active( DEBUG_GL_INFO, True );
+
+    /* Redirect stderr to file; taken from SDL_main.c, which is in the 
+       public domain */
+    newfp = freopen(BUGREPORT_FILE, "w", stderr);
+    if ( newfp == NULL ) {	/* This happens on NT */
+#if !defined(stderr)
+	stderr = fopen(BUGREPORT_FILE, "w");
+#else
+	newfp = fopen(BUGREPORT_FILE, "w");
+	if ( newfp ) {
+	    *stderr = *newfp;
+	}
+#endif
+    }
+
+    /* Write bug report header */
+    fprintf( stderr, "Tux Racer Diagnostic Log\n\n" );
+
+    /* Generate time string */
+    t = time( NULL );
+    sprintf( time_buff, "%s", asctime( gmtime( &t ) ) );
+    time_buff[ strlen(time_buff)-1 ] = (char)0; /* remove trailing newline */
+
+    fprintf( stderr, "Generated:       %s GMT\n", time_buff );
+    fprintf( stderr, "TR Version:      %s\n", VERSION );
+    fprintf( stderr, "OS:              " );
+
+    if ( get_os_version( os_buff, sizeof( os_buff ) ) == 0 ) {
+	fprintf( stderr, "%s\n", os_buff );
+    } else {
+	fprintf( stderr, "Could not determine!\n" );
+    }
+
+    fprintf( stderr, "\n" );
+}

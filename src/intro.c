@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -49,10 +49,10 @@ static void abort_intro( player_data_t *plyr ) {
     plyr->pos.x = start_pt.x;
     plyr->pos.z = start_pt.y;
 
-    glutPostRedisplay();
+    winsys_post_redisplay();
 }
 
-void intro_init() 
+void intro_init(void) 
 {
     int i, num_items;
     item_t *item_locs;
@@ -62,12 +62,12 @@ void intro_init()
 
     init_key_frame();
 
-    glutDisplayFunc( main_loop );
-    glutIdleFunc( main_loop );
-    glutReshapeFunc( reshape );
-    glutMouseFunc( NULL );
-    glutMotionFunc( NULL );
-    glutPassiveMotionFunc( NULL );
+    winsys_set_display_func( main_loop );
+    winsys_set_idle_func( main_loop );
+    winsys_set_reshape_func( reshape );
+    winsys_set_mouse_func( NULL );
+    winsys_set_motion_func( NULL );
+    winsys_set_passive_motion_func( NULL );
 
     plyr->orientation_initialized = False;
 
@@ -143,12 +143,12 @@ void intro_loop( scalar_t time_step )
 
     draw_sky( plyr->view.pos );
 
-    draw_fog_plane( plyr->view );
+    draw_fog_plane();
 
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
+    setup_course_lighting();
     render_course( );
-    /* draw_background( getparam_fov(), (scalar_t)width/height ); */
     draw_trees();
 
     draw_tux();
@@ -157,7 +157,7 @@ void intro_loop( scalar_t time_step )
     draw_hud( plyr );
 
     reshape( width, height );
-    glutSwapBuffers();
+    winsys_swap_buffers();
 } 
 
 START_KEYBOARD_CB( intro_cb )

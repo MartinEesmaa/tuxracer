@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -31,7 +31,6 @@ typedef enum {
     DEBUG_ODE,
     DEBUG_QUADTREE,
     DEBUG_CONTROL,
-    DEBUG_HEALTH,
     DEBUG_SOUND,
     DEBUG_TEXTURE,
     DEBUG_VIEW,
@@ -41,14 +40,19 @@ typedef enum {
     DEBUG_GAME_LOGIC,
     DEBUG_SAVE,
     DEBUG_JOYSTICK,
+    DEBUG_GL_INFO,
     NUM_DEBUG_MODES
 } debug_mode_t;
 
 void init_debug();
 bool_t debug_mode_is_active( debug_mode_t mode );
+void debug_mode_set_active( debug_mode_t mode, bool_t active );
 void print_debug( debug_mode_t mode, char *fmt, ... );
+void setup_diagnostic_log();
 
-#ifdef TUXRACER_NO_DEBUG
+/* Define assertion macros (these do nothing if TUXRACER_NO_ASSERT
+   is defined) */
+#ifdef TUXRACER_NO_ASSERT
 
 #define check_assertion( condition, desc )  /* noop */
 
@@ -62,7 +66,7 @@ void print_debug( debug_mode_t mode, char *fmt, ... );
     }
 
 
-#endif /* TUXRACER_NO_DEBUG */
+#endif /* TUXRACER_NO_ASSERT */
 
 #define code_not_reached() \
     check_assertion( 0, "supposedly unreachable code reached!" )

@@ -46,12 +46,13 @@ struct	VertInfo {
 };
 
 
-class quadsquare;
+struct quadsquare;
 
 
 // A structure used during recursive traversal of the tree to hold
 // relevant but transitory data.
-struct quadcornerdata {
+class quadcornerdata {
+public:
     const quadcornerdata*	Parent;
     quadsquare*	Square;
     int	ChildIndex;

@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,11 +17,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #ifndef _TUXRACER_H_
 #define _TUXRACER_H_
 
@@ -29,33 +24,89 @@ extern "C"
 #   include <config.h>
 #endif
 
+#if defined ( __MWERKS__ ) || defined( _MSC_VER )
+#   define NATIVE_WIN32_COMPILER 1
+#else
+/* Assume UNIX compatible by default */
+#   define COMPILER_IS_UNIX_COMPATIBLE 1
+#endif
+
+#if defined( WIN32 ) || defined( __CYGWIN__ ) || \
+    defined ( NATIVE_WIN32_COMPILER )
+#  ifndef WIN32
+#     define WIN32
+#  endif
+#  include <windows.h>
+#endif 
+
+#if defined( NATIVE_WIN32_COMPILER )
+/* Need to manually define some things that autoconf defines for
+   us in config.h */
+#   define VERSION "0.61pre"
+#   define HAVE_SDL 1
+#   define HAVE_SDL_MIXER 1
+#   define HAVE_SDL_JOYSTICKOPEN 1
+#   define TCL_HEADER <tcl.h>
+
+#   define HAVE__ISNAN
+
+#   ifdef _MSC_VER
+#       pragma warning (disable:4244) /* conversion from double to float */
+#       pragma warning (disable:4305) /* truncation from const dbl to float */
+#       pragma warning (disable:4761) /* integral size mismatch */
+#   endif /* _MSC_VER */
+
+#   ifdef __MWERKS__
+        /* Codewarrior 4 seems to need this... */
+        int _isnan( double x );
+#   endif /* __MWERKS__ */
+#endif
+
+/* Include all (or most) system include files here.  This slows down
+   compilation but makes maintenance easier since system-dependent
+   #ifdefs are centralized. */
 #include <math.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <time.h>
 #include <ctype.h>
-#include <sys/time.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <limits.h>
 #include <stdarg.h>
 
-#if defined( WIN32 ) || defined( __CYGWIN__ )
-    /* Note that this will define WIN32 for us, if it isn't defined already
-     */
-#  include <windows.h>
-#endif /* defined( WIN32 ) || defined( __CYGWIN__ ) */
+/* Macros and include files for non-standard math routines */
+#ifdef HAVE_IEEEFP_H
+#   include <ieeefp.h>
+#endif
+#include <float.h>
 
+/* System-dependent includes */
+#if defined( NATIVE_WIN32_COMPILER )
+#  include <io.h>
+#  include <direct.h>
+#endif
+
+#if defined( COMPILER_IS_UNIX_COMPATIBLE )
+#   include <unistd.h>
+#   include <sys/types.h>
+#   include <pwd.h>
+#   include <dirent.h>
+#   include <sys/time.h>
+#   include <sys/types.h>
+#   include <dirent.h>
+#endif
+
+/* OpenGL */
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include <GL/glut.h>
 
 #ifdef HAVE_GL_GLX_H
 #   include <GL/glx.h>
 #endif
 
+/* Tcl -- name of header is system-dependent :( */
 #include TCL_HEADER
 
 #ifndef M_PI
@@ -64,6 +115,13 @@ extern "C"
 
 #define EPS 1e-13
 
+/* Some versions of sys/stat.h don't define S_ISDIR */
+#ifndef S_ISDIR
+#   define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
+#endif /* S_ISDIR */
+
+/* Header files to include by default */
+#include "winsys.h"
 #include "string_util.h"
 #include "file_util.h"
 #include "game_config.h"
@@ -74,23 +132,18 @@ extern "C"
 
 #define PROG_NAME "tuxracer"
 
-/* Macros and include files for non-standard math routines */
-#ifdef HAVE_IEEEFP_H
-#   include <ieeefp.h>
-#endif
-#include <float.h>
-
-#ifdef HAVE_FINITE
+#if defined( HAVE_FINITE )
 #   define FINITE(x) (finite(x))
-#elif HAVE__FINITE
+#elif defined( HAVE__FINITE )
 #   define FINITE(x) (_finite(x))
-#elif HAVE_ISNAN
+#elif defined( HAVE_ISNAN )
 #   define FINITE(x) (!isnan(x))
-#elif HAVE__ISNAN
+#elif defined( HAVE__ISNAN )
 #   define FINITE(x) (!_isnan(x))
 #else
 #   error "You don't have finite(), _finite(), isnan(), or _isnan() on your system!"
 #endif
+
 
 /* Macros for swapping bytes */
 #define SWAP_WORD(x) \
@@ -112,8 +165,8 @@ tmp |= ((x) >> 8)  & 0x00ff; \
 }
 
 
-/* define this to turn off all debugging checks and messages */
-/* #define TUXRACER_NO_DEBUG */
+/* define this to turn off all debugging assertions/checks */
+/* #define TUXRACER_NO_ASSERT */
 
 /* Directory separator */
 #ifdef WIN32
@@ -130,6 +183,11 @@ tmp |= ((x) >> 8)  & 0x00ff; \
 /* Number of lives players get to complete a cup */
 #define INIT_NUM_LIVES 4
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* Game state */
 typedef enum {
     ALL_MODES = -2,
@@ -138,6 +196,7 @@ typedef enum {
     GAME_TYPE_SELECT,
     EVENT_SELECT,
     RACE_SELECT,
+    LOADING,
     INTRO,
     RACING,
     GAME_OVER,
@@ -250,7 +309,6 @@ typedef struct {
     bool_t collision;                   /* has plyr collided with obstacle? */
     control_t control;                  /* player control data */
     view_t view;                        /* player's view point */
-    scalar_t health;                    /* player's health */
     int herring;                        /* number of fish collected */
     int score;                          /* players' score */
 } player_data_t;
@@ -283,8 +341,16 @@ extern game_data_t g_game;
 
 #define get_player_data( plyr ) ( & g_game.player[ (plyr) ] )
 
-#endif
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+
+#endif
+
+/* Emacs Customizations
+;;; Local Variables: ***
+;;; c-basic-offset:0 ***
+;;; End: ***
+*/
+
+/* EOF */

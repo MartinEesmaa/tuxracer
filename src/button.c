@@ -1,6 +1,6 @@
 /* 
  * Tux Racer 
- * Copyright (C) 1999-2000 Jasmin F. Patry
+ * Copyright (C) 1999-2001 Jasmin F. Patry
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -67,11 +67,11 @@ struct button_ {
 */
 static bool_t in_bbox( button_t *button, int x, int y )
 {
-    return 
+    return (bool_t) (
 	( x >= button->pos.x ) &&
 	( x <= button->pos.x + button->w ) &&
 	( y >= button->pos.y ) &&
-	( y <= button->pos.y + button->h );
+	( y <= button->pos.y + button->h ) );
 }
 
 
@@ -82,14 +82,15 @@ static bool_t in_bbox( button_t *button, int x, int y )
   \date    Created:  2000-09-17
   \date    Modified: 2000-09-17
 */
-static void button_mouse_down_cb( void *widget, ui_mouse_button_t which_button,
+static void button_mouse_down_cb( void *widget, 
+				  winsys_mouse_button_t which_button,
 				  int x, int y )
 {
     button_t *button = (button_t*) widget;
 
     check_assertion( button != NULL, "button is NULL" );
 
-    if ( which_button != UI_LEFT_BUTTON ) {
+    if ( which_button != WS_LEFT_BUTTON ) {
 	return;
     }
 
@@ -134,14 +135,15 @@ void button_perform_click_action( button_t *button )
   \date    Created:  2000-09-17
   \date    Modified: 2000-09-17
 */
-static void button_mouse_up_cb( void *widget, ui_mouse_button_t which_button,
+static void button_mouse_up_cb( void *widget, 
+				winsys_mouse_button_t which_button,
 				int x, int y )
 {
     button_t *button = (button_t*) widget;
 
     check_assertion( button != NULL, "button is NULL" );
 
-    if ( which_button != UI_LEFT_BUTTON ) {
+    if ( which_button != WS_LEFT_BUTTON ) {
 	return;
     }
 
