@@ -40,7 +40,7 @@ static int num_keymap_entries = 0;
     { GAME_OVER, DEFAULT_CALLBACK, NULL, NULL, game_over_cb }
 */
 
-int add_keymap_entry( game_mode_t mode, keymap_class_t class,
+int add_keymap_entry( game_mode_t mode, keymap_class_t keymap_class,
 		      char *keys, key_func_t key_func, key_cb_t key_cb )
 {
     if ( num_keymap_entries == KEYMAP_SIZE ) {
@@ -48,7 +48,7 @@ int add_keymap_entry( game_mode_t mode, keymap_class_t class,
     }
 
     keymap[ num_keymap_entries ].mode = mode;
-    keymap[ num_keymap_entries ].class = class;
+    keymap[ num_keymap_entries ].keymap_class = keymap_class;
     keymap[ num_keymap_entries ].keys = keys;
     keymap[ num_keymap_entries ].key_func = key_func;
     keymap[ num_keymap_entries ].key_cb = key_cb;
@@ -104,7 +104,9 @@ static void init_keytable( game_mode_t mode )
 
     /* Handle default callbacks first */
     for (i=0; i<num_keymap_entries; i++) {
-	if ( keymap[i].mode == mode && keymap[i].class == DEFAULT_CALLBACK ) {
+	if ( keymap[i].mode == mode && 
+            keymap[i].keymap_class == DEFAULT_CALLBACK ) 
+        {
 	    fill_keytable( keymap[i].key_cb );
 	}
     }
@@ -112,12 +114,12 @@ static void init_keytable( game_mode_t mode )
     /* Handle other classes */
     for (i=0; i<num_keymap_entries; i++) {
 	if ( keymap[i].mode == mode ) {
-	    switch ( keymap[i].class ) {
+	    switch ( keymap[i].keymap_class ) {
 	    case FIXED_KEY:
 		if ( ! insert_keytable_entries( keymap[i].keys, 
 						keymap[i].key_cb ) )
 		{
-		    assert( 0 );
+		    check_assertion( 0, "failed to insert keytable entries" );
 		}
 
 		break;
@@ -132,7 +134,7 @@ static void init_keytable( game_mode_t mode )
 		    if ( ! insert_keytable_entries( keymap[i].keys, 
 						    keymap[i].key_cb ) )
 		    {
-			assert( 0 );
+			check_assertion( 0, "couldn't insert keytable entry" );
 		    }
 		}
 
@@ -143,7 +145,7 @@ static void init_keytable( game_mode_t mode )
 		break;
 
             default:
-		assert(0);
+		code_not_reached();
 	    }
 
 	}
@@ -164,6 +166,10 @@ static void keyboard_handler( int key, bool_t special, bool_t release, int x, in
 	table = special_keytable;
     } else {
 	table = keytable;
+    }
+
+    if ( isalpha( key ) ) {
+	key = tolower( key );
     }
 
     if ( table[key] != NULL ) {

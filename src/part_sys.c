@@ -22,6 +22,10 @@
 #include "part_sys.h"
 #include "phys_sim.h"
 #include "gl_util.h"
+#include "tcl_util.h"
+#include "course_render.h"
+#include "render_util.h"
+#include "textures.h"
 
 /* This constant is here as part of a debugging check to prevent an infinite 
    number of particles from being created */
@@ -34,15 +38,23 @@
 #define MIN_AGE     -0.2
 #define MAX_AGE      1.
 
+#define PARTICLE_SHADOW_HEIGHT 0.05
+#define PARTICLE_SHADOW_ALPHA 0.1
+
 typedef struct _Particle {
     point_t pt[3];
+    scalar_t terrain_height[3];
     scalar_t age;
     scalar_t death;
+    scalar_t alpha;
     vector_t vel;
     struct _Particle *next;
 } Particle;
 
-static colour_t partColour = { 0.69, 0.72, 0.906 };
+static GLfloat particle_colour_diffuse[4];
+static GLfloat particle_colour_specular[4];
+static GLfloat particle_shininess;
+
 static Particle* head = NULL;
 static int num_particles = 0;
 
@@ -58,11 +70,7 @@ void create_new_particles( point_t loc, vector_t vel, int num )
 
     /* Debug check to track down infinite particle bug */
     if ( num_particles + num > MAX_PARTICLES ) {
-        fprintf( stderr, 
-        "tuxracer: Maximum number of particles exceeded.\n"
-        "*** Please help the Tux Racer developers by reporting this bug \n"
-        "*** to <tuxracer-devel@lists.sourceforge.net>\n" );
-        assert( 0 );
+	check_assertion( 0, "maximum number of particles exceeded" );
     } 
 
     for (i=0; i<num; i++) {
@@ -70,8 +78,7 @@ void create_new_particles( point_t loc, vector_t vel, int num )
         newp = (Particle*)malloc( sizeof( Particle) );
 
         if ( newp == NULL ) {
-            fprintf( stderr, "tuxracer: Out of memory.\n" );
-            exit( -1 );
+            handle_system_error( 1, "out of memory" );
         } 
 
         num_particles += 1;
@@ -124,6 +131,8 @@ void update_particles( scalar_t time_step )
             if ( (**p).pt[i].y < ycoord - 3 ) {
                 (**p).age = (**p).death + 1;
             } 
+
+	    (**p).terrain_height[i] = ycoord;
         } 
 
         if ( (**p).age >= (**p).death ) {
@@ -134,28 +143,102 @@ void update_particles( scalar_t time_step )
             continue;
         } 
 
+        (**p).alpha = ( (**p).death - (**p).age ) / (**p).death;
+
         (**p).vel.y += -EARTH_GRAV * time_step;
         p = &( (**p).next );
     } 
 } 
 
-void draw_particles()
+void draw_particle_shadows( )
 {
-    scalar_t alpha;
     Particle *p;
     int i;
 
-    set_gl_options( PARTICLES );
+    set_gl_options( PARTICLE_SHADOWS );
+
+
     for (p=head; p!=NULL; p = p->next) {
         if ( p->age < 0 ) continue;
 
-        alpha = ( p->death - p->age ) / p->death;
+	set_material_alpha( black, black, 0.0, 
+			    PARTICLE_SHADOW_ALPHA * p->alpha  );
 
         glBegin( GL_TRIANGLES );
-        glColor4f( partColour.r, partColour.g, partColour.b, alpha );
+
         for ( i=0; i<3; i++) {
+            glVertex3f( p->pt[i].x, 
+			min( p->pt[i].y, 
+			     p->terrain_height[i] + PARTICLE_SHADOW_HEIGHT ), 
+			p->pt[i].z );
+        } 
+
+        glEnd();
+    } 
+
+} 
+
+void draw_particles( player_data_t *plyr )
+{
+    Particle *p;
+    int i;
+    vector_t normal;
+    GLuint   *tex_names;
+    GLfloat tmp;
+
+    set_gl_options( PARTICLES );
+
+    tex_names = get_tex_names();
+
+    glBindTexture( GL_TEXTURE_2D, tex_names[SNOW_TEX] );
+
+    if ( get_course_lighting() ) {
+        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+	glEnable( GL_LIGHTING );
+
+	setup_course_lighting();
+	glShadeModel( GL_SMOOTH );
+    } else {
+        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+	glShadeModel( GL_FLAT );
+    }
+
+    for (p=head; p!=NULL; p = p->next) {
+        if ( p->age < 0 ) continue;
+
+        glBegin( GL_TRIANGLES );
+
+	tmp = particle_colour_diffuse[3];
+	particle_colour_diffuse[3] *= p->alpha;
+	glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, 
+		      particle_colour_diffuse );
+	particle_colour_diffuse[3] = tmp;
+
+	tmp = particle_colour_specular[3];
+	particle_colour_specular[3] *= p->alpha;
+	glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, 
+		      particle_colour_specular );
+	particle_colour_specular[3] = tmp;
+
+	glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, particle_shininess );
+
+	normal = cross_product( subtract_points( p->pt[1], p->pt[0] ),
+				subtract_points( p->pt[2], p->pt[1] ) );
+
+	if ( dot_product( subtract_points( p->pt[0], plyr->view.pos ),
+			  normal ) > 0 ) 
+	{
+	    normal = scale_vector( -1., normal );
+	}
+	normalize_vector( &normal );
+
+        for ( i=0; i<3; i++) {
+            glNormal3f( normal.x, normal.y, normal.z );
+	    glTexCoord2f( p->pt[i].x / TEX_SCALE, p->pt[i].z / TEX_SCALE );
             glVertex3f( p->pt[i].x, p->pt[i].y, p->pt[i].z );
         } 
+
         glEnd();
     } 
 
@@ -174,4 +257,97 @@ void clear_particles()
     } 
     head = NULL;
     num_particles = 0;
+}
+
+void reset_particles() {
+    particle_colour_diffuse[0] = light_blue.r;
+    particle_colour_diffuse[1] = light_blue.g;
+    particle_colour_diffuse[2] = light_blue.b;
+    particle_colour_diffuse[3] = 1.0; /* alpha */
+
+    particle_colour_specular[0] = 0.0;
+    particle_colour_specular[1] = 0.0;
+    particle_colour_specular[2] = 0.0;
+    particle_colour_specular[3] = 1.0; /* alpha */
+
+    particle_shininess = 0;
 } 
+
+static int particle_colour_cb(ClientData cd, Tcl_Interp *ip, 
+			      int argc, char *argv[]) 
+{
+    double tmp_dbl;
+    scalar_t tmp_arr[4];
+    bool_t error = False;
+    
+    if (argc < 3) {
+	error = True;
+    }
+
+    NEXT_ARG;
+
+    while ( !error && argc > 0 ) {
+
+	if ( strcmp( "-ambient_and_diffuse", *argv ) == 0 ||
+	     strcmp( "-diffuse",  *argv ) == 0 ) 
+	{
+	    NEXT_ARG;
+	    if ( argc == 0 ) {
+		error = True;
+		break;
+	    }
+	    if ( get_tcl_tuple ( ip, *argv, tmp_arr, 4 ) == TCL_ERROR ) {
+		error = True;
+		break;
+	    }
+	    copy_to_glfloat_array( particle_colour_diffuse, tmp_arr, 4 );
+	} else if ( strcmp( "-specular", *argv ) == 0 ) {
+	    NEXT_ARG;
+	    if ( argc == 0 ) {
+		error = True;
+		break;
+	    }
+	    if ( get_tcl_tuple ( ip, *argv, tmp_arr, 4 ) == TCL_ERROR ) {
+		error = True;
+		break;
+	    }
+	    copy_to_glfloat_array( particle_colour_specular, tmp_arr, 4 );
+	} else if ( strcmp( "-shininess", *argv ) == 0 ) {
+	    NEXT_ARG;
+	    if ( argc == 0 ) {
+		error = True;
+		break;
+	    }
+	    if ( Tcl_GetDouble ( ip, *argv, &tmp_dbl ) == TCL_ERROR ) {
+		error = True;
+		break;
+	    }
+	    particle_shininess = tmp_dbl;
+	} else {
+	    print_warning( TCL_WARNING, "tux_particle_colour: unrecognized "
+			   "parameter `%s'", *argv );
+	}
+
+	NEXT_ARG;
+    }
+
+    if ( error ) {
+	print_warning( TCL_WARNING, "error in call to tux_particle_colour" );
+	Tcl_AppendResult(
+	    ip, 
+	    "\nUsage: tux_particle_colour "
+	    "[-diffuse { r g b a }] "
+	    "[-specular { r g b a }] "
+	    "[-shininess <value>] "
+            , (char *) 0 );
+	return TCL_ERROR;
+    }
+
+    return TCL_OK;
+}
+
+void register_particle_callbacks( Tcl_Interp *ip )
+{
+    Tcl_CreateCommand (ip, "tux_particle_colour", particle_colour_cb,  0,0);
+    Tcl_CreateCommand (ip, "tux_particle_color", particle_colour_cb,  0,0);
+}

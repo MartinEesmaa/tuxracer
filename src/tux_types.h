@@ -89,6 +89,33 @@ typedef struct {
     double specular_exp;
 } material_t;
 
+/* Light */
+typedef struct {
+    bool_t is_on;
+    GLfloat ambient[4];
+    GLfloat diffuse[4];
+    GLfloat specular[4];
+    GLfloat position[4];
+    GLfloat spot_direction[3];
+    GLfloat spot_exponent;
+    GLfloat spot_cutoff;
+    GLfloat constant_attenuation;
+    GLfloat linear_attenuation;
+    GLfloat quadratic_attenuation;
+} light_t;
+
+/* Key frame for animation sequences */
+typedef struct {
+    scalar_t time;
+    point_t pos;
+    scalar_t yaw;        /* angle of rotation about y axis */
+    scalar_t pitch;      /* angle of rotation about x axis */
+    scalar_t l_shldr;
+    scalar_t r_shldr;
+    scalar_t l_hip;
+    scalar_t r_hip;
+} key_frame_t; 
+
 /* Scene graph node types. */
 typedef enum { 
     Empty, Sphere

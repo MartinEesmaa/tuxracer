@@ -69,7 +69,7 @@ CFLAGS = -Wall -ansi -pedantic -g @TUXRACER_EXTRA_CFLAGS@ 		  -I/usr/X11R6/inclu
 
 bin_PROGRAMS = tuxracer
 
-tuxracer_SOURCES =  	alglib.c					alglib.h					course_load.c					course_load.h					course_render.c					course_render.h					fps.c						fps.h					        game_config.c				        game_config.h				        game_over.c				        game_over.h					gl_util.c					gl_util.h					hier.c						hier.h						hier_cb.c					hier_cb.h					hier_util.c					hier_util.h					image.c						image.h						intro.c						intro.h						keyboard.c					keyboard.h					keyboard_util.c					keyboard_util.h					keyframe.c					keyframe.h					loop.c						loop.h						main.c						multiplayer.c					multiplayer.h				        nmrcl.c					        nmrcl.h						part_sys.c					part_sys.h					phys_sim.c					phys_sim.h					pic.c						pic.h						preview.c					preview.h					racing.c					racing.h					render_util.c					render_util.h					screenshot.c					screenshot.h					start_screen.c					start_screen.h					string_util.c					string_util.h					tcl_util.c					tcl_util.h					textures.c					textures.h					tux.c						tux.h					        tux_shadow.c				        tux_shadow.h					tux_types.h					tuxracer.h					view.c						view.h
+tuxracer_SOURCES =  	alglib.c					alglib.h					course_load.c					course_load.h					course_render.c					course_render.h					debug.c						debug.h						error_util.c					error_util.h					fog.c						fog.h						fps.c						fps.h					        game_config.c				        game_config.h				        game_over.c				        game_over.h					gl_util.c					gl_util.h					hier.c						hier.h						hier_cb.c					hier_cb.h					hier_util.c					hier_util.h					image.c						image.h						intro.c						intro.h						keyboard.c					keyboard.h					keyboard_util.c					keyboard_util.h					keyframe.c					keyframe.h					lights.c					lights.h					loop.c						loop.h						main.c						mirror_course.c					mirror_course.h					multiplayer.c					multiplayer.h				        nmrcl.c					        nmrcl.h						part_sys.c					part_sys.h					phys_sim.c					phys_sim.h					pic.c						pic.h						preview.c					preview.h					racing.c					racing.h					render_util.c					render_util.h					screenshot.c					screenshot.h					start_screen.c					start_screen.h					string_util.c					string_util.h					tcl_util.c					tcl_util.h					textures.c					textures.h					tux.c						tux.h					        tux_shadow.c				        tux_shadow.h					tux_types.h					tuxracer.h					view.c						view.h
 
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../config.h
@@ -85,12 +85,13 @@ X_CFLAGS = @X_CFLAGS@
 X_LIBS = @X_LIBS@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
 X_PRE_LIBS = @X_PRE_LIBS@
-tuxracer_OBJECTS =  alglib.o course_load.o course_render.o fps.o \
-game_config.o game_over.o gl_util.o hier.o hier_cb.o hier_util.o \
-image.o intro.o keyboard.o keyboard_util.o keyframe.o loop.o main.o \
-multiplayer.o nmrcl.o part_sys.o phys_sim.o pic.o preview.o racing.o \
-render_util.o screenshot.o start_screen.o string_util.o tcl_util.o \
-textures.o tux.o tux_shadow.o view.o
+tuxracer_OBJECTS =  alglib.o course_load.o course_render.o debug.o \
+error_util.o fog.o fps.o game_config.o game_over.o gl_util.o hier.o \
+hier_cb.o hier_util.o image.o intro.o keyboard.o keyboard_util.o \
+keyframe.o lights.o loop.o main.o mirror_course.o multiplayer.o nmrcl.o \
+part_sys.o phys_sim.o pic.o preview.o racing.o render_util.o \
+screenshot.o start_screen.o string_util.o tcl_util.o textures.o tux.o \
+tux_shadow.o view.o
 tuxracer_LDADD = $(LDADD)
 tuxracer_DEPENDENCIES = 
 tuxracer_LDFLAGS = 
@@ -211,89 +212,115 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 alglib.o: alglib.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h
+	tux_types.h alglib.h debug.h error_util.h
 course_load.o: course_load.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h course_load.h \
-	course_render.h image.h textures.h phys_sim.h tcl_util.h \
-	keyframe.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	course_load.h course_render.h image.h textures.h phys_sim.h \
+	tcl_util.h keyframe.h gl_util.h lights.h fog.h part_sys.h
 course_render.o: course_render.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h course_load.h \
-	course_render.h textures.h phys_sim.h hier_util.h gl_util.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	course_load.h course_render.h textures.h phys_sim.h hier_util.h \
+	gl_util.h render_util.h fog.h
+debug.o: debug.c debug.h tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h error_util.h
+error_util.o: error_util.c error_util.h tuxracer.h ../config.h \
+	string_util.h game_config.h tux_types.h alglib.h debug.h
+fog.o: fog.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h debug.h error_util.h fog.h gl_util.h \
+	tcl_util.h
 fps.o: fps.c fps.h tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h render_util.h
+	tux_types.h alglib.h debug.h error_util.h render_util.h
 game_config.o: game_config.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h
 game_over.o: game_over.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h multiplayer.h gl_util.h \
-	fps.h render_util.h phys_sim.h course_load.h view.h \
-	course_render.h tux.h tux_shadow.h keyboard.h loop.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	multiplayer.h gl_util.h fps.h render_util.h phys_sim.h \
+	course_load.h view.h course_render.h tux.h tux_shadow.h \
+	keyboard.h loop.h fog.h
 gl_util.o: gl_util.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h gl_util.h
+	tux_types.h alglib.h debug.h error_util.h gl_util.h
 hier.o: hier.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h hier_util.h
+	tux_types.h alglib.h debug.h error_util.h hier_util.h
 hier_cb.o: hier_cb.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h hier.h tcl_util.h
+	tux_types.h alglib.h debug.h error_util.h hier.h tcl_util.h
 hier_util.o: hier_util.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	render_util.h
 image.o: image.c image.h
 intro.o: intro.c keyframe.h tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h course_render.h \
-	multiplayer.h gl_util.h fps.h loop.h render_util.h view.h tux.h \
-	tux_shadow.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	course_render.h multiplayer.h gl_util.h fps.h loop.h \
+	render_util.h view.h tux.h tux_shadow.h fog.h
 keyboard.o: keyboard.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h keyboard.h keyboard_util.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	keyboard.h keyboard_util.h
 keyboard_util.o: keyboard_util.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h keyboard_util.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	keyboard_util.h
 keyframe.o: keyframe.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h tux.h phys_sim.h \
-	course_load.h hier.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h tux.h \
+	phys_sim.h course_load.h hier.h
+lights.o: lights.c tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h debug.h error_util.h lights.h gl_util.h \
+	tcl_util.h
 loop.o: loop.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h loop.h
+	tux_types.h alglib.h debug.h error_util.h loop.h
 main.o: main.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h course_load.h course_render.h textures.h \
-	tux.h phys_sim.h view.h part_sys.h keyframe.h preview.h \
-	gl_util.h screenshot.h fps.h tux_shadow.h loop.h multiplayer.h \
-	render_util.h start_screen.h intro.h racing.h game_over.h \
-	keyboard.h
+	tux_types.h alglib.h debug.h error_util.h course_load.h \
+	course_render.h textures.h tux.h phys_sim.h view.h part_sys.h \
+	keyframe.h preview.h gl_util.h screenshot.h fps.h tux_shadow.h \
+	loop.h multiplayer.h render_util.h start_screen.h intro.h \
+	racing.h game_over.h keyboard.h fog.h lights.h
+mirror_course.o: mirror_course.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	course_load.h course_render.h keyframe.h phys_sim.h
 multiplayer.o: multiplayer.c
 nmrcl.o: nmrcl.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h nmrcl.h
+	tux_types.h alglib.h debug.h error_util.h nmrcl.h
 part_sys.o: part_sys.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h part_sys.h phys_sim.h \
-	course_load.h gl_util.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	part_sys.h phys_sim.h course_load.h gl_util.h tcl_util.h \
+	course_render.h render_util.h textures.h
 phys_sim.o: phys_sim.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h course_load.h \
-	course_render.h hier.h hier_util.h tux.h part_sys.h phys_sim.h \
-	nmrcl.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	course_load.h course_render.h hier.h hier_util.h tux.h \
+	part_sys.h phys_sim.h nmrcl.h
 pic.o: pic.c pic.h
 preview.o: preview.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h course_load.h
+	tux_types.h alglib.h debug.h error_util.h course_load.h
 racing.o: racing.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h keyboard.h keyframe.h course_render.h \
-	multiplayer.h gl_util.h fps.h loop.h render_util.h view.h tux.h \
-	tux_shadow.h phys_sim.h course_load.h part_sys.h screenshot.h
-render_util.o: render_util.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h gl_util.h
-screenshot.o: screenshot.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h screenshot.h pic.h
-start_screen.o: start_screen.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h keyboard.h keyframe.h \
+	tux_types.h alglib.h debug.h error_util.h keyboard.h keyframe.h \
 	course_render.h multiplayer.h gl_util.h fps.h loop.h \
-	render_util.h view.h preview.h screenshot.h course_load.h
+	render_util.h view.h tux.h tux_shadow.h phys_sim.h \
+	course_load.h part_sys.h screenshot.h fog.h
+render_util.o: render_util.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	gl_util.h
+screenshot.o: screenshot.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	screenshot.h pic.h
+start_screen.o: start_screen.c tuxracer.h ../config.h string_util.h \
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	keyboard.h keyframe.h course_render.h multiplayer.h gl_util.h \
+	fps.h loop.h render_util.h view.h preview.h screenshot.h \
+	course_load.h fog.h
 string_util.o: string_util.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h
 tcl_util.o: tcl_util.c tcl_util.h tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h
 textures.o: textures.c tuxracer.h ../config.h string_util.h \
-	game_config.h tux_types.h alglib.h textures.h image.h
-tux.o: tux.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h hier_cb.h hier.h gl_util.h
+	game_config.h tux_types.h alglib.h debug.h error_util.h \
+	textures.h image.h
+tux.o: tux.c lights.h tuxracer.h ../config.h string_util.h game_config.h \
+	tux_types.h alglib.h debug.h error_util.h hier_cb.h hier.h \
+	gl_util.h
 tux_shadow.o: tux_shadow.c tux_shadow.h tuxracer.h ../config.h \
-	string_util.h game_config.h tux_types.h alglib.h gl_util.h \
-	tux.h hier.h phys_sim.h course_load.h textures.h
+	string_util.h game_config.h tux_types.h alglib.h debug.h \
+	error_util.h gl_util.h tux.h hier.h phys_sim.h course_load.h \
+	textures.h
 view.o: view.c tuxracer.h ../config.h string_util.h game_config.h \
-	tux_types.h alglib.h view.h phys_sim.h course_load.h tux.h \
-	hier.h
+	tux_types.h alglib.h debug.h error_util.h view.h phys_sim.h \
+	course_load.h tux.h hier.h
 
 info-am:
 info: info-am

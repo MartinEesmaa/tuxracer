@@ -28,7 +28,6 @@ void set_gl_options( RenderMode mode )
 	   GL_TEXTURE_2D
 	   GL_DEPTH_TEST
 	   GL_CULL_FACE
-	   GL_FOG
 	   GL_LIGHTING
 	   GL_NORMALIZE
 	   GL_ALPHA_TEST
@@ -47,7 +46,6 @@ void set_gl_options( RenderMode mode )
         glDisable( GL_TEXTURE_2D );
         glDisable( GL_DEPTH_TEST );
         glDisable( GL_CULL_FACE );
-        glDisable( GL_FOG );
 	glDisable( GL_LIGHTING );
 	glDisable( GL_NORMALIZE );
 	glDisable( GL_ALPHA_TEST );
@@ -60,7 +58,6 @@ void set_gl_options( RenderMode mode )
 	glEnable( GL_TEXTURE_2D );
 	glEnable( GL_DEPTH_TEST );
 	glEnable( GL_CULL_FACE );
-	glEnable( GL_FOG );
 	glDisable( GL_LIGHTING );
 	glDisable( GL_NORMALIZE );
 	glDisable( GL_ALPHA_TEST );
@@ -73,7 +70,6 @@ void set_gl_options( RenderMode mode )
 	glEnable( GL_TEXTURE_2D );
 	glEnable( GL_DEPTH_TEST );
         glDisable( GL_CULL_FACE );
-	glEnable( GL_FOG );
 	glDisable( GL_LIGHTING );
 	glDisable( GL_NORMALIZE );
         glEnable( GL_ALPHA_TEST );
@@ -85,10 +81,22 @@ void set_gl_options( RenderMode mode )
         break;
         
     case PARTICLES:
+        glEnable( GL_TEXTURE_2D );
+	glEnable( GL_DEPTH_TEST );
+        glDisable( GL_CULL_FACE );
+	glDisable( GL_LIGHTING );
+	glDisable( GL_NORMALIZE );
+	glDisable( GL_ALPHA_TEST );
+        glEnable( GL_BLEND );
+	glDisable( GL_STENCIL_TEST );
+	glDepthMask( GL_TRUE );
+
+        break;
+        
+    case PARTICLE_SHADOWS:
         glDisable( GL_TEXTURE_2D );
 	glEnable( GL_DEPTH_TEST );
         glDisable( GL_CULL_FACE );
-	glEnable( GL_FOG );
 	glDisable( GL_LIGHTING );
 	glDisable( GL_NORMALIZE );
 	glDisable( GL_ALPHA_TEST );
@@ -102,7 +110,6 @@ void set_gl_options( RenderMode mode )
 	glEnable( GL_TEXTURE_2D );
 	glEnable( GL_DEPTH_TEST );
         glDisable( GL_CULL_FACE ); 
-	glEnable( GL_FOG );
 	glDisable( GL_LIGHTING );
 	glDisable( GL_NORMALIZE );
 	glDisable( GL_ALPHA_TEST );
@@ -115,7 +122,6 @@ void set_gl_options( RenderMode mode )
         glDisable( GL_TEXTURE_2D );
 	glEnable( GL_DEPTH_TEST );
 	glEnable( GL_CULL_FACE );
-	glEnable( GL_FOG );
         glEnable( GL_LIGHTING );
 	glEnable( GL_NORMALIZE );
 	glDisable( GL_ALPHA_TEST );
@@ -130,7 +136,6 @@ void set_gl_options( RenderMode mode )
 	glDisable( GL_TEXTURE_2D );
 	glEnable( GL_DEPTH_TEST );
 	glDisable( GL_CULL_FACE );
-	glEnable( GL_FOG );
 	glDisable( GL_LIGHTING );
 	glDisable( GL_NORMALIZE );
 	glDisable( GL_ALPHA_TEST );
@@ -144,7 +149,6 @@ void set_gl_options( RenderMode mode )
 	glDisable( GL_TEXTURE_2D );
 	glEnable( GL_DEPTH_TEST );
 	glEnable( GL_CULL_FACE );
-	glEnable( GL_FOG );
 	glDisable( GL_LIGHTING );
 	glDisable( GL_NORMALIZE );
 	glDisable( GL_ALPHA_TEST );
@@ -155,9 +159,7 @@ void set_gl_options( RenderMode mode )
 	break;
 
     default:
-        fprintf( stderr, "set_gl_options: unknown rendering mode %d\n",
-            mode );
-        assert(0);
+	code_not_reached();
     } 
 } 
 
@@ -166,7 +168,30 @@ void check_gl_error()
     GLenum error;
     error = glGetError();
     if ( error != GL_NO_ERROR ) {
-	fprintf( stderr, "OpenGL Error: %s\n", gluErrorString( error ) );
+	print_warning( CRITICAL_WARNING, 
+		       "OpenGL Error: %s", gluErrorString( error ) );
 	fflush( stderr );
     }
+}
+
+void copy_to_glfloat_array( GLfloat dest[], scalar_t src[], int n )
+{
+    int i;
+    for (i=0; i<n; i++) {
+	dest[i] = src[i];
+    }
+}
+
+void init_glfloat_array( int num, GLfloat arr[], ... )
+{
+    int i;
+    va_list args;
+
+    va_start( args, arr );
+
+    for (i=0; i<num; i++) {
+	arr[i] = va_arg(args, double);
+    }
+
+    va_end( args );
 }

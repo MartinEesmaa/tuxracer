@@ -24,10 +24,19 @@
  * Constants 
  */
 
+
 static const colour_t clear_colour = { 0.545, 0.70, 0.90 };
 static const colour_t text_colour = { 0.0, 0.0, 0.0 };
 static const float fog_colour[4] = { 1.0, 1.0, 1.0, 1.0 };
 
+const colour_t white = { 1.0, 1.0, 1.0 };
+const colour_t grey  = { 0.7, 0.7, 0.7 };
+const colour_t red   = { 1.0, 0. , 0.  };
+const colour_t green = { 0. , 1.0, 0.  };
+const colour_t blue  = { 0. , 0. , 1.0 };
+const colour_t light_blue = { 0.5, 0.5, 0.8 };
+const colour_t black = { 0., 0., 0. };
+const colour_t sky   = { 0.82, 0.86, 0.88 };
 
 /* XXX: this will eventually replaced with nicer texture-mapped chars */
 /* This routine taken from Mesa Demos */
@@ -40,14 +49,24 @@ void print_string( void *font, char *string )
         glutBitmapCharacter( font, string[i] );
 } 
 
+void print_string_centered( scalar_t y, void *font, char *string )
+{
+    scalar_t width;
+
+    width = glutBitmapLength( font, (unsigned char*) string );
+    width = width / getparam_x_resolution() * 640.;
+    glRasterPos2i( 640. / 2. - width / 2., y );
+    print_string( font, string );
+}
+
 void reshape( int w, int h )
 {
-    set_x_resolution( w );
-    set_y_resolution( h );
+    setparam_x_resolution( w );
+    setparam_y_resolution( h );
     glViewport( 0, 0, (GLint) w, (GLint) h );
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-    gluPerspective( get_fov(), (scalar_t)w/h, 0.1, 10000 );
+    gluPerspective( getparam_fov(), (scalar_t)w/h, 0.1, 10000 );
 
     glMatrixMode( GL_MODELVIEW );
 } 
@@ -89,9 +108,37 @@ void clear_rendering_context()
 	     | GL_STENCIL_BUFFER_BIT );
 }
 
-void configure_fog()
+
+/* 
+ * Sets the material properties
+ */
+void set_material_alpha( colour_t diffuse_colour, colour_t specular_colour,
+			 scalar_t specular_exp, scalar_t alpha )
 {
-    glFogi( GL_FOG_MODE, GL_EXP );
-    glFogfv( GL_FOG_COLOR, fog_colour );
-    glFogf( GL_FOG_DENSITY, 0.005 );
-}
+  GLfloat mat_amb_diff[4];
+  GLfloat mat_specular[4];
+
+  /* Set material colour (used when lighting is on) */
+  mat_amb_diff[0] = diffuse_colour.r;
+  mat_amb_diff[1] = diffuse_colour.g;
+  mat_amb_diff[2] = diffuse_colour.b;
+  mat_amb_diff[3] = alpha; 
+  glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mat_amb_diff );
+
+  mat_specular[0] = specular_colour.r;
+  mat_specular[1] = specular_colour.g;
+  mat_specular[2] = specular_colour.b;
+  mat_specular[3] = alpha;
+  glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, mat_specular );
+
+  glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, specular_exp );
+
+  /* Set standard colour */
+  glColor4f( diffuse_colour.r, diffuse_colour.g, diffuse_colour.b, alpha );
+} 
+
+void set_material( colour_t diffuse_colour, colour_t specular_colour,
+                  double specular_exp )
+{
+    set_material_alpha( diffuse_colour, specular_colour, specular_exp, 1.0 );
+} 

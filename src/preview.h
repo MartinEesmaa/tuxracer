@@ -21,8 +21,12 @@
 #ifndef _PREVIEW_H_
 #define _PREVIEW_H_
 
+#include "tuxracer.h"
+
 void init_preview();
 
 void update_preview();
+
+point_t get_preview_eye_pt();
 
 #endif /* _PREVIEW_H_ */

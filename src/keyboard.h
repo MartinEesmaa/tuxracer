@@ -34,7 +34,7 @@ typedef void (*key_cb_t)( int key, bool_t special, bool_t release,
 
 typedef struct {
     game_mode_t mode;
-    keymap_class_t class;
+    keymap_class_t keymap_class;
     char *keys;
     key_func_t key_func;
     key_cb_t key_cb;
@@ -42,12 +42,14 @@ typedef struct {
 
 #define START_KEYBOARD_CB( name ) \
     void name ( int key, bool_t special, bool_t release, int x, int y ) { \
-    player_data_t *plyr = get_player_data( local_player() );
+    player_data_t *plyr = get_player_data( local_player() ); \
+    plyr = plyr + 1 - 1; /* to suppress warnings */
+
 
 #define END_KEYBOARD_CB }
 
 void init_keyboard();
-int add_keymap_entry( game_mode_t mode, keymap_class_t class,
+int add_keymap_entry( game_mode_t mode, keymap_class_t keymap_class,
 		      char *keys, key_func_t key_func, key_cb_t key_cb );
 
 #endif

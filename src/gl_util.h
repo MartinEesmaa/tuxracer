@@ -21,11 +21,14 @@
 #ifndef _GL_UTIL_H_
 #define _GL_UTIL_H_
 
+#include "tuxracer.h"
+
 typedef enum {
     TEXT,
     COURSE,
     TREES,
     PARTICLES,
+    PARTICLE_SHADOWS,
     BACKGROUND,
     TUX,
     TUX_SHADOW
@@ -34,5 +37,9 @@ typedef enum {
 void set_gl_options( RenderMode mode );
 
 void check_gl_error();
+
+void copy_to_glfloat_array( GLfloat dest[], scalar_t src[], int n );
+
+void init_glfloat_array( int num, GLfloat arr[], ... );
 
 #endif

@@ -52,7 +52,7 @@ void traverse_dag_for_view_point( scene_node_t *node, matrixgl_t trans )
     matrixgl_t new_trans;
     scene_node_t *child;
 
-    assert( node != NULL );
+    check_assertion( node != NULL, "node is NULL" );
 
     multiply_matrices( new_trans, trans, node->trans );
 
@@ -79,7 +79,7 @@ point_t get_tux_view_pt( player_data_t *plyr )
     tux_root_node_name = get_tux_root_node();
 
     if ( get_scene_node( tux_root_node_name, &tux_root_node ) != TCL_OK ) {
-	assert(0);
+	check_assertion(0, "couldn't load tux's root node" );
     } 
 
     traverse_dag_for_view_point( tux_root_node, trans );
@@ -156,7 +156,7 @@ void update_view( player_data_t *plyr )
         break;
 
     default:
-	assert( 0 );
+	code_not_reached();
     } 
 
     gluLookAt( view_pt.x, view_pt.y, view_pt.z, 

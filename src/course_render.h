@@ -24,6 +24,7 @@
 vector_t* get_course_normals();
 void reset_course_list();
 void calc_normals();
+void setup_course_lighting();
 void render_course();
 void draw_background(scalar_t fov, scalar_t aspect );
 void draw_trees();

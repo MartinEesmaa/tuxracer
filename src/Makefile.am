@@ -10,6 +10,12 @@ tuxracer_SOURCES =				\
 	course_load.h				\
 	course_render.c				\
 	course_render.h				\
+	debug.c					\
+	debug.h					\
+	error_util.c				\
+	error_util.h				\
+	fog.c					\
+	fog.h					\
 	fps.c					\
 	fps.h					\
         game_config.c				\
@@ -34,9 +40,13 @@ tuxracer_SOURCES =				\
 	keyboard_util.h				\
 	keyframe.c				\
 	keyframe.h				\
+	lights.c				\
+	lights.h				\
 	loop.c					\
 	loop.h					\
 	main.c					\
+	mirror_course.c				\
+	mirror_course.h				\
 	multiplayer.c				\
 	multiplayer.h				\
         nmrcl.c					\

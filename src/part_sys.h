@@ -25,5 +25,9 @@ void create_new_particles( point_t loc, vector_t vel, int num );
 void update_particles( scalar_t time_step );
 void draw_particles();
 void clear_particles();
+void reset_particles();
+void draw_particle_shadows( );
+void draw_particles( player_data_t *plyr );
+void register_particle_callbacks( Tcl_Interp *ip );
 
 #endif /* _PART_SYS_H_ */

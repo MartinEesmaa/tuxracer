@@ -27,52 +27,95 @@ void read_config_file();
 void write_config_file();
 void clear_config_cache();
 
-char *get_data_dir();
-void set_data_dir(char *);
-bool_t get_draw_tux_shadow();
-void set_draw_tux_shadow( bool_t );
-int get_tux_sphere_divisions();
-void set_tux_sphere_divisions( int );
-int get_tux_shadow_sphere_divisions();
-void set_tux_shadow_sphere_divisions( int );
-bool_t get_compile_course();
-void set_compile_course( bool_t );
-bool_t get_use_sphere_display_list();
-void set_use_sphere_display_list( bool_t );
-bool_t get_display_fps();
-void set_display_fps( bool_t );
-int get_x_resolution();
-void set_x_resolution( int );
-int get_y_resolution();
-void set_y_resolution( int );
-bool_t get_do_intro_animation();
-void set_do_intro_animation( bool_t );
-int get_mipmap_type();
-void set_mipmap_type( int );
-bool_t get_fullscreen();
-void set_fullscreen( bool_t );
-int get_ode_solver();
-void set_ode_solver( int );
-int get_control_mode();
-void set_control_mode( int );
-char *get_quit_key();
-void set_quit_key( char * );
-char *get_turn_left_key();
-void set_turn_left_key( char * );
-char *get_turn_right_key();
-void set_turn_right_key( char * );
-char *get_brake_key();
-void set_brake_key( char * );
-char *get_above_view_key();
-void set_above_view_key( char * );
-char *get_behind_view_key();
-void set_behind_view_key( char * );
-char *get_eye_view_key();
-void set_eye_view_key( char * );
-char *get_screenshot_key();
-void set_screenshot_key( char * );
-int get_fov();
-void set_fov( int );
+char *getparam_data_dir();
+void setparam_data_dir(char *);
+
+bool_t getparam_draw_tux_shadow();
+void setparam_draw_tux_shadow( bool_t );
+
+bool_t getparam_draw_particles();
+void setparam_draw_particles( bool_t );
+
+bool_t getparam_draw_particle_shadows();
+void setparam_draw_particle_shadows( bool_t );
+
+int getparam_tux_sphere_divisions();
+void setparam_tux_sphere_divisions( int );
+
+int getparam_tux_shadow_sphere_divisions();
+void setparam_tux_shadow_sphere_divisions( int );
+
+bool_t getparam_nice_fog();
+void setparam_nice_fog( bool_t );
+
+bool_t getparam_compile_course();
+void setparam_compile_course( bool_t );
+
+bool_t getparam_use_sphere_display_list();
+void setparam_use_sphere_display_list( bool_t );
+
+bool_t getparam_display_fps();
+void setparam_display_fps( bool_t );
+
+int getparam_x_resolution();
+void setparam_x_resolution( int );
+
+int getparam_y_resolution();
+void setparam_y_resolution( int );
+
+bool_t getparam_do_intro_animation();
+void setparam_do_intro_animation( bool_t );
+
+int getparam_mipmap_type();
+void setparam_mipmap_type( int );
+
+bool_t getparam_fullscreen();
+void setparam_fullscreen( bool_t );
+
+bool_t getparam_force_window_position();
+void setparam_force_window_position( bool_t );
+
+bool_t getparam_warp_pointer();
+void setparam_warp_pointer( bool_t );
+
+int getparam_ode_solver();
+void setparam_ode_solver( int );
+
+int getparam_control_mode();
+void setparam_control_mode( int );
+
+char *getparam_quit_key();
+void setparam_quit_key( char * );
+
+char *getparam_turn_left_key();
+void setparam_turn_left_key( char * );
+
+char *getparam_turn_right_key();
+void setparam_turn_right_key( char * );
+
+char *getparam_brake_key();
+void setparam_brake_key( char * );
+
+char *getparam_above_view_key();
+void setparam_above_view_key( char * );
+
+char *getparam_behind_view_key();
+void setparam_behind_view_key( char * );
+
+char *getparam_eye_view_key();
+void setparam_eye_view_key( char * );
+
+char *getparam_screenshot_key();
+void setparam_screenshot_key( char * );
+
+int getparam_fov();
+void setparam_fov( int );
+
+char *getparam_debug();
+void setparam_debug( char * );
+
+int getparam_warning_level();
+void setparam_warning_level( int );
 
 #endif 
 

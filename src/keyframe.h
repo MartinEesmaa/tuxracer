@@ -22,9 +22,11 @@
 
 #include "tuxracer.h"
 
+void get_key_frame_data( key_frame_t **fp, int *n );
 void init_key_frame();
 void reset_key_frame();
 void update_key_frame( player_data_t *plyr, scalar_t dt );
+void mirror_keyframe();
 void register_key_frame_callbacks( Tcl_Interp *ip );
 
 #endif

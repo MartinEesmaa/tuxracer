@@ -4,12 +4,7 @@
 
 #include "config.h"
 
-#include <GL/gl.h>
-#include <GL/glut.h>
-#include <tcl.h>
-
 #include <math.h>
-#include <assert.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,11 +12,14 @@
 #include <time.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <limits.h>
+#include <stdarg.h>
 
-#include "string_util.h"
-#include "game_config.h"
+#include <GL/gl.h>
+#include <GL/glut.h>
+#include <tcl.h>
 
 #ifndef M_PI
 #define M_PI 3.1415926535
@@ -29,10 +27,17 @@
 
 #define EPS 1e-13
 
+#include "string_util.h"
+#include "game_config.h"
 #include "tux_types.h"
 #include "alglib.h"
+#include "debug.h"
+#include "error_util.h"
 
-#define DEBUG 1
+#define PROG_NAME "tuxracer"
+
+/* define this to turn off all debugging checks and messages */
+/* #define TUXRACER_NO_DEBUG */
 
 #define BUFF_LEN 512
 

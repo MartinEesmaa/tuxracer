@@ -41,6 +41,8 @@
 #include "racing.h"
 #include "game_over.h"
 #include "keyboard.h"
+#include "fog.h"
+#include "lights.h"
 
 #define WINDOW_TITLE "Tux Racer (c) 1999-2000 Jasmin F. Patry"
 
@@ -67,7 +69,7 @@ static int glutWindow;
 void cleanup(void)
 {
     write_config_file();
-    if ( get_fullscreen() ) {
+    if ( getparam_fullscreen() ) {
 	glutLeaveGameMode();
     }
 }
@@ -94,6 +96,9 @@ int main( int argc, char **argv )
     init_game_configuration();
     read_config_file();
 
+    /* Set up the debugging modes */
+    init_debug();
+
     /* Set up a function to clean up when program exits */
     if ( atexit( cleanup ) != 0 ) {
 	perror( "atexit" );
@@ -114,14 +119,18 @@ int main( int argc, char **argv )
 #endif
 
     /* Create a window */
-    if ( get_fullscreen() ) {
+    if ( getparam_fullscreen() ) {
 	glutInitWindowPosition( 0, 0 );
 	glutEnterGameMode();
     } else {
 	/* Set the initial window size */
-	width = get_x_resolution();
-	height = get_y_resolution();
+	width = getparam_x_resolution();
+	height = getparam_y_resolution();
 	glutInitWindowSize( width, height );
+
+	if ( getparam_force_window_position() ) {
+	    glutInitWindowPosition( 0, 0 );
+	}
 
 	glutWindow = glutCreateWindow( WINDOW_TITLE );
 
@@ -135,17 +144,7 @@ int main( int argc, char **argv )
     /* 
      * Initial OpenGL settings 
      */
-
-    /* Maximum quality. */
-    glHint( GL_POINT_SMOOTH_HINT, GL_NICEST );
-    glHint( GL_LINE_SMOOTH_HINT, GL_NICEST );
-    glHint( GL_POLYGON_SMOOTH_HINT, GL_NICEST );
-    glHint( GL_FOG_HINT, GL_NICEST );
-
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-
-    /* Fog settings */
-    configure_fog();
 
 
     /* 
@@ -153,11 +152,15 @@ int main( int argc, char **argv )
      */
     register_course_load_tcl_callbacks( g_game.tcl_interp );
     register_key_frame_callbacks( g_game.tcl_interp );
+    register_fog_callbacks( g_game.tcl_interp );
+    register_course_light_callbacks( g_game.tcl_interp );
+    register_particle_callbacks( g_game.tcl_interp );
 
     load_tux();
     init_textures();
 
-    select_course( 1 );
+    g_game.course.num = 1;
+    select_course( g_game.course.num );
     init_preview();
 
     g_game.mode = START;

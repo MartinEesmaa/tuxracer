@@ -30,8 +30,28 @@
 #include "preview.h"
 #include "screenshot.h"
 #include "course_load.h"
+#include "fog.h"
 
 static const colour_t text_colour = { 0.0, 0.0, 0.0 };
+
+static char * menu_text[] = {  "1-9: Course Select",
+			       "N: Next Course",
+			       "P: Previous Course",
+			       "M: Mirror Course",
+			       "R: Reload Course",
+			       "S: Start Race",
+			       "Q: Quit" };
+
+static void print_menu( int x, int starty, int endy, 
+			char *menu_text[], int n ) 
+{
+    int i;
+
+    for ( i=0; i<n; i++ ) {
+	glRasterPos2i( x, starty + (scalar_t)i/(n-1) * ( endy-starty ) );
+	print_string( GLUT_BITMAP_TIMES_ROMAN_24, menu_text[i] );
+    }
+}
 
 void start_screen_init() 
 {
@@ -57,7 +77,10 @@ void start_screen_loop( scalar_t time_step )
     update_preview();
 
     set_course_clipping( False );
-    set_course_fog( False );
+    set_course_eye_point( get_preview_eye_pt() );
+
+    disable_fog();
+
     draw_trees( );
     render_course( );
 
@@ -67,41 +90,25 @@ void start_screen_loop( scalar_t time_step )
 
     glColor3f( text_colour.r, text_colour.g, text_colour.b );
 
-    glRasterPos2i( 240, 400 );
-    print_string( GLUT_BITMAP_TIMES_ROMAN_24, "TUX RACER" );
+    print_string_centered( 400, GLUT_BITMAP_TIMES_ROMAN_24, "TUX RACER" );
 
-    glRasterPos2i( 60, 320 );
-    sprintf( buff, "1-9: Select Course" );
-    print_string( GLUT_BITMAP_TIMES_ROMAN_24, buff );
+    print_menu( 60, 320, 100, menu_text, 
+		sizeof( menu_text ) / sizeof( menu_text[0] ) );
 
-    glRasterPos2i( 60, 272 );
-    sprintf( buff, "N: Next Course" );
-    print_string( GLUT_BITMAP_TIMES_ROMAN_24, buff );
 
-    glRasterPos2i( 60, 224 );
-    sprintf( buff, "P: Previous Course" );
-    print_string( GLUT_BITMAP_TIMES_ROMAN_24, buff );
+    if ( get_course_name() != NULL ) {
+	print_string_centered( 40, GLUT_BITMAP_HELVETICA_12, 
+			       get_course_name() );
+    }
 
-    glRasterPos2i( 60, 176 );
-    print_string( GLUT_BITMAP_TIMES_ROMAN_24, "S: Start Race" );
-
-    /*
-    glRasterPos2i( 60, 128 );
-    if ( get_control_mode() == MOUSE ) {
-        print_string( GLUT_BITMAP_TIMES_ROMAN_24, 
-            "C: Toggle Control (Now: Mouse)" );
-    } else {
-        print_string( GLUT_BITMAP_TIMES_ROMAN_24, 
-            "C: Toggle Control (Now: Keyboard)" );
-    } 
-    */
-
-    glRasterPos2i( 60, 80 );
-    print_string( GLUT_BITMAP_TIMES_ROMAN_24, "Q:  Quit" );
+    if ( get_course_author() != NULL ) {
+	sprintf( buff, "Designed by %s", get_course_author() );
+	print_string_centered( 20, GLUT_BITMAP_HELVETICA_12, buff );
+    }
 
     print_fps();
 
-    reshape( get_x_resolution(), get_y_resolution() );
+    reshape( getparam_x_resolution(), getparam_y_resolution() );
 
     glutSwapBuffers();
 } 
@@ -125,7 +132,7 @@ START_KEYBOARD_CB( start_menu_cb )
         set_course_lighting( !get_course_lighting() );
         break;
     case 's':
-	if ( get_do_intro_animation() ) {
+	if ( getparam_do_intro_animation() ) {
 	    g_game.mode = INTRO;
 	} else {
 	    g_game.mode = RACING;
@@ -143,6 +150,9 @@ START_KEYBOARD_CB( start_menu_cb )
     case '=':
         screenshot();
         break;
+    case 'm':
+	set_course_mirroring( !get_course_mirroring() );
+	break;
     case 'n':
 	g_game.course.num++;
 	if ( ! course_exists( g_game.course.num ) )
@@ -156,6 +166,9 @@ START_KEYBOARD_CB( start_menu_cb )
 	    while ( course_exists( ++g_game.course.num ) ) ;
 	    g_game.course.num--;
 	}
+	select_course( g_game.course.num );
+	break;
+    case 'r':
 	select_course( g_game.course.num );
 	break;
     }
@@ -179,7 +192,7 @@ void start_screen_register()
     status |= 
 	add_keymap_entry( START, DEFAULT_CALLBACK, NULL, NULL, start_menu_cb );
 
-    assert( status == 0 );
+    check_assertion( status == 0, "out of keymap entries" );
 
     register_loop_funcs( START, start_screen_init, start_screen_loop );
 }

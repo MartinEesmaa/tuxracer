@@ -17,9 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <assert.h>
-#include <math.h>
 #include "tuxracer.h"
+#include "render_util.h"
 
 #define USE_GLUSPHERE 0
 
@@ -155,35 +154,6 @@ void draw_sphere( int num_divisions )
 
 #endif /* USE_GLUSPHERE */
 
-/*--------------------------------------------------------------------------*/
-
-/* 
- * Sets the material properties
- */
-void set_material( colour_t diffuse_colour, colour_t specular_colour,
-                  double specular_exp )
-{
-  GLfloat mat_amb_diff[4];
-  GLfloat mat_specular[4];
-
-  /* Set material colour (used when lighting is on) */
-  mat_amb_diff[0] = diffuse_colour.r;
-  mat_amb_diff[1] = diffuse_colour.g;
-  mat_amb_diff[2] = diffuse_colour.b;
-  mat_amb_diff[3] = 1.0;          /* alpha */
-  glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mat_amb_diff );
-
-  mat_specular[0] = specular_colour.r;
-  mat_specular[1] = specular_colour.g;
-  mat_specular[2] = specular_colour.b;
-  mat_specular[3] = 1.0;          /* alpha */
-  glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, mat_specular );
-
-  glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, specular_exp );
-
-  /* Set standard colour */
-  glColor3f( diffuse_colour.r, diffuse_colour.g, diffuse_colour.b );
-} 
 
 /*--------------------------------------------------------------------------*/
 
@@ -193,7 +163,7 @@ void traverse_dag( scene_node_t *node, material_t *mat )
 {
     scene_node_t *child;
 
-    assert( node != NULL );
+    check_assertion( node != NULL, "node is NULL" );
     glPushMatrix();
 
     glMultMatrixd( (double *) node->trans );
@@ -206,10 +176,10 @@ void traverse_dag( scene_node_t *node, material_t *mat )
         set_material( mat->diffuse, mat->specular_colour, 
                      mat->specular_exp );
 
-	if ( get_use_sphere_display_list() ) {
+	if ( getparam_use_sphere_display_list() ) {
 	    glCallList( g_hier_sphere_display_list );
 	} else {
-	    draw_sphere( get_tux_sphere_divisions() );
+	    draw_sphere( getparam_tux_sphere_divisions() );
 	}
     } 
 
@@ -234,14 +204,14 @@ vector_t make_normal( polygon_t p, point_t *v )
     vector_t normal, v1, v2;
     scalar_t old_len;
 
-    assert( p.num_vertices > 2 );
+    check_assertion( p.num_vertices > 2, "number of vertices must be > 2" );
 
     v1 = subtract_points( v[p.vertices[1]], v[p.vertices[0]] );
     v2 = subtract_points( v[p.vertices[p.num_vertices-1]], v[p.vertices[0]] );
     normal = cross_product( v1, v2 );
 
     old_len = normalize_vector( &normal );
-    assert( old_len > 0 );
+    check_assertion( old_len > 0, "normal vector has length 0" );
 
     return normal;
 } 
@@ -386,7 +356,7 @@ bool_t check_polyhedron_collision_with_dag(
     polyhedron_t newph;
     bool_t hit = False;
 
-    assert( node != NULL );
+    check_assertion( node != NULL, "node is NULL" );
 
     multiply_matrices( newModelMatrix, modelMatrix, node->trans );
     multiply_matrices( newInvModelMatrix, node->invtrans, invModelMatrix );

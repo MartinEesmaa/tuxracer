@@ -25,22 +25,21 @@
 #include "phys_sim.h"
 #include "hier_util.h"
 #include "gl_util.h"
+#include "render_util.h"
+#include "fog.h"
 
 /* 
  *  Constants 
  */
 
+#define FLAT_SEGMENT_FRACTION 0.2
+
+#define BACKGROUND_TEXTURE_ASPECT 3.0
+
 /* Clip limits */
 #define FWD_CLIP_LIMIT 100.0
 #define BWD_CLIP_LIMIT 20.0
 #define FWD_TREE_DETAIL_LIMIT 7.0
-
-/* Colours */
-static const colour_t white = { 1.0, 1.0, 1.0 };
-static const colour_t grey  = { 0.7, 0.7, 0.7 };
-static const colour_t red   = { 1.0, 0. , 0.  };
-static const colour_t sky   = { 0.82, 0.86, 0.88 };
-static const colour_t black = { 0., 0., 0. };
 
 
 /*
@@ -60,9 +59,6 @@ static bool_t clip_course = False;
 /* If clipping is active, it will be based on a camera located here */
 static point_t eye_pt;
 
-/* Should we use fog when drawing the course? */
-static bool_t use_fog = False;
-
 /* Should we activate lighting when drawing the course? */
 static bool_t light_course = True;
 
@@ -80,7 +76,6 @@ static bool_t light_course = True;
 
 void set_course_clipping( bool_t state ) { clip_course = state; }
 void set_course_eye_point( point_t pt ) { eye_pt = pt; }
-void set_course_fog( bool_t state) { use_fog = state; }
 void set_course_lighting( bool_t state ) { light_course = state; }
 bool_t get_course_lighting() { return light_course; }
 
@@ -88,7 +83,7 @@ vector_t* get_course_normals() { return nmls; }
 
 void reset_course_list()
 {
-    if ( ! get_compile_course() ) 
+    if ( ! getparam_compile_course() ) 
 	return;
 
     if (disp_list_initialized)
@@ -114,8 +109,9 @@ void calc_normals()
     } 
 
     nmls = (vector_t *)malloc( sizeof(vector_t)*nx*ny ); 
-    assert( nmls != NULL );
-
+    if ( nmls == NULL ) {
+	handle_system_error( 1, "malloc failed" );
+    }
 
     for ( y=0; y<ny; y++) {
         for ( x=0; x<nx; x++) {
@@ -129,7 +125,9 @@ void calc_normals()
                 v1 = subtract_points( p1, p0 );
                 v2 = subtract_points( p2, p0 );
                 n = cross_product( v2, v1 );
-		assert( n.y > 0 );
+
+		check_assertion( n.y > 0, "course normal points down" );
+
                 normalize_vector( &n );
                 nml = add_vectors( nml, n );
 
@@ -138,7 +136,9 @@ void calc_normals()
                 v1 = subtract_points( p1, p0 );
                 v2 = subtract_points( p2, p0 );
                 n = cross_product( v2, v1 );
-		assert( n.y > 0 );
+
+		check_assertion( n.y > 0, "course normal points down" );
+
                 normalize_vector( &n );
                 nml = add_vectors( nml, n );
             } 
@@ -148,7 +148,9 @@ void calc_normals()
                 v1 = subtract_points( p1, p0 );
                 v2 = subtract_points( p2, p0 );
                 n = cross_product( v2, v1 );
-		assert( n.y > 0 );
+
+		check_assertion( n.y > 0, "course normal points down" );
+
                 normalize_vector( &n );
                 nml = add_vectors( nml, n );
             } 
@@ -158,7 +160,9 @@ void calc_normals()
                 v1 = subtract_points( p1, p0 );
                 v2 = subtract_points( p2, p0 );
                 n = cross_product( v2, v1 );
-		assert( n.y > 0 );
+
+		check_assertion( n.y > 0, "course normal points down" );
+
                 normalize_vector( &n );
                 nml = add_vectors( nml, n );
             } 
@@ -168,7 +172,9 @@ void calc_normals()
                 v1 = subtract_points( p1, p0 );
                 v2 = subtract_points( p2, p0 );
                 n = cross_product( v1, v2 );
-		assert( n.y > 0 );
+
+		check_assertion( n.y > 0, "course normal points down" );
+
                 normalize_vector( &n );
                 nml = add_vectors( nml, n );
 
@@ -177,7 +183,9 @@ void calc_normals()
                 v1 = subtract_points( p1, p0 );
                 v2 = subtract_points( p2, p0 );
                 n = cross_product( v1, v2 );
-		assert( n.y > 0 );
+
+		check_assertion( n.y > 0, "course normal points down" );
+
                 normalize_vector( &n );
                 nml = add_vectors( nml, n );
 
@@ -201,10 +209,11 @@ int select_tex( int x, int y, int nx,  terrain_t *terrain )
     case Snow:
         return SNOW_TEX;
     default:
-        assert(0);
+        code_not_reached();
     } 
     return 0;    /* to suppress warnings */
 } 
+
 
 
 #define DRAW_POINT \
@@ -224,8 +233,6 @@ void render_course()
     point_t   pt;
     int       curTex, oldTex;
     vector_t  nml;
-    GLfloat   light_position[4];
-    GLfloat   light_intensity[4];
     bool_t    compile_course;
     GLuint    *tex_names;
 
@@ -233,57 +240,22 @@ void render_course()
     terrain   = get_course_terrain_data();
     get_course_dimensions( &courseWidth, &courseLength );
     get_course_divisions( &nx, &ny );
-    compile_course = get_compile_course();
+    compile_course = getparam_compile_course();
     tex_names = get_tex_names();
 
     set_gl_options( COURSE );
 
-    if ( use_fog ) {
-        glEnable( GL_FOG );
-    } else {
-        glDisable( GL_FOG );
-    } 
-
     if ( light_course ) {
         glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-        set_material( grey, white, 1.0 );
+        set_material( white, black, 1.0 );
         glEnable( GL_LIGHTING );
-        glEnable( GL_LIGHT0 );
-        glDisable( GL_LIGHT1 );
-        glDisable( GL_LIGHT2 );
 
-        /* Set up light sources
-         */
-        glPushMatrix();
-        glTranslatef( 0, 20, -courseLength/2. );
-        light_position[0] = 1;
-        light_position[1] = 1; 
-        light_position[2] = 1;
-        light_position[3] = 0;
-        light_intensity[0] = 3.0;
-        light_intensity[1] = 3.0;
-        light_intensity[2] = 3.0;
-        light_intensity[3] = 1.0;
-        glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, light_intensity);
-        light_intensity[0] = 0.0;
-        light_intensity[1] = 0.0;
-        light_intensity[2] = 0.0;
-        light_intensity[3] = 0.0;
-        glLightfv(GL_LIGHT0, GL_SPECULAR, light_intensity);
-
-        light_intensity[0] = 1.1;
-        light_intensity[1] = 1.1;
-        light_intensity[2] = 1.1;
-        light_intensity[3] = 1.0;
-        glLightfv(GL_LIGHT0, GL_AMBIENT, light_intensity);
-
-        glPopMatrix();
+	setup_course_lighting();
 
         glShadeModel( GL_SMOOTH );
     } else {
         glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
-        set_material( white, white, 0.0 );
+        set_material( white, black, 0.0 );
         glShadeModel( GL_FLAT );
     } 
 
@@ -391,7 +363,8 @@ void draw_background(scalar_t fov, scalar_t aspect )
     scalar_t bgndWidth, bgndHeight;
     scalar_t miny;
     scalar_t x0, x1, z0;
-    GLuint    *tex_names;
+    scalar_t total_length;
+    GLuint   *tex_names;
 
     set_gl_options( BACKGROUND );
 
@@ -399,110 +372,106 @@ void draw_background(scalar_t fov, scalar_t aspect )
     miny = get_min_y_coord();
     tex_names = get_tex_names();
 
+    total_length = ( 1.0 + FLAT_SEGMENT_FRACTION ) * courseLength;
+
     /* make background fill field of view */
-    bgndWidth  = 2 * tan(fov/2.*M_PI/180.) * aspect * 1.2*courseLength;
-    bgndHeight = bgndWidth / 3.;   /* aspect ratio of bgnd textures */ 
+    bgndWidth  = 2 * tan(fov/2.*M_PI/180.) * aspect * total_length;
+
+    if ( bgndWidth < total_length ) {
+	bgndWidth = total_length;
+    }
+
+    bgndHeight = bgndWidth / BACKGROUND_TEXTURE_ASPECT;
 
     if (bgndHeight < 1.5 * (-miny)) {
         bgndHeight =  1.5 * (-miny);
+	bgndWidth = BACKGROUND_TEXTURE_ASPECT * bgndHeight;
     } 
 
     x0 = courseWidth / 2. - bgndWidth / 2.;
     x1 = courseWidth / 2. + bgndWidth / 2.;
-    z0 = -1.2*courseLength + bgndWidth;
+    z0 = -total_length + bgndWidth;
 
     glBindTexture( GL_TEXTURE_2D, tex_names[BACKGROUND_TEX] );
     glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
 
     glBegin(GL_QUAD_STRIP);
 
-    glTexCoord2f( 0., 1. );
+    glTexCoord2f( 0.01, 0.99 );
     glVertex3f( x0, bgndHeight + miny, z0);
-    glTexCoord2f( 0., 0. );
+    glTexCoord2f( 0.01, 0.01 );
     glVertex3f( x0, miny, z0);
 
-    glTexCoord2f( 1., 1. );
-    glVertex3f( x0, bgndHeight + miny, -1.2*courseLength);
-    glTexCoord2f( 1., 0. );
-    glVertex3f( x0, miny, -1.2*courseLength);
+    glTexCoord2f( 0.99, 0.99 );
+    glVertex3f( x0, bgndHeight + miny, -total_length);
+    glTexCoord2f( 0.99, 0.01 );
+    glVertex3f( x0, miny, -total_length);
 
-    glTexCoord2f( 2., 1. );
-    glVertex3f( x1, bgndHeight + miny, -1.2*courseLength);
-    glTexCoord2f( 2., 0. );
-    glVertex3f( x1, miny, -1.2*courseLength);
+    glTexCoord2f( 0.01, 0.99 );
+    glVertex3f( x1, bgndHeight + miny, -total_length);
+    glTexCoord2f( 0.01, 0.01 );
+    glVertex3f( x1, miny, -total_length);
 
-    glTexCoord2f( 3., 1. );
+    glTexCoord2f( 0.99, 0.99 );
     glVertex3f( x1, bgndHeight + miny, z0);
-    glTexCoord2f( 3., 0. );
+    glTexCoord2f( 0.99, 0.01 );
     glVertex3f( x1, miny, z0);
 
-    glTexCoord2f( 4., 1. );
+    glTexCoord2f( 0.01, 0.99 );
     glVertex3f( x0, bgndHeight + miny, z0);
-    glTexCoord2f( 4., 0. );
+    glTexCoord2f( 0.01, 0.01 );
     glVertex3f( x0, miny, z0);
 
     glEnd();
 
-    glBindTexture( GL_TEXTURE_2D, tex_names[SNOW_TEX] );
-
-    glBegin(GL_QUADS);
-    glTexCoord2f( 0/TEX_SCALE, -0.9*courseLength/TEX_SCALE );
-    glVertex3f( 0, miny, -0.9*courseLength );
-
-    glTexCoord2f( courseWidth/TEX_SCALE, -0.9*courseLength/TEX_SCALE );
-    glVertex3f( courseWidth, miny, -0.9*courseLength );
-
-    glTexCoord2f( courseWidth/TEX_SCALE, -1.2*courseLength/TEX_SCALE );
-    glVertex3f( courseWidth, miny, -1.2*courseLength );
-    
-    glTexCoord2f( 0/TEX_SCALE, -1.2*courseLength/TEX_SCALE );
-    glVertex3f( 0, miny, -1.2*courseLength );
-    glEnd();
-
-    glBindTexture( GL_TEXTURE_2D, tex_names[SNOW_TEX] );
-    set_material( grey, grey, 0.0 );
+    set_material( sky, black, 0.0 );
     glDisable( GL_TEXTURE_2D );
 
     glBegin( GL_QUADS );
-    glTexCoord2f( x0/TEX_SCALE, z0 );
+    glVertex3f( x0, bgndHeight + miny, z0 );
+    glVertex3f( x0, bgndHeight + miny, -total_length );
+    glVertex3f( x1, bgndHeight + miny, -total_length );
+    glVertex3f( x1, bgndHeight + miny, z0 );
+    glEnd();
+
+    /* Draw bottom rectangle, light it the same way as the course */
+    if ( light_course ) {
+        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+        set_material( white, black, 1.0 );
+        glEnable( GL_LIGHTING );
+
+	setup_course_lighting();
+
+        glShadeModel( GL_SMOOTH );
+    } else {
+        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+        set_material( white, black, 0.0 );
+        glShadeModel( GL_FLAT );
+    } 
+
+    glEnable( GL_TEXTURE_2D );
+    glBindTexture( GL_TEXTURE_2D, tex_names[SNOW_TEX] );
+    glNormal3f( 0, 1., 0 );
+
+    glBegin( GL_QUADS );
+
+    glTexCoord2f( x0/TEX_SCALE, z0/TEX_SCALE );
     glVertex3f( x0, miny, z0 );
 
-    glTexCoord2f( 0/TEX_SCALE, z0 );
-    glVertex3f( 0, miny, z0 );
-
-    glTexCoord2f(0/TEX_SCALE, -1.2*courseLength/TEX_SCALE );
-    glVertex3f( 0, miny, -1.2*courseLength );
-
-    glTexCoord2f(x0/TEX_SCALE, -1.2*courseLength/TEX_SCALE );
-    glVertex3f( x0, miny, -1.2*courseLength );
-
-
-    glTexCoord2f( courseWidth/TEX_SCALE, z0 );
-    glVertex3f( courseWidth, miny, z0 );
-
-    glTexCoord2f( x1/TEX_SCALE, z0 );
+    glTexCoord2f( x1/TEX_SCALE, z0/TEX_SCALE );
     glVertex3f( x1, miny, z0 );
 
-    glTexCoord2f(x1/TEX_SCALE, -1.2*courseLength/TEX_SCALE );
-    glVertex3f( x1, miny, -1.2*courseLength );
+    glTexCoord2f( x1/TEX_SCALE, -total_length/TEX_SCALE );
+    glVertex3f( x1, miny, -total_length );
 
-    glTexCoord2f(courseWidth/TEX_SCALE, -1.2*courseLength/TEX_SCALE );
-    glVertex3f( courseWidth, miny, -1.2*courseLength );
+    glTexCoord2f( x0/TEX_SCALE, -total_length/TEX_SCALE );
+    glVertex3f( x0, miny, -total_length );
 
     glEnd();
 
-    set_material( sky, sky, 0.0 );
-    glDisable( GL_TEXTURE_2D );
-
-    glBegin( GL_QUADS );
-    glVertex3f( x0, bgndHeight + miny, z0);
-    glVertex3f( x0, bgndHeight + miny, -1.2*courseLength);
-    glVertex3f( x1, bgndHeight + miny, -1.2*courseLength);
-    glVertex3f( x1, bgndHeight + miny, z0);
-    glEnd();
 } 
 
-void draw_trees( ) 
+void draw_trees( point_t view_pt ) 
 {
     tree_t    *treeLocs;
     int       numTrees;
@@ -510,22 +479,29 @@ void draw_trees( )
     scalar_t  treeHeight;
     int       i;
     GLuint    *tex_names;
+    vector_t  normal;
 
     treeLocs = get_tree_locs();
     numTrees = get_num_trees();
     tex_names = get_tex_names();
 
     set_gl_options( TREES );
-    if ( use_fog == True ) {
-        glEnable( GL_FOG );
-    } else {
-        glDisable( GL_FOG );
-    } 
-
-    set_material( white, white, 0.0 );
 
     glBindTexture( GL_TEXTURE_2D, tex_names[TREE_TEX] );
-    glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+    if ( light_course ) {
+        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+        set_material( white, black, 1.0 );
+        glEnable( GL_LIGHTING );
+
+	setup_course_lighting();
+
+        glShadeModel( GL_SMOOTH );
+    } else {
+        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+        set_material( white, black, 0.0 );
+        glShadeModel( GL_FLAT );
+    } 
 
     for (i = 0; i< numTrees; i++ ) {
 
@@ -543,6 +519,11 @@ void draw_trees( )
 
         treeRadius = treeLocs[i].diam/2.;
         treeHeight = treeLocs[i].height;
+
+	normal = subtract_points( eye_pt, treeLocs[i].ray.pt );
+	normalize_vector( &normal );
+
+	glNormal3f( normal.x, normal.y, normal.z );
 
         glBegin( GL_QUADS );
         glTexCoord2f( 0., 0. );

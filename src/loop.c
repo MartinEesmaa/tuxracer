@@ -52,8 +52,8 @@ static mode_funcs_t mode_funcs[ NUM_GAME_MODES ] =
 void register_loop_funcs( game_mode_t mode, mode_init_func_ptr_t init_func,
 			  mode_loop_func_ptr_t loop_func )
 {
-    assert( mode >= 0 );
-    assert( mode < NUM_GAME_MODES );
+    check_assertion( mode >= 0 && mode < NUM_GAME_MODES,
+		     "invalid game mode" );
     mode_funcs[ mode ].init_func = init_func;
     mode_funcs[ mode ].loop_func = loop_func;
 }
@@ -88,6 +88,11 @@ void main_loop()
 {
     static game_mode_t prev_mode = NO_MODE;
     game_mode_t cur_mode = g_game.mode;
+
+    if ( getparam_warp_pointer() ) {
+	glutWarpPointer( getparam_x_resolution()/2, 
+			 getparam_y_resolution()/2 );
+    }
 
     if ( prev_mode != cur_mode ) {
 	if ( mode_funcs[ cur_mode ].init_func != NULL ) {

@@ -27,6 +27,7 @@
 
 static scalar_t theta;
 static scalar_t sign;
+static point_t eye_pt;
 
 void init_preview()
 {
@@ -34,26 +35,32 @@ void init_preview()
     sign = 1;
 } 
 
+point_t get_preview_eye_pt() 
+{
+    return eye_pt;
+}
+
 void update_preview()
 {
     scalar_t courseWidth, courseLength;
-    point_t  eyePt;
     point_t  coursePt;
     scalar_t courseAngle;
 
     get_course_dimensions( &courseWidth, &courseLength );
     courseAngle = get_course_angle();
 
-    eyePt = make_point( sin( theta * M_PI / 180.0 ) * courseLength,
+    eye_pt = make_point( sin( theta * M_PI / 180.0 ) * courseLength + 
+			courseWidth / 2.,
 			-courseLength * tan( courseAngle*M_PI/180.0 ) / 2.,
 			-cos( theta * M_PI / 180.0 ) * courseLength );
 
-    coursePt = make_point( 0.0, 
+    coursePt = make_point( courseWidth / 2., 
 			   -courseLength * tan( courseAngle*M_PI/180.0 ) / 2.,
 			   -courseLength / 2.);
 
-    gluLookAt( eyePt.x, eyePt.y, eyePt.z, coursePt.x, coursePt.y, coursePt.z,
-               0, 1, 0 );
+    gluLookAt( eye_pt.x, eye_pt.y, eye_pt.z, 
+	       coursePt.x, coursePt.y, coursePt.z, 
+	       0, 1, 0 );
 
     theta += sign*DTHETA;
     if (theta > MAXTHETA ) {

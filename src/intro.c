@@ -27,6 +27,7 @@
 #include "view.h"
 #include "tux.h"
 #include "tux_shadow.h"
+#include "fog.h"
 
 void intro_init() 
 {
@@ -44,8 +45,8 @@ void intro_loop( scalar_t time_step )
     int width, height;
     player_data_t *plyr = get_player_data( local_player() );
 
-    width = get_x_resolution();
-    height = get_y_resolution();
+    width = getparam_x_resolution();
+    height = getparam_y_resolution();
 
     check_gl_error();
 
@@ -55,15 +56,16 @@ void intro_loop( scalar_t time_step )
 
     clear_rendering_context();
 
+    setup_fog();
+
     set_view_mode( plyr, ABOVE );
     update_view( plyr );
 
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
-    set_course_fog( True );
     render_course( );
-    draw_background( get_fov(), (scalar_t)width/height );
-    draw_trees( );
+    draw_background( getparam_fov(), (scalar_t)width/height );
+    draw_trees( plyr );
 
     draw_tux();
     draw_tux_shadow();

@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#include "lights.h"
 #include "tuxracer.h"
 #include "hier_cb.h"
 #include "hier.h"
@@ -63,9 +64,6 @@ void adjust_tux_joints( scalar_t turnFact, bool_t isBraking )
 
 void draw_tux()
 {
-    GLfloat light_position[4];
-    GLfloat light_intensity[4];
-
     GLfloat dummy_colour[]  = { 0.0, 0.0, 0.0, 1.0 };
 
     /* XXX: For some reason, inserting this call here makes Tux render
@@ -77,29 +75,7 @@ void draw_tux()
 
     /* Turn on lights
      */
-    glEnable( GL_LIGHT0 );
-    glDisable( GL_LIGHT1 );
-    glDisable( GL_LIGHT2 );
-
-    /* Set up light sources
-     */
-    light_position[0] = 1.;
-    light_position[1] = 1.;
-    light_position[2] = 2.;
-    light_position[3] = 0;
-    light_intensity[0] = 0.8;
-    light_intensity[1] = 0.8;
-    light_intensity[2] = 0.8;
-    light_intensity[3] = 1.0;
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_intensity);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, light_intensity);
-
-    light_intensity[0] = 0.3;
-    light_intensity[1] = 0.3;
-    light_intensity[2] = 0.3;
-    light_intensity[3] = 1.0;
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_intensity);
+    setup_course_lighting();
 
     glShadeModel( GL_SMOOTH );
 
@@ -123,27 +99,23 @@ void load_tux()
     initialize_scene_graph();
 
     if ( getcwd( cwd, BUFF_LEN ) == NULL ) {
-	perror( "getcwd" );
-	exit(-1);
+	handle_system_error( 1, "getcwd failed" );
     }
 
-    if ( chdir( get_data_dir() ) != 0 ) {
-        fprintf( stderr, "Couldn't chdir to %s: %s\n", 
-		 get_data_dir(), strerror(errno) );
-        exit(-1);
+    if ( chdir( getparam_data_dir() ) != 0 ) {
+        handle_system_error( 1, "couldn't chdir to %s", getparam_data_dir() );
     } 
 
     if ( Tcl_EvalFile( g_game.tcl_interp, "./tux.tcl") == TCL_ERROR ) {
-        fprintf( stderr, "Error evalating %s/tux.tcl: %s\n", 
-		 get_data_dir(), g_game.tcl_interp->result );
-        exit(-1);
+        handle_system_error( 1, "error evalating %s/tux.tcl: %s", 
+			     getparam_data_dir(), g_game.tcl_interp->result );
     } 
 
-    assert( !Tcl_InterpDeleted( g_game.tcl_interp ) );
+    check_assertion( !Tcl_InterpDeleted( g_game.tcl_interp ),
+		     "Tcl interpreter deleted" );
 
     if ( chdir( cwd ) != 0 ) {
-        perror("chdir");
-        exit(-1);
+	handle_system_error( 1, "couldn't chdir to %s", cwd );
     } 
 } 
 

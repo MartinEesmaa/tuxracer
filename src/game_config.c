@@ -182,7 +182,11 @@ void fetch_param_bool( struct param *p )
     int val;
     str_val = Tcl_GetVar( g_game.tcl_interp, p->name, TCL_GLOBAL_ONLY );
     
-    if ( str_val == NULL 
+    if ( string_cmp_no_case( str_val, "false" ) == 0 ) {
+	p->val.bool_val = False;
+    } else if ( string_cmp_no_case( str_val, "true" ) == 0 ) {
+	p->val.bool_val = True;
+    } else if ( str_val == NULL 
 	 || Tcl_GetInt( g_game.tcl_interp, str_val, &val) == TCL_ERROR  ) 
     {
 	p->val.bool_val = p->deflt.bool_val;
@@ -213,13 +217,13 @@ void set_param_bool( struct param *p, bool_t new_val )
  * Creates set/get functions for each parameter
  */
 #define FN_PARAM( name, typename, type ) \
-    type get_ ## name() { \
+    type getparam_ ## name() { \
         if ( !Params. ## name ## .loaded ) { \
             fetch_param_ ## typename( &( Params. ## name ) ); \
         } \
         return Params. ## name ## .val. ## typename ## _val; \
     } \
-    void set_ ## name( type val) { \
+    void setparam_ ## name( type val) { \
         set_param_ ## typename( &( Params. ## name ), val ); } 
 
 #define FN_PARAM_STRING( name ) \
@@ -243,6 +247,8 @@ struct params {
     struct param fullscreen;
     struct param x_resolution;
     struct param y_resolution;
+    struct param force_window_position;
+    struct param warp_pointer;
     struct param control_mode; /* 0 = keyboard, 
 				  1 = mouse,
 				  2 = joystick
@@ -259,6 +265,9 @@ struct params {
     struct param draw_tux_shadow;
     struct param tux_sphere_divisions;
     struct param tux_shadow_sphere_divisions;
+    struct param draw_particles;
+    struct param draw_particle_shadows;
+    struct param nice_fog;
     struct param compile_course;
     struct param use_sphere_display_list;
     struct param do_intro_animation;
@@ -274,6 +283,8 @@ struct params {
 				2 = ODE45
 			     */
     struct param fov; 
+    struct param debug; 
+    struct param warning_level; 
 };
 
 static struct params Params;
@@ -287,8 +298,11 @@ void init_game_configuration()
 {
     INIT_PARAM_STRING( data_dir, DATA_DIR );
     INIT_PARAM_BOOL( draw_tux_shadow, False );
+    INIT_PARAM_BOOL( draw_particles, True );
+    INIT_PARAM_BOOL( draw_particle_shadows, False );
     INIT_PARAM_INT( tux_sphere_divisions, 6 );
     INIT_PARAM_INT( tux_shadow_sphere_divisions, 3 );
+    INIT_PARAM_BOOL( nice_fog, True );
     INIT_PARAM_BOOL( compile_course, False );
     INIT_PARAM_BOOL( use_sphere_display_list, True );
     INIT_PARAM_BOOL( display_fps, False );
@@ -297,6 +311,8 @@ void init_game_configuration()
     INIT_PARAM_BOOL( do_intro_animation, True );
     INIT_PARAM_INT( mipmap_type, 3 );
     INIT_PARAM_BOOL( fullscreen, False );
+    INIT_PARAM_BOOL( force_window_position, True );
+    INIT_PARAM_BOOL( warp_pointer, True );
     INIT_PARAM_INT( ode_solver, 1 );
     INIT_PARAM_INT( control_mode, 0 );
     INIT_PARAM_STRING( quit_key, "q escape" );
@@ -308,6 +324,8 @@ void init_game_configuration()
     INIT_PARAM_STRING( eye_view_key, "3" );
     INIT_PARAM_STRING( screenshot_key, "=" );
     INIT_PARAM_INT( fov, 60 );
+    INIT_PARAM_STRING( debug, "" );
+    INIT_PARAM_INT( warning_level, 100 );
 }
 
 
@@ -317,8 +335,11 @@ void init_game_configuration()
 
 FN_PARAM_STRING( data_dir )
 FN_PARAM_BOOL( draw_tux_shadow )
+FN_PARAM_BOOL( draw_particles )
+FN_PARAM_BOOL( draw_particle_shadows )
 FN_PARAM_INT( tux_sphere_divisions )
 FN_PARAM_INT( tux_shadow_sphere_divisions )
+FN_PARAM_BOOL( nice_fog )
 FN_PARAM_BOOL( compile_course )
 FN_PARAM_BOOL( use_sphere_display_list )
 FN_PARAM_BOOL( display_fps )
@@ -327,6 +348,8 @@ FN_PARAM_INT( y_resolution )
 FN_PARAM_BOOL( do_intro_animation )
 FN_PARAM_INT( mipmap_type )
 FN_PARAM_BOOL( fullscreen )
+FN_PARAM_BOOL( force_window_position )
+FN_PARAM_BOOL( warp_pointer )
 FN_PARAM_INT( ode_solver )
 FN_PARAM_STRING( quit_key )
 FN_PARAM_STRING( turn_left_key )
@@ -337,6 +360,8 @@ FN_PARAM_STRING( behind_view_key )
 FN_PARAM_STRING( eye_view_key )
 FN_PARAM_STRING( screenshot_key )
 FN_PARAM_INT( fov )
+FN_PARAM_STRING( debug )
+FN_PARAM_INT( warning_level )
 
 
 /*
@@ -409,8 +434,9 @@ void write_config_file()
     config_stream = fopen( config_file, "w" );
 
     if ( config_stream == NULL ) {
-	fprintf(stderr, "Could open %s for writing: %s\n", 
-		config_file, strerror(errno) );
+	print_warning( CRITICAL_WARNING, 
+		       "couldn't open %s for writing: %s", 
+		       config_file, strerror(errno) );
 	return;
     }
 
@@ -434,11 +460,11 @@ void write_config_file()
 	    break;
 	case PARAM_BOOL:
 	    fetch_param_bool( parm );
-	    fprintf( config_stream, "set %s %d\n",
-		     parm->name, parm->val.bool_val ? 1 : 0 );
+	    fprintf( config_stream, "set %s %s\n",
+		     parm->name, parm->val.bool_val ? "true" : "false" );
 	    break;
 	default:
-	    assert(0);
+	    code_not_reached();
 	}
     }
 

@@ -32,6 +32,7 @@
 #include "phys_sim.h"
 #include "part_sys.h"
 #include "screenshot.h"
+#include "fog.h"
 
 /* Time constant for automatic steering centering (s) */
 #define TURN_DECAY_TIME_CONSTANT 0.5
@@ -64,14 +65,16 @@ void racing_loop( scalar_t time_step )
     int width, height;
     player_data_t *plyr = get_player_data( local_player() );
 
-    width = get_x_resolution();
-    height = get_y_resolution();
+    width = getparam_x_resolution();
+    height = getparam_y_resolution();
 
     check_gl_error();
 
     new_frame_for_fps_calc();
 
     clear_rendering_context();
+
+    setup_fog();
 
     if ( left_turn ^ right_turn ) {
 	increment_turn_fact( plyr, 
@@ -91,16 +94,20 @@ void racing_loop( scalar_t time_step )
 
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
-    set_course_fog( True );
     render_course();
-    draw_background( get_fov(), (scalar_t)width/height );
-    draw_trees();
+    draw_background( getparam_fov(), (scalar_t)width/height );
+    draw_trees( plyr );
 
     draw_tux();
     draw_tux_shadow();
 
-    update_particles( time_step );
-    draw_particles();
+    if ( getparam_draw_particles() ) {
+	update_particles( time_step );
+	if ( getparam_draw_particle_shadows() ) {
+	    draw_particle_shadows( );
+	}
+	draw_particles( plyr );
+    }
 
     print_time();
 
@@ -174,24 +181,25 @@ void racing_register()
 {
     int status = 0;
 
-    status |= add_keymap_entry( 
-	RACING, CONFIGURABLE_KEY, "escape", get_quit_key, quit_racing_cb );
-    status |= add_keymap_entry( 
-	RACING, CONFIGURABLE_KEY, "j", get_turn_left_key, turn_left_cb );
-    status |= add_keymap_entry( 
-	RACING, CONFIGURABLE_KEY, "l", get_turn_right_key, turn_right_cb );
-    status |= add_keymap_entry(
-	RACING, CONFIGURABLE_KEY, "space", get_brake_key, brake_cb );
-    status |= add_keymap_entry(
-	RACING, CONFIGURABLE_KEY, "1", get_above_view_key, above_view_cb );
-    status |= add_keymap_entry(
-	RACING, CONFIGURABLE_KEY, "2", get_behind_view_key, behind_view_cb );
-    status |= add_keymap_entry(
-	RACING, CONFIGURABLE_KEY, "3", get_eye_view_key, eye_view_cb );
-    status |= add_keymap_entry(
-	RACING, CONFIGURABLE_KEY, "=", get_screenshot_key, screenshot_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"escape", getparam_quit_key, quit_racing_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"j", getparam_turn_left_key, turn_left_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"l", getparam_turn_right_key, turn_right_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"space", getparam_brake_key, brake_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"1", getparam_above_view_key, above_view_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"2", getparam_behind_view_key, 
+				behind_view_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"3", getparam_eye_view_key, eye_view_cb );
+    status |= add_keymap_entry( RACING, CONFIGURABLE_KEY, 
+				"=", getparam_screenshot_key, screenshot_cb );
 
-    assert( status == 0 );
+    check_assertion( status == 0, "out of keymap entries" );
 
     register_loop_funcs( RACING, racing_init, racing_loop );
 }

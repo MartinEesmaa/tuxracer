@@ -18,7 +18,6 @@
  */
 
 
-#include <sys/stat.h>
 #include "tuxracer.h"
 #include "course_load.h"
 #include "course_render.h"
@@ -27,6 +26,11 @@
 #include "phys_sim.h"
 #include "tcl_util.h"
 #include "keyframe.h"
+#include "gl_util.h"
+#include "lights.h"
+#include "fog.h"
+#include "part_sys.h"
+
 
 #define MAX_TREES 256
 
@@ -54,6 +58,9 @@ static scalar_t      treeHeight;
 static polyhedron_t  treePolyhedron;
 static terrain_t    *terrain;
 static point2d_t     startPt;
+static char         *course_author = NULL;
+static char         *course_name = NULL;
+static int           base_height_value;
 
 scalar_t     *get_course_elev_data()    { return elevation; }
 terrain_t    *get_course_terrain_data() { return terrain; }
@@ -64,6 +71,9 @@ scalar_t      get_tree_diam()           { return treeDiam; }
 scalar_t      get_tree_height()         { return treeHeight; }
 polyhedron_t  get_tree_polyhedron()     { return treePolyhedron; }
 point2d_t     get_start_pt()            { return startPt; }
+void          set_start_pt( point2d_t p ) { startPt = p; }
+char         *get_course_author()       { return course_author; }
+char         *get_course_name()         { return course_name; }
 
 void get_course_dimensions( scalar_t *width, scalar_t *length )
 {
@@ -76,6 +86,7 @@ void get_course_divisions( int *x, int *y )
     *x = nx;
     *y = ny;
 } 
+
 
 static void reset_course()
 {
@@ -92,6 +103,25 @@ static void reset_course()
     treePolyhedron.num_polygons = 0;
     treePolyhedron.num_vertices = 0;
     nx = ny = -1;
+    startPt.x = 0;
+    startPt.y = 0;
+    base_height_value = 127; /* 50% grey */
+
+    set_course_mirroring( False );
+
+    reset_lights();
+    reset_fog();
+    reset_particles();
+
+    if ( course_author != NULL ) {
+	free( course_author );
+    }
+    course_author = NULL;
+
+    if ( course_name != NULL ) {
+	free( course_name );
+    }
+    course_name = NULL;
 
     if ( courseLoaded == False ) return;
 
@@ -111,7 +141,7 @@ bool_t course_exists( int num )
     char buff[BUFF_LEN];
     struct stat s;
 
-    sprintf( buff, "%s/courses/%d", get_data_dir(), num );
+    sprintf( buff, "%s/courses/%d", getparam_data_dir(), num );
     if ( stat( buff, &s ) != 0 ) {
 	return False;
     }
@@ -126,41 +156,38 @@ void select_course( int num )
     char buff[BUFF_LEN];
     char cwd[BUFF_LEN];
 
-    assert( 1 <= num );
+    check_assertion( 1 <= num, "Course numbers must be >= 1" );
 
     reset_course();
 
     courseNumber = num;
 
     if ( getcwd( cwd, BUFF_LEN ) == NULL ) {
-	perror( "getcwd" );
-	exit(-1);
+	handle_system_error( 1, "getcwd failed" );
     }
 
-    sprintf( buff, "%s/courses/%d", get_data_dir(), num );
+    sprintf( buff, "%s/courses/%d", getparam_data_dir(), num );
     if ( chdir( buff ) != 0 ) {
-        fprintf( stderr, "Chdir to %s:\n", buff );
-        perror("chdir");
-        exit(-1);
+	handle_system_error( 1, "Couldn't chdir to %s", buff );
     } 
 
     if ( Tcl_EvalFile( g_game.tcl_interp, "./course.tcl") == TCL_ERROR ) {
-        fprintf( stderr, "Error evalating %s/course.tcl: %s\n", 
-		 buff, g_game.tcl_interp->result );
-        exit(-1);
+	handle_error( 1, "Error evaluating %s/course.tcl: %s\n",  
+		      buff, Tcl_GetStringResult( g_game.tcl_interp ) );
     } 
 
     if ( chdir( cwd ) != 0 ) {
-        perror("chdir");
-        exit(-1);
+	handle_system_error( 1, "Couldn't chdir to %s", cwd );
     } 
 
-    assert( !Tcl_InterpDeleted( g_game.tcl_interp ) );
+    check_assertion( !Tcl_InterpDeleted( g_game.tcl_interp ),
+		     "Tcl interpreter deleted" );
 
     calc_normals();
 
     courseLoaded = True;
 } 
+
 
 static terrain_t intensity_to_terrain( int intensity )
 {
@@ -219,7 +246,17 @@ static int angle_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    assert( MIN_ANGLE <= angle && angle <= MAX_ANGLE );
+    if ( angle < MIN_ANGLE ) {
+	print_warning( TCL_WARNING, "course angle is too small. Setting to %f",
+		       MIN_ANGLE );
+	angle = MIN_ANGLE;
+    }
+
+    if ( MAX_ANGLE < angle ) {
+	print_warning( TCL_WARNING, "course angle is too large. Setting to %f",
+		       MAX_ANGLE );
+	angle = MAX_ANGLE;
+    }
 
     courseAngle = angle;
 
@@ -239,23 +276,35 @@ static int elev_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    assert( !courseLoaded );
+    if (courseLoaded) {
+	print_warning( TCL_WARNING, "ignoring %s: course already loaded",
+		       argv[0] );
+	return TCL_OK;
+    }
 
     elevImg = ImageLoad( argv[1] );
-    assert( elevImg != NULL );
+    if ( elevImg == NULL ) {
+	print_warning( TCL_WARNING, "%s: couldn't load %s", argv[0], argv[1] );
+	return TCL_ERROR;
+    }
 
     nx = elevImg->sizeX;
     ny = elevImg->sizeY;
 
     elevation = (scalar_t *)malloc( sizeof(scalar_t)*nx*ny );
+
+    if ( elevation == NULL ) {
+	handle_system_error( 1, "malloc failed" );
+    }
+
     slope = tan( courseAngle * M_PI/180.0 );
 
     pad = 0;    /* RGBA images rows are aligned on 4-byte boundaries */
     for (y=0; y<ny; y++) {
         for (x=0; x<nx; x++) {
             ELEV(nx-1-x, ny-1-y) = 
-		( elevImg->data[ (x + nx * y) * elevImg->sizeZ + pad ] 
-		  / 255.0 - 0.5 ) * elevScale
+		( ( elevImg->data[ (x + nx * y) * elevImg->sizeZ + pad ] 
+		    - base_height_value ) / 255.0 ) * elevScale
 		- (scalar_t) (ny-1.-y)/ny * courseLength * slope;
 
             if ( x == 0 || x == nx-1 ) {
@@ -284,12 +333,25 @@ static int terrain_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
     } 
 
     terrainImg = ImageLoad( argv[1] );
-    assert( terrainImg != NULL );
 
-    assert( nx == terrainImg->sizeX );
-    assert( ny == terrainImg->sizeY );
+    if ( terrainImg == NULL ) {
+	print_warning( TCL_WARNING, "%s: couldn't load %s", argv[0], argv[1] );
+	return TCL_ERROR;
+    }
+
+    if ( nx != terrainImg->sizeX || ny != terrainImg->sizeY ) {
+	print_warning( TCL_WARNING, 
+		       "%s: terrain image must have same dimensions as "
+		       "elevation image (%d x %d)", argv[0], nx, ny );
+
+	return TCL_ERROR;
+    }
 
     terrain = (terrain_t *)malloc( sizeof(terrain_t)*nx*ny );
+
+    if ( terrain == NULL ) {
+	handle_system_error( 1, "malloc failed" );
+    }
 
     pad = 0;
     for (y=0; y<ny; y++) {
@@ -367,7 +429,9 @@ static int snow_tex_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    load_texture( SNOW_TEX, argv[1] );
+    if ( !load_texture( SNOW_TEX, argv[1] ) ) {
+	return TCL_ERROR;
+    }
 
     return TCL_OK;
 } 
@@ -388,8 +452,17 @@ static int start_pt_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
         return TCL_ERROR;
     } 
 
-    assert( xcd > 0 && xcd < courseWidth );
-    assert( ycd > 0 && ycd < courseLength );
+    if ( !( xcd > 0 && xcd < courseWidth ) ) {
+	print_warning( TCL_WARNING, "%s: x coordinate out of bounds, "
+		       "using 0\n", argv[0] );
+	xcd = 0;
+    }
+
+    if ( !( ycd > 0 && ycd < courseLength ) ) {
+	print_warning( TCL_WARNING, "%s: y coordinate out of bounds, "
+		       "using 0\n", argv[0] );
+	ycd = 0;
+    }
 
     startPt.x = xcd;
     startPt.y = -ycd;
@@ -411,7 +484,10 @@ static int elev_scale_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[]
         return TCL_ERROR;
     } 
 
-    assert( scale > 0 );
+    if ( scale <= 0 ) {
+	print_warning( TCL_WARNING, "%s: scale must be positive", argv[0] );
+	return TCL_ERROR;
+    }
 
     elevScale = scale;
 
@@ -436,7 +512,11 @@ static int trees_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
     } 
 
     treeImg = ImageLoad( argv[1] );
-    assert( treeImg != NULL );
+    if ( treeImg == NULL ) {
+	print_warning( TCL_WARNING, "%s: couldn't load %s", 
+		       argv[0], argv[1] );
+	return TCL_ERROR;
+    }
 
     sx = treeImg->sizeX;
     sy = treeImg->sizeY;
@@ -663,6 +743,57 @@ static int friction_cb ( ClientData cd, Tcl_Interp *ip,
     return TCL_OK;
 } 
 
+static int course_author_cb( ClientData cd, Tcl_Interp *ip, 
+			     int argc, char *argv[]) 
+{
+    if ( argc != 2 ) {
+        fprintf( stderr, "Usage: %s <author's name>", argv[0] );
+        return TCL_ERROR;
+    } 
+
+    if ( course_author != NULL ) {
+        free(course_author);
+    }
+    course_author = string_copy( argv[1] );
+
+    return TCL_OK;
+} 
+
+static int course_name_cb( ClientData cd, Tcl_Interp *ip, 
+			   int argc, char *argv[]) 
+{
+    if ( argc != 2 ) {
+        fprintf( stderr, "Usage: %s <course name>", argv[0] );
+        return TCL_ERROR;
+    } 
+
+    if ( course_name != NULL ) {
+        free(course_name);
+    }
+    course_name = string_copy( argv[1] );
+
+    return TCL_OK;
+} 
+
+static int base_height_value_cb( ClientData cd, Tcl_Interp *ip, 
+				 int argc, char *argv[]) 
+{
+    int value;
+
+    if ( argc != 2 ) {
+        Tcl_AppendResult( ip, "Usage: base_height_value <0-255>", NULL );
+        return TCL_ERROR;
+    } 
+
+    if ( Tcl_GetInt( ip, argv[1], &value ) != TCL_OK ) {
+        return TCL_ERROR;
+    } 
+
+    base_height_value = value;
+
+    return TCL_OK;
+} 
+
 void register_course_load_tcl_callbacks( Tcl_Interp *ip )
 {
     Tcl_CreateCommand (ip, "tux_course_dim", course_dim_cb,  0,0);
@@ -680,5 +811,8 @@ void register_course_load_tcl_callbacks( Tcl_Interp *ip )
     Tcl_CreateCommand (ip, "tux_snow_tex",   snow_tex_cb,   0,0);
     Tcl_CreateCommand (ip, "tux_start_pt",   start_pt_cb,   0,0);
     Tcl_CreateCommand (ip, "tux_friction",   friction_cb,   0,0);
+    Tcl_CreateCommand (ip, "tux_course_author", course_author_cb, 0,0);
+    Tcl_CreateCommand (ip, "tux_course_name", course_name_cb, 0,0);
+    Tcl_CreateCommand (ip, "tux_base_height_value", base_height_value_cb, 0,0);
 }
 

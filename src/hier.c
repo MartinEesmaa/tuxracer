@@ -406,7 +406,7 @@ void initialize_scene_graph()
     /* Initialize the sphere display list */
     g_hier_sphere_display_list = glGenLists(1);
     glNewList( g_hier_sphere_display_list, GL_COMPILE );
-    draw_sphere( get_tux_sphere_divisions() );
+    draw_sphere( getparam_tux_sphere_divisions() );
     glEndList();
 
     /* Initialize state */
@@ -430,8 +430,7 @@ void draw_scene_graph( char *node )
     scene_node_t *nodePtr;
 
     if ( get_scene_node( node, &nodePtr ) != TCL_OK ) {
-        fprintf( stderr, "draw_scene_graph: No such node: %s\n", node );
-        exit(-1);
+        handle_error( 1, "draw_scene_graph: No such node `%s'", node );
     } 
 
     traverse_dag( nodePtr, &g_hier_default_material );
@@ -447,8 +446,7 @@ bool_t collide( char *node, polyhedron_t ph )
     make_identity_matrix( invmat );
 
     if ( get_scene_node( node, &nodePtr ) != TCL_OK ) {
-        fprintf( stderr, "draw_scene_graph: No such node: %s\n", node );
-        exit(-1);
+        handle_error( 1, "draw_scene_graph: No such node `%s'", node );
     } 
 
     return check_polyhedron_collision_with_dag( nodePtr, mat, invmat, ph );

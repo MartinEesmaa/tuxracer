@@ -38,7 +38,7 @@ void init_textures()
 
 int get_min_filter()
 {
-    switch( get_mipmap_type() ) {
+    switch( getparam_mipmap_type() ) {
     case 0: 
 	return GL_NEAREST;
     case 1:
@@ -56,12 +56,12 @@ int get_min_filter()
     }
 }
 
-void load_texture( int texnum, char *filename )
+bool_t load_texture( int texnum, char *filename )
 {
     IMAGE *texImage;
 
     if ( initialized == False ) {
-        assert(0);
+        check_assertion( 0, "texture module not initialized" );
     } 
 
     if ( glIsTexture( tex_names[texnum] ) ) {
@@ -72,7 +72,12 @@ void load_texture( int texnum, char *filename )
     glBindTexture( GL_TEXTURE_2D, tex_names[texnum] );
 
     texImage = ImageLoad( filename );
-    assert( texImage != NULL );
+
+    if ( texImage == NULL ) {
+	print_warning( IMPORTANT_WARNING, 
+		       "couldn't load image %s", filename );
+	return False;
+    }
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
@@ -97,10 +102,12 @@ void load_texture( int texnum, char *filename )
         glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
         break;
     default:
-        assert(0);
+        code_not_reached();
     } 
 
     free( texImage->data );
     free( texImage );
+
+    return True;
 } 
 

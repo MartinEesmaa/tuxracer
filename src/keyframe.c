@@ -22,22 +22,17 @@
 #include "phys_sim.h"
 #include "hier.h"
 
-#define MAX_NUM_FRAMES 128
+#define MAX_NUM_KEY_FRAMES 128
 
-typedef struct {
-    scalar_t time;
-    point_t pos;
-    scalar_t yaw;        /* angle of rotation about y axis */
-    scalar_t pitch;      /* angle of rotation about x axis */
-    scalar_t l_shldr;
-    scalar_t r_shldr;
-    scalar_t l_hip;
-    scalar_t r_hip;
-} KeyFrame; 
-
-static KeyFrame frames[MAX_NUM_FRAMES];
+static key_frame_t frames[MAX_NUM_KEY_FRAMES];
 static int numFrames = 0;
 static scalar_t keyTime;
+
+void get_key_frame_data( key_frame_t **fp, int *n )
+{
+    *fp = frames;
+    *n = numFrames;
+}
 
 void reset_key_frame()
 {
@@ -79,12 +74,12 @@ void update_key_frame( player_data_t *plyr, scalar_t dt )
 
     keyTime += dt;
 
-    for (idx = 0; idx < numFrames; idx ++) {
+    for (idx = 1; idx < numFrames; idx ++) {
         if ( keyTime < frames[idx].time )
             break;
     } 
 
-    if ( idx == numFrames ) {
+    if ( idx == numFrames || numFrames == 0 ) {
         g_game.mode = RACING;
         return;
     } 
@@ -95,9 +90,14 @@ void update_key_frame( player_data_t *plyr, scalar_t dt )
     reset_scene_node( lhp );
     reset_scene_node( rhp );
 
-    assert( idx > 0 );
+    check_assertion( idx > 0, "invalid keyframe index" );
 
-    frac = (keyTime - frames[idx].time) / ( frames[idx-1].time - frames[idx].time );
+    if ( fabs( frames[idx-1].time - frames[idx].time ) < EPS ) {
+	frac = 1.;
+    } else {
+	frac = (keyTime - frames[idx].time) 
+	    / ( frames[idx-1].time - frames[idx].time );
+    }
 
     pos.x = interp( frac, frames[idx-1].pos.x, frames[idx].pos.x );
     pos.z = interp( frac, frames[idx-1].pos.z, frames[idx].pos.z );
@@ -129,15 +129,16 @@ void update_key_frame( player_data_t *plyr, scalar_t dt )
 static int key_frame_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[]) 
 {
     double tmp;
-    KeyFrame frame;
+    key_frame_t frame;
+    point2d_t start_pt = get_start_pt();
 
-    if (numFrames == MAX_NUM_FRAMES ) {
-        fprintf( stderr, "%s: Max. num. of frames reached\n", argv[0] );
-        
+    if (numFrames == MAX_NUM_KEY_FRAMES ) {
+        print_warning( TCL_WARNING, 
+		       "%s: max. num. of frames reached", argv[0] );
     } 
 
     if ( argc != 11 ) {
-        fprintf( stderr, "Usage: %s <lotsa stuff>", argv[0] );
+	print_warning( TCL_WARNING, "wrong number of args to %s", argv[0] );
         return TCL_ERROR;
     } 
 
@@ -150,13 +151,13 @@ static int key_frame_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
     if ( Tcl_GetDouble( ip, argv[2], &tmp ) != TCL_OK ) {
         return TCL_ERROR;
     } else {
-	frame.pos.x = tmp;
+	frame.pos.x = tmp + start_pt.x;
     }
 
     if ( Tcl_GetDouble( ip, argv[3], &tmp ) != TCL_OK ) {
         return TCL_ERROR;
     } else {
-	frame.pos.z = -tmp;
+	frame.pos.z = -tmp + start_pt.y;
     }
     
     if ( Tcl_GetDouble( ip, argv[4], &tmp ) != TCL_OK ) {
@@ -206,6 +207,7 @@ static int key_frame_cb ( ClientData cd, Tcl_Interp *ip, int argc, char *argv[])
 
     return TCL_OK;
 } 
+
 
 
 void register_key_frame_callbacks( Tcl_Interp *ip )

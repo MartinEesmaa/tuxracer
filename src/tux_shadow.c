@@ -48,7 +48,7 @@ void draw_tux_shadow()
     char *tux_root_node_name;
     scene_node_t *tux_root_node;
 
-    if ( ! get_draw_tux_shadow() ) 
+    if ( ! getparam_draw_tux_shadow() ) 
 	return;
 
     set_gl_options( TUX_SHADOW ); 
@@ -61,7 +61,7 @@ void draw_tux_shadow()
     tux_root_node_name = get_tux_root_node();
 
     if ( get_scene_node( tux_root_node_name, &tux_root_node ) != TCL_OK ) {
-	assert(0);
+	check_assertion( 0, "couldn't find tux's root node" );
     } 
 
     traverse_dag_for_shadow( tux_root_node, model_matrix );
@@ -72,7 +72,7 @@ void traverse_dag_for_shadow( scene_node_t *node, matrixgl_t model_matrix )
     matrixgl_t new_model_matrix;
     scene_node_t *child;
 
-    assert( node != NULL );
+    check_assertion( node != NULL, "node is NULL" );
 
     multiply_matrices(new_model_matrix, model_matrix, node->trans);
 
@@ -93,7 +93,7 @@ void draw_shadow_sphere( matrixgl_t model_matrix )
 {
     scalar_t theta, phi, d_theta, d_phi, eps, twopi;
     scalar_t x, y, z;
-    int div = get_tux_shadow_sphere_divisions();
+    int div = getparam_tux_shadow_sphere_divisions();
     
     eps = 1e-15;
     twopi = M_PI * 2.0;

@@ -36,8 +36,14 @@ tree_t       *get_tree_locs();
 int           get_num_trees();
 scalar_t      get_tree_diam();
 scalar_t      get_tree_height();
+void          set_start_pt( point2d_t p );
 point2d_t     get_start_pt();
 polyhedron_t  get_tree_polyhedron();
+char         *get_course_author();
+char         *get_course_name(); 
+light_t      *get_course_lights();
+void          set_course_mirroring( bool_t state );
+bool_t        get_course_mirroring( );
 
 void          register_course_load_tcl_callbacks( Tcl_Interp *interp );
 

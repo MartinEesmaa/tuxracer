@@ -7,6 +7,12 @@ Alan Levy <alanlevy@pcug.org.au>
 
 Ingo Ruhnke <grumbel@gmx.de>
 	* Helped to track down nasty particle generation bug
+	* Designed a track
 
 Michael Dale Long <mlong@long.custom.net>
 	* Lighting patch to make dark areas of terrain brighter
+
+Steve Baker <sjbaker1@airmail.net>
+	* LOTS of very helpful suggestions, tips for supporting
+	Voodoo{1,2} cards
+

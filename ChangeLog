@@ -1,10 +1,117 @@
+2000-03-06  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* Making version 0.11.
+
+	* game_config.c: "true" and "false" now accepted as values for
+	boolean configuration variables.
+
+2000-03-05  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* course_load.c: Added a tux_base_height_value callback which sets
+	the reference grey value in the heightmap image.  Currently this
+	only affects the placement of the white rectangle at the bottom of
+	the course.
+
+	* lights.c: moved light configuration code from 2000-03-04 to this
+	file.
+
+	* fog.c: fog can now be configured on a course-by-course basis
+
+	* start_screen.c: Added "mirror course" item, cleaned up menu
+	display code 
+	
+
+2000-03-04  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* mirror_course.c: (new file) Tracks can now be mirrored (i.e.,
+	what was left is now right, and vice versa)
+
+	* part_sys.c (draw_particle_shadows): Added particle shadows
+
+	* course_load.c (select_course): Fixed error reporting from Tcl
+	callbacks.
+
+	* course_load.c (course_light_cb): Added callback so that course
+	designer can customize course lighting.  
+
+	* start_screen.c: Added "reload course" item to make it easier for
+	course designers to adjust courses
+	
+	* preview.c (update_preview): fixed preview so that course in
+	centered in screen and symmetric wrt to center of course
+
+	* course_render.c (draw_background): tweaks to drawing of
+	background image and "floor"
+
+2000-03-03  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* course_load.c (course_name_cb): added callback so that
+	course name can be displayed on start screen
+	
+	* course_load.c (course_author_cb): added callback so that
+	course author's name can be displayed on start screen
+
+	* render_util.c (print_string_centered): created routine so that
+	strings are now properly centered.  Fixed start screen and game
+	over screens to use this.
+
+	* game_config.c: changed parameter get_* and set_* routines to
+	getparam_* and setparam_*.  Obviously a whole bunch of other files
+	were changed too as a consequence.
+
+	* keyboard_util.c (translate_key): made alphabetic keys
+	case-insensitive.
+
+	* keyboard.c (keyboard_handler): made alphabetic keys
+	case-insensitive. 
+
+	* keyframe.c (key_frame_cb): made Tux's position relative to
+	starting point (suggested by Steve Baker) 
+
+	* cleaned up error handling in lots of places (course loading in
+	particular), changed all assertions, warning messages, and error
+	messages to use routines in debug.c and error_util.c
+
+	* error_util.c: file created (error_util.h also)
+
+	* game_config.c: debug, warning_level parameters added
+
+	* debug.c: file created (debug.h also)
+
+2000-03-02  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+	
+	* phy_simc.c: Adjusted Tux's damping parameters to reduce
+	bouncing.  Also adjusted ODE solver minimum step size and
+	tolerances to increase accuracy of physical simulation.
+	
+	* phys_sim.c (solve_ode_system): Clamping of step size placed in
+	its own function to ensure that its performed consistently.
+	
+	* phys_sim.c (calc_spring_force): In some cases the spring force
+	was negative -- fixed.
+
+	* main.c (main): Initialize g_game.course.num variable to initial
+	course number -- fixes a bug where the first time 'n' is pressed
+	on the start screen does nothing
+	
+	* loop.c (main_loop): Warp pointer to middle of window at every
+	time step, for the convenience of Voodoo users (thanks to Steve
+	Baker for the tip)
+
+	* main.c (main): Now set initial window position in non-fullscreen
+	mode if force_window_position is true.  This is mainly for the
+	convenience of Voodoo users (thanks to Steve Baker for the tip)
+
+	* game_config.c: Added force_window_position and warp_pointer
+	parameters.
+
 2000-03-01  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
 
 	* Making version 0.10.1
 
 	* configure.in: Added checks for libtcl8.0 and libtcl8.2, in
 	addition to the library name specified by --with-tcl-lib-name
-	option (which defaults to "tcl")
+	option (which defaults to "tcl") (suggested by Ingo Ruhnke)
 
 2000-02-29  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
 
@@ -20,7 +127,8 @@
 
 	* racing.c (racing_loop): Fixed bug that was causing an unlimited
 	number of particles to be generated (problem with centering of
-	steering)
+	steering) (thanks to Ingo Ruhnke and Steve Baker for reporting
+	this, and to Ingo for helping to debug it)
 	
 2000-02-28  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
 

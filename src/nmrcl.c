@@ -68,7 +68,8 @@ void euler_init_ode_data( ode_data_t *p, double init_val, double h )
 double euler_next_time(ode_data_t *p, int step)
 {
     euler_data_t *data = (euler_data_t*)p;
-    assert( 0 <= step && step < 2 );
+    check_assertion( 0 <= step && step < 2, 
+		     "invalid step number in euler ode solver" );
     return step * data->h;
 }
 
@@ -136,7 +137,7 @@ void ode23_init_ode_data( ode_data_t *p, double init_val, double h )
 double ode23_next_time(ode_data_t *p, int step)
 {
     ode23_data_t *data = (ode23_data_t*)p;
-    assert( 0 <= step && step < 4 );
+    check_assertion( 0 <= step && step < 4, "invalid step for ode23 solver" );
     return ode23_time_step_mat[step] * data->h;
 }
 
@@ -224,7 +225,7 @@ void ode45_init_ode_data( ode_data_t *p, double init_val, double h )
 double ode45_next_time(ode_data_t *p, int step)
 {
     ode45_data_t *data = (ode45_data_t*)p;
-    assert( 0 <= step && step < 7 );
+    check_assertion( 0 <= step && step < 7, "invalid step for ode45 solver" );
     return ode45_time_step_mat[step] * data->h;
 }
 
@@ -295,7 +296,8 @@ double lin_interp( const double x[], const double y[], double val, int n )
     int i;
     double m, b;
 
-    assert( n>=2 );
+    check_assertion( 
+	n>=2, "linear interpolation requires at least two data points" );
 
     if ( val < x[0] ) {
 	i = 0;

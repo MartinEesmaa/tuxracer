@@ -20,11 +20,7 @@
 #ifndef _HIER_UTIL_H
 #define _HIER_UTIL_H
 
-
 void draw_sphere( int num_divisions );
-
-void set_material( colour_t diffuse_colour, colour_t specular_colour,
-		   double specular_exp );
 
 void traverse_dag( scene_node_t *node, material_t *mat );
 

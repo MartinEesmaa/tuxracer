@@ -30,6 +30,7 @@
 #include "tux_shadow.h"
 #include "keyboard.h"
 #include "loop.h"
+#include "fog.h"
 
 static const colour_t text_colour = { 0.0, 0.0, 0.0 };
 
@@ -46,8 +47,8 @@ void game_over_loop( scalar_t time_step )
 {
     player_data_t *plyr = get_player_data( local_player() );
     int width, height;
-    width = get_x_resolution();
-    height = get_y_resolution();
+    width = getparam_x_resolution();
+    height = getparam_y_resolution();
 
     check_gl_error();
 
@@ -55,15 +56,16 @@ void game_over_loop( scalar_t time_step )
 
     clear_rendering_context();
 
+    setup_fog();
+
     update_player_pos( plyr, EPS );
     update_view( plyr );
 
     set_course_clipping( True );
     set_course_eye_point( plyr->view.pos );
-    set_course_fog( True );
     render_course();
-    draw_background( get_fov(), (scalar_t)width/height );
-    draw_trees();
+    draw_background( getparam_fov(), (scalar_t)width/height );
+    draw_trees( plyr );
 
     draw_tux();
     draw_tux_shadow();
@@ -75,11 +77,11 @@ void game_over_loop( scalar_t time_step )
     print_fps();
 
     glColor3f( text_colour.r, text_colour.g, text_colour.b );
-    glRasterPos2i( 260, 300 );
-    print_string( GLUT_BITMAP_TIMES_ROMAN_24, "GAME OVER" );
+    print_string_centered( 300, GLUT_BITMAP_TIMES_ROMAN_24, 
+			   "GAME OVER" );
     
-    glRasterPos2i( 230 , 150 );
-    print_string( GLUT_BITMAP_TIMES_ROMAN_24, "Press any key to continue" );
+    print_string_centered( 150, GLUT_BITMAP_TIMES_ROMAN_24, 
+			   "Press any key to continue" );
 
     reshape( width, height );
 
@@ -101,7 +103,7 @@ void game_over_register()
     status |= add_keymap_entry(
 	GAME_OVER, DEFAULT_CALLBACK, NULL, NULL, game_over_cb );
 
-    assert( status == 0 );
+    check_assertion( status == 0, "out of keymap entries" );
 
     register_loop_funcs( GAME_OVER, game_over_init, game_over_loop );
 }

@@ -75,13 +75,13 @@
 #define TUX_GLUTE_STAGE_1_SPRING_COEFF 3000
 
 /* The damping coefficient of first section of aforementioned tush (N*s/m) */
-#define TUX_GLUTE_STAGE_1_DAMPING_COEFF 100
+#define TUX_GLUTE_STAGE_1_DAMPING_COEFF 500
 
 /* The spring coefficient of second section of aforementioned tush (N/m) */
 #define TUX_GLUTE_STAGE_2_SPRING_COEFF 10000
 
 /* The damping coefficient of second section of aforementioned tush (N*s/m) */
-#define TUX_GLUTE_STAGE_2_DAMPING_COEFF 450
+#define TUX_GLUTE_STAGE_2_DAMPING_COEFF 1000
 
 /* The maximum force exertedd by both sections of spring (N) */
 #define TUX_GLUTE_MAX_SPRING_FORCE 3000
@@ -117,7 +117,7 @@ static const double air_log_drag_coeff[] = { 2.25,
 					     -0.9 };
 
 /* Minimum time step for ODE solver (s) */
-#define MIN_TIME_STEP 0.01
+#define MIN_TIME_STEP 0.001
 
 /* Maximum time step for ODE solver (s) */
 #define MAX_TIME_STEP 0.05
@@ -126,10 +126,10 @@ static const double air_log_drag_coeff[] = { 2.25,
 #define MAX_STEP_DISTANCE 0.10
 
 /* Tolerance on error in Tux's position (m) */
-#define MAX_POSITION_ERROR 0.005
+#define MAX_POSITION_ERROR 1.e-5
 
 /* Tolerance on error in Tux's velocity (m/s) */
-#define MAX_VELOCITY_ERROR 0.05
+#define MAX_VELOCITY_ERROR 1.e-4
 
 /* To smooth out the terrain, the terrain normals are interpolated
    near the edges of the triangles.  This parameter controls how much
@@ -243,14 +243,14 @@ void get_indices_for_point( scalar_t x, scalar_t z,
 	    (*y0)--;
     } 
 
-    assert( *x0 >= 0 ) ;
-    assert( *x0 < nx ) ;
-    assert( *x1 >= 0 ) ;
-    assert( *x1 < nx ) ;
-    assert( *y0 >= 0 ) ;
-    assert( *y0 < ny ) ;
-    assert( *y1 >= 0 ) ;
-    assert( *y1 < ny ) ;
+    check_assertion( *x0 >= 0, "invalid x0 index" );
+    check_assertion( *x0 < nx, "invalid x0 index" );
+    check_assertion( *x1 >= 0, "invalid x1 index" );
+    check_assertion( *x1 < nx, "invalid x1 index" );
+    check_assertion( *y0 >= 0, "invalid y0 index" );
+    check_assertion( *y0 < ny, "invalid y0 index" );
+    check_assertion( *y1 >= 0, "invalid y1 index" );
+    check_assertion( *y1 < ny, "invalid y1 index" );
 }
 
 void find_barycentric_coords( scalar_t x, scalar_t z, 
@@ -555,7 +555,7 @@ scalar_t get_compression_depth( terrain_t surf_type )
     case Snow:
 	return 0.05;
     default:
-	assert(0);
+	code_not_reached();
     }
 }
 
@@ -785,7 +785,8 @@ static vector_t calc_spring_force( scalar_t compression, vector_t vel,
     scalar_t spring_vel; /* velocity perp. to surface (for damping) */
     scalar_t spring_f_mag; /* magnitude of force */
 
-    assert( compression >= 0 );
+   check_assertion( compression >= 0, 
+		    "spring can't have negative compression" );
     
     spring_vel = dot_product( vel, surf_nml );
 
@@ -807,6 +808,7 @@ static vector_t calc_spring_force( scalar_t compression, vector_t vel,
 
     /* Clamp */
     spring_f_mag = min( spring_f_mag, TUX_GLUTE_MAX_SPRING_FORCE );
+    spring_f_mag = max( spring_f_mag, 0.0 );
 
     return scale_vector( spring_f_mag, surf_nml );
 }
@@ -853,7 +855,8 @@ vector_t calc_net_force( player_data_t *plyr, point_t uncorr_pos,
 	 * Calculate the spring force exterted by his rear end. :-)
 	 */
 	glute_compression = surf_y - comp_depth - uncorr_pos.y;
-	assert( glute_compression >= 0 );
+	check_assertion( glute_compression >= 0, 
+			 "unexpected negative compression" );
 
 	nml_f = calc_spring_force( glute_compression, vel, surf_nml );
     }
@@ -938,6 +941,19 @@ vector_t calc_net_force( player_data_t *plyr, point_t uncorr_pos,
     return net_force;
 }
 
+static scalar_t adjust_time_step_size( scalar_t h, vector_t vel )
+{
+    scalar_t speed;
+
+    speed = normalize_vector( &vel );
+
+    h = max( h, MIN_TIME_STEP );
+    h = min( h, MAX_STEP_DISTANCE / speed );
+    h = min( h, MAX_TIME_STEP );
+
+    return h;
+}
+
 /*
  * Solves the system of ordinary differential equations governing Tux's 
  * movement.  Based on Matlab's ode23.m, (c) The MathWorks, Inc.
@@ -962,7 +978,7 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
     int i;
 
     /* Select a solver */
-    switch ( get_ode_solver() ) {
+    switch ( getparam_ode_solver() ) {
     case EULER:
 	solver = new_euler_solver();
 	break;
@@ -973,7 +989,7 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
 	solver = new_ode45_solver();
 	break;
     default:
-	set_ode_solver( ODE23 );
+	setparam_ode_solver( ODE23 );
 	solver = new_ode23_solver();
     }
 
@@ -981,10 +997,7 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
     h = ode_time_step;
 
     if ( h < 0 || solver.estimate_error == NULL ) {
-	tmp_vel = plyr->vel;
-	speed = normalize_vector( &tmp_vel );
-	h = min( dtime, MAX_STEP_DISTANCE / speed );
-	h = min( h, MAX_TIME_STEP );
+	h = adjust_time_step_size( dtime, plyr->vel );
     }
 
     t0 = 0;
@@ -1009,17 +1022,19 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
     while (!done) {
 
 	if ( t >= tfinal ) {
-	    fprintf( stderr, "Tux Racer warning: t >= tfinal in "
-		     "solve_ode_system()\n" );
+	    print_warning( CRITICAL_WARNING, 
+			   "t >= tfinal in solve_ode_system()" );
 	    break;
 	}
 
 	/* extend h by up to 10% to reach tfinal */
 	if ( 1.1 * h > tfinal - t ) {
 	    h = tfinal-t;
-	    assert( h >= 0. );
+	    check_assertion( h >= 0., "integrated past tfinal" );
 	    done = True;
 	}
+
+        print_debug( DEBUG_ODE, "h: %g", h );
 
 	saved_pos = new_pos;
 	saved_vel = new_vel;
@@ -1127,6 +1142,9 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
 		tot_pos_err = sqrt( tot_pos_err );
 		tot_vel_err = sqrt( tot_vel_err );
 
+                print_debug( DEBUG_ODE, "pos_err: %g, vel_err: %g", 
+			     tot_pos_err, tot_vel_err );
+
 		if ( tot_pos_err / MAX_POSITION_ERROR >
 		     tot_vel_err / MAX_VELOCITY_ERROR )
 		{
@@ -1143,13 +1161,14 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
 		    done = False;
 		    if ( !failed ) {
 			failed = True;
-			h = max( MIN_TIME_STEP, 
-				 h * max( 0.5, 0.8 * pow( 
-				     tol/err, 
-				     solver.time_step_exponent() ) ) );
+			h *=  max( 0.5, 0.8 *
+				   pow( tol/err, 
+					solver.time_step_exponent() ) );
 		    } else {
-			h = max( MIN_TIME_STEP, 0.5 * h );
+			h *= 0.5;
 		    }
+
+		    h = adjust_time_step_size( h, saved_vel );
 
 		    new_pos = saved_pos;
 		    new_vel = saved_vel;
@@ -1171,7 +1190,11 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
 
 	tmp_vel = new_vel;
 	speed = normalize_vector( &tmp_vel );
-	generate_particles( plyr, h, new_pos, speed );
+
+	/* only generate particles if we're drawing them */
+	if ( getparam_draw_particles() ) {
+	    generate_particles( plyr, h, new_pos, speed );
+	}
 
 	/* If no failures, compute a new h */
 	if ( !failed && solver.estimate_error != NULL ) {
@@ -1184,11 +1207,7 @@ void solve_ode_system( player_data_t *plyr, scalar_t dtime )
 	}
 
 	/* Clamp h to constraints */
-	h = max( h, MIN_TIME_STEP );
-	
-	h = min( h, MAX_STEP_DISTANCE / speed );
-
-	h = min( h, MAX_TIME_STEP );
+	h = adjust_time_step_size( h, new_vel );
 
 	/* Important: to make trees "solid", we must manipulate the 
 	   velocity here; if we don't and Tux is moving very quickly,

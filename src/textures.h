@@ -33,7 +33,7 @@
 
 GLuint* get_tex_names();
 void init_textures();
-void load_texture( int texnum, char *filename );
+bool_t load_texture( int texnum, char *filename );
 
 #endif /* _TEXTURES_H_ */
 

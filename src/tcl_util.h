@@ -30,4 +30,7 @@ vector_t  make_vector_from_array ( scalar_t *v );
 colour_t  make_colour_from_array ( scalar_t *c );
 colour_t  make_colour( scalar_t r, scalar_t g, scalar_t b );
 
+/* Useful macro for processing Tcl callbacks */
+#define NEXT_ARG argc -=1; argv += 1
+
 #endif /* _TCL_UTIL_H_ */

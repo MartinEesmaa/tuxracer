@@ -60,9 +60,14 @@ static key_aliases_t key_aliases[] = {
 bool_t translate_key( char *name, key_desc_t *desc ) 
 {
     int i;
+    int key;
 
     if ( strlen( name ) == 1 ) {
-	desc->key = name[0];
+	key = name[0];
+	if ( isalpha(key) ) {
+	    key = tolower( key );
+	}
+	desc->key = key;
 	desc->special = False;
 	return True;
     }

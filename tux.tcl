@@ -12,15 +12,10 @@ tux_root_node $root
 #
 
 tux_material white_penguin \
-            {0.829 0.829 0.829} {0.96648 0.96648 0.96648} 50.0
-tux_material white_penguin_hi \
-            {0.729 0.729 0.729} {0.296648 0.296648 0.296648} 50.0
-tux_material black_penguin {0.04 0.04 0.04} {0.6 0.6 0.6} 50.0
-tux_material black_penguin_hi {0.11 0.11 0.11} {0.4 0.4 0.4} 50.0
+            {0.58 0.58 0.58 } {0.2 0.2 0.2} 50.0
+tux_material black_penguin {0.08 0.08 0.08} {0.4 0.4 0.4} 50.0
 tux_material beak_colour \
-            {0.88039 0.668627 0.153725} {0.99215 0.941176 0.807843} 27.9
-tux_material beak_colour_hi \
-            {0.68039 0.468627 0.113725} {0.99215 0.941176 0.807843} 27.9
+            {0.64 0.54 0.06} {0.4 0.4 0.4} 5
 tux_material nostril_colour \
             {0.48039 0.318627 0.033725} {0.0 0.0 0.0} 1
 tux_material iris_colour {0.01 0.01 0.01} {0.4 0.4 0.4} 90.0

@@ -17,7 +17,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-
 #include <time.h>
 #include "fps.h"
 #include "render_util.h"
@@ -64,7 +63,7 @@ void print_fps()
 {
     char buff[30];
 
-    if ( ! get_display_fps() ) return;
+    if ( ! getparam_display_fps() ) return;
 
     flat_mode();
     sprintf( buff, "FPS: %.1f", get_fps() );
