@@ -16,3 +16,6 @@ Steve Baker <sjbaker1@airmail.net>
 	* LOTS of very helpful suggestions, tips for supporting
 	Voodoo{1,2} cards
 
+Sten Eriksson <sten.eriksson@udac.se>
+        * Patch to fix coredump in 0.11
+

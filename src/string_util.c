@@ -22,7 +22,16 @@
 
 char *string_copy( char *src ) 
 {
-    char *dest = (char *) malloc( strlen( src ) + 1 );
+    char *dest;
+
+    check_assertion( src != NULL, "string NULL in string_copy" );
+
+    dest = (char *) malloc( strlen( src ) + 1 );
+
+    if ( dest == NULL ) {
+	handle_system_error( 1, "malloc failed" );
+    }
+
     strcpy( dest, src );
     return dest;
 }
@@ -31,6 +40,10 @@ int string_cmp_no_case( char *s1, char *s2 )
 {
     char *s1c, *s2c;
     int retval;
+
+    check_assertion( s1 != NULL && s2 != NULL, 
+		     "string NULL in string_cmp_no_case" );
+
     s1c = string_copy( s1 );
     s2c = string_copy( s2 );
     string_to_lower( s1c );
@@ -44,7 +57,12 @@ int string_cmp_no_case( char *s1, char *s2 )
 void string_to_lower( char *s )
 {
     int i;
-    int l = strlen( s );
+    int l;
+
+    check_assertion( s != NULL, "string NULL in string_to_lower" );
+
+    l = strlen(s);
+
     for (i=0; i<l; i++) {
 	s[i] = tolower(s[i]);
     }

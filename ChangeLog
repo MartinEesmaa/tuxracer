@@ -1,5 +1,12 @@
 2000-03-06  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
 
+	* Making version 0.11.1. 
+
+	* string_util.c: Added better assertions and error checking
+
+	* game_config.c (fetch_param_bool): Fixed bug reported by Sten
+	Eriksson <sten.eriksson@udac.se> (wasn't checking for NULL)
+
 	* Making version 0.11.
 
 	* game_config.c: "true" and "false" now accepted as values for

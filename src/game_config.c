@@ -180,19 +180,26 @@ void fetch_param_bool( struct param *p )
 {
     char *str_val;
     int val;
+    bool_t no_val = False;
+
     str_val = Tcl_GetVar( g_game.tcl_interp, p->name, TCL_GLOBAL_ONLY );
     
-    if ( string_cmp_no_case( str_val, "false" ) == 0 ) {
+    if ( str_val == NULL ) {
+	no_val = True;
+    } else if ( string_cmp_no_case( str_val, "false" ) == 0 ) {
 	p->val.bool_val = False;
     } else if ( string_cmp_no_case( str_val, "true" ) == 0 ) {
 	p->val.bool_val = True;
-    } else if ( str_val == NULL 
-	 || Tcl_GetInt( g_game.tcl_interp, str_val, &val) == TCL_ERROR  ) 
-    {
-	p->val.bool_val = p->deflt.bool_val;
+    } else if ( Tcl_GetInt( g_game.tcl_interp, str_val, &val) == TCL_ERROR ) {
+	no_val = True;
     } else {
 	p->val.bool_val = (val == 0) ? False : True ;
     }
+
+    if ( no_val ) {
+	p->val.bool_val = p->deflt.bool_val;
+    }
+
     p->loaded = True;
 }
 
