@@ -84,7 +84,7 @@ void setup_course_lighting()
 }
 
 static int course_light_cb (ClientData cd, Tcl_Interp *ip, 
-			    int argc, char *argv[]) 
+			    int argc, char **argv) 
 {
     int light_num;
     scalar_t tmp_arr[4];

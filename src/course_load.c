@@ -34,7 +34,7 @@
 #include "multiplayer.h"
 
 
-#define MAX_TREES 256
+#define MAX_TREES 8192
 
 #define MIN_ANGLE 5
 #define MAX_ANGLE 80

@@ -1,4 +1,34 @@
+2000-04-18  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+	
+	* Making version 0.12.1
+
+	* /src/main.c:
+	Register game_config Tcl callbacks
+	Added error check when create Tcl interp
+
+	* /src/lights.c:
+	Minor fix in argument list for course_light callback
+
+	* /src/game_config.h:
+	Added prototype for Tcl callback registration
+
+	* /src/game_config.c:
+	Added routines for getting and setting parameters from Tcl
+	Added additional assertion checks
+
+	* /src/course_load.c:
+	Increased maximum number of trees to 8192
+
+	* /configure.in, /README:
+	Incremented version number
+
+	* /Makefile.am:
+	Added contrib directory to distribution
+
 2000-04-02  Jasmin Patry  <jfpatry@cgl.uwaterloo.ca>
+
+	* /contrib/script-fu/README, /contrib/script-fu/tuxracer-create-level.scm, /contrib/script-fu/tuxracer-load-level-1.1.scm, /contrib/script-fu/tuxracer-save-as-rgbs-1.0.scm, /contrib/script-fu/tuxracer-save-as-rgbs-1.1.scm:
+	Initial checkin
 	
 	* Making version 0.12
 

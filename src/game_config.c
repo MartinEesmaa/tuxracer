@@ -86,6 +86,10 @@ struct param {
 void fetch_param_string( struct param *p )
 {
     char *val;
+
+    check_assertion( p->type == PARAM_STRING, 
+		     "configuration parameter type mismatch" );
+
     val = Tcl_GetVar( g_game.tcl_interp, p->name, TCL_GLOBAL_ONLY );
     if ( val == NULL ) {
 	p->val.string_val = string_copy( p->deflt.string_val );
@@ -99,6 +103,10 @@ void fetch_param_string( struct param *p )
 void set_param_string( struct param *p, char *new_val )
 {
     char *ret;
+
+    check_assertion( p->type == PARAM_STRING, 
+		     "configuration parameter type mismatch" );
+
     if ( p->loaded ) {
 	free( p->val.string_val );
     }
@@ -115,6 +123,10 @@ void set_param_string( struct param *p, char *new_val )
 void fetch_param_char( struct param *p )
 {
     char *str_val;
+
+    check_assertion( p->type == PARAM_CHAR, 
+		     "configuration parameter type mismatch" );
+
     str_val = Tcl_GetVar( g_game.tcl_interp, p->name, TCL_GLOBAL_ONLY );
     
     if ( str_val == NULL || str_val[0] == '\0' ) {
@@ -129,6 +141,9 @@ void set_param_char( struct param *p, char new_val )
 {
     char buff[2];
     char *ret;
+
+    check_assertion( p->type == PARAM_CHAR, 
+		     "configuration parameter type mismatch" );
 
     buff[0] = new_val;
     buff[1] = '\0';
@@ -147,6 +162,10 @@ void fetch_param_int( struct param *p )
 {
     char *str_val;
     int val;
+
+    check_assertion( p->type == PARAM_INT, 
+		     "configuration parameter type mismatch" );
+    
     str_val = Tcl_GetVar( g_game.tcl_interp, p->name, TCL_GLOBAL_ONLY );
     
     if ( str_val == NULL 
@@ -163,6 +182,9 @@ void set_param_int( struct param *p, int new_val )
 {
     char buff[30];
     char *ret;
+
+    check_assertion( p->type == PARAM_INT, 
+		     "configuration parameter type mismatch" );
 
     sprintf( buff, "%d", new_val );
 
@@ -181,6 +203,9 @@ void fetch_param_bool( struct param *p )
     char *str_val;
     int val;
     bool_t no_val = False;
+
+    check_assertion( p->type == PARAM_BOOL, 
+		     "configuration parameter type mismatch" );
 
     str_val = Tcl_GetVar( g_game.tcl_interp, p->name, TCL_GLOBAL_ONLY );
     
@@ -207,6 +232,9 @@ void set_param_bool( struct param *p, bool_t new_val )
 {
     char buff[2];
     char *ret;
+
+    check_assertion( p->type == PARAM_BOOL, 
+		     "configuration parameter type mismatch" );
 
     sprintf( buff, "%d", new_val ? 1 : 0 );
 
@@ -506,3 +534,155 @@ void write_config_file()
 	perror( "fclose" );
     }
 }
+
+/*
+ * Tcl callback to allow reading of game configuration variables from Tcl.
+ */
+static int get_param_cb ( ClientData cd, Tcl_Interp *ip, 
+			  int argc, char *argv[]) 
+{
+    int i;
+    int num_params;
+    struct param *parm;
+
+    if ( argc != 2 ) {
+        Tcl_AppendResult(ip, argv[0], ": invalid number of arguments\n", 
+			 "Usage: ", argv[0], " <parameter name>",
+			 (char *)0 );
+        return TCL_ERROR;
+    } 
+
+    /* Search for parameter */
+    parm = NULL;
+    num_params = sizeof(Params)/sizeof(struct param);
+    for (i=0; i<num_params; i++) {
+	parm = (struct param*)&Params + i;
+
+	if ( strcmp( parm->name, argv[1] ) == 0 ) {
+	    break;
+	}
+    }
+
+    /* If can't find parameter, report error */
+    if ( parm == NULL || i == num_params ) {
+	Tcl_AppendResult(ip, argv[0], ": invalid parameter `",
+			 argv[1], "'", (char *)0 );
+	return TCL_ERROR;
+    }
+
+    /* Get value of parameter */
+    switch ( parm->type ) {
+    case PARAM_STRING:
+	fetch_param_string( parm );
+	Tcl_SetObjResult( ip, Tcl_NewStringObj( parm->val.string_val, -1 ) );
+	break;
+
+    case PARAM_CHAR:
+	fetch_param_char( parm );
+	Tcl_SetObjResult( ip, Tcl_NewStringObj( &parm->val.char_val, 1 ) );
+	break;
+
+    case PARAM_INT:
+	fetch_param_int( parm );
+	Tcl_SetObjResult( ip, Tcl_NewIntObj( parm->val.int_val ) );
+	break;
+
+    case PARAM_BOOL:
+	fetch_param_bool( parm );
+	Tcl_SetObjResult( ip, Tcl_NewBooleanObj( parm->val.bool_val ) );
+	break;
+
+    default:
+	code_not_reached();
+    }
+
+    return TCL_OK;
+} 
+
+/* 
+ * Tcl callback to allow setting of game configuration variables from Tcl.
+ */
+static int set_param_cb ( ClientData cd, Tcl_Interp *ip, 
+			  int argc, char *argv[]) 
+{
+    int i;
+    int tmp_int;
+    int num_params;
+    struct param *parm;
+
+    if ( argc != 3 ) {
+        Tcl_AppendResult(ip, argv[0], ": invalid number of arguments\n", 
+			 "Usage: ", argv[0], " <parameter name> <value>",
+			 (char *)0 );
+        return TCL_ERROR;
+    } 
+
+    /* Search for parameter */
+    parm = NULL;
+    num_params = sizeof(Params)/sizeof(struct param);
+    for (i=0; i<num_params; i++) {
+	parm = (struct param*)&Params + i;
+
+	if ( strcmp( parm->name, argv[1] ) == 0 ) {
+	    break;
+	}
+    }
+
+    /* If can't find parameter, report error */
+    if ( parm == NULL || i == num_params ) {
+	Tcl_AppendResult(ip, argv[0], ": invalid parameter `",
+			 argv[1], "'", (char *)0 );
+	return TCL_ERROR;
+    }
+
+    /* Set value of parameter */
+    switch ( parm->type ) {
+    case PARAM_STRING:
+	set_param_string( parm, argv[2] ); 
+	break;
+
+    case PARAM_CHAR:
+	if ( strlen( argv[2] ) > 1 ) {
+	    Tcl_AppendResult(ip, "\n", argv[0], ": value for `",
+			     argv[1], "' must be a single character", 
+			     (char *)0 );
+	    return TCL_ERROR;
+	}
+	set_param_char( parm, argv[2][0] );
+	break;
+
+    case PARAM_INT:
+	if ( Tcl_GetInt( ip, argv[2], &tmp_int ) != TCL_OK ) {
+	    Tcl_AppendResult(ip, "\n", argv[0], ": value for `",
+			     argv[1], "' must be an integer", 
+			     (char *)0 );
+	    return TCL_ERROR;
+	}
+	set_param_int( parm, tmp_int );
+	break;
+
+    case PARAM_BOOL:
+	if ( Tcl_GetBoolean( ip, argv[2], &tmp_int ) != TCL_OK ) {
+	    Tcl_AppendResult(ip, "\n", argv[0], ": value for `",
+			     argv[1], "' must be a boolean", 
+			     (char *)0 );
+	    return TCL_ERROR;
+	}
+	check_assertion( tmp_int == 0 || tmp_int == 1, 
+			 "invalid boolean value" );
+	set_param_bool( parm, tmp_int );
+	break;
+
+    default:
+	code_not_reached();
+    }
+
+    return TCL_OK;
+} 
+
+void register_game_config_callbacks( Tcl_Interp *ip )
+{
+    Tcl_CreateCommand (ip, "tux_get_param", get_param_cb,   0,0);
+    Tcl_CreateCommand (ip, "tux_set_param", set_param_cb,   0,0);
+}
+

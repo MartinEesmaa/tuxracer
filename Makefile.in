@@ -66,6 +66,8 @@ TUXRACER_EXTRA_CFLAGS = @TUXRACER_EXTRA_CFLAGS@
 VERSION = @VERSION@
 
 SUBDIRS = src
+EXTRA_DIST =  	contrib/script-fu/README 	contrib/script-fu/tuxracer-create-level.scm 	contrib/script-fu/tuxracer-load-level-1.1.scm 	contrib/script-fu/tuxracer-save-as-rgbs-1.0.scm 	contrib/script-fu/tuxracer-save-as-rgbs-1.1.scm 
+
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = config.h
@@ -251,6 +253,7 @@ distdir: $(DISTFILES)
 	-rm -rf $(distdir)
 	mkdir $(distdir)
 	-chmod 777 $(distdir)
+	$(mkinstalldirs) $(distdir)/contrib/script-fu
 	@for file in $(DISTFILES); do \
 	  d=$(srcdir); \
 	  if test -d $$d/$$file; then \

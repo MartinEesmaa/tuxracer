@@ -97,6 +97,10 @@ int main( int argc, char **argv )
     /* Create a Tcl interpreter */
     g_game.tcl_interp = Tcl_CreateInterp();
 
+    if ( g_game.tcl_interp == NULL ) {
+	handle_error( 1, "cannot create Tcl interpreter" ); 
+    }
+
     /* Setup the configuration variables and read the ~/.tuxracer file */
     init_game_configuration();
     read_config_file();
@@ -155,6 +159,7 @@ int main( int argc, char **argv )
     /* 
      * Load the game data and initialize game state
      */
+    register_game_config_callbacks( g_game.tcl_interp );
     register_course_load_tcl_callbacks( g_game.tcl_interp );
     register_key_frame_callbacks( g_game.tcl_interp );
     register_fog_callbacks( g_game.tcl_interp );

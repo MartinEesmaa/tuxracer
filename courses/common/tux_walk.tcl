@@ -1,4 +1,4 @@
-if { $tux_slides_on_belly != "false" && $tux_slides_on_belly != 0 } {
+if { [ tux_get_param "tux_slides_on_belly" ] } {
     tux_key_frame 0.5 -1.05 -1.0 0.455 90 0 -20.6 39.8 -23.4 18.2
     tux_key_frame 1.0 -0.7  -1.0 0.455 90 0 39.8 -20.6 18.2 -23.4
     tux_key_frame 1.5 -0.35 -1.0 0.455 90 0 -20.6 39.8 -23.4 18.2

@@ -31,6 +31,7 @@ void init_game_configuration();
 void read_config_file();
 void write_config_file();
 void clear_config_cache();
+void register_game_config_callbacks( Tcl_Interp *ip );
 
 #define PROTO_PARAM( name, type ) \
     type getparam_ ## name(); \
